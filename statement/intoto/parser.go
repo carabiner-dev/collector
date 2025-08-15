@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/carabiner-dev/ampel/pkg/formats/predicate"
 	"github.com/carabiner-dev/attestation"
+	"github.com/carabiner-dev/collector/predicate"
 	v1 "github.com/in-toto/attestation/go/v1"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/encoding/protojson"
