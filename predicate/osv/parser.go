@@ -36,7 +36,7 @@ func (p *Parser) Parse(data []byte) (attestation.Predicate, error) {
 		return nil, fmt.Errorf("parsing results into predicate: %w", err)
 	}
 
-	if results == nil || (results.Date == nil && len(results.Results) == 0) {
+	if results == nil || (results.GetDate() == nil && len(results.GetResults()) == 0) {
 		return nil, attestation.ErrNotCorrectFormat
 	}
 

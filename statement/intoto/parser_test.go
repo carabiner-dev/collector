@@ -7,12 +7,11 @@ import (
 	"os"
 	"testing"
 
-	"github.com/carabiner-dev/attestation"
-	"github.com/stretchr/testify/require"
-
 	"github.com/carabiner-dev/ampel/pkg/formats/predicate/generic"
 	"github.com/carabiner-dev/ampel/pkg/formats/predicate/json"
 	v02 "github.com/carabiner-dev/ampel/pkg/formats/predicate/slsa/provenance/v02"
+	"github.com/carabiner-dev/attestation"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParse(t *testing.T) {
@@ -32,7 +31,7 @@ func TestParse(t *testing.T) {
 			require.True(t, ok)
 			parsed, ok := genericPred.GetParsed().(*v02.Provenance)
 			require.Truef(t, ok, "%T", genericPred.GetParsed())
-			require.Equal(t, "https://github.com/Attestations/GitHubActionsWorkflow@v1", parsed.BuildType)
+			require.Equal(t, "https://github.com/Attestations/GitHubActionsWorkflow@v1", parsed.GetBuildType())
 			require.Len(t, s.GetSubjects(), 10)
 		}},
 		{"plain-json-pred", nil, "testdata/plain-json.json", false, func(t *testing.T, s attestation.Statement) {

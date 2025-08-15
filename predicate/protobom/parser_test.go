@@ -46,8 +46,8 @@ func TestParse(t *testing.T) {
 			protopred, ok := pred.(*generic.Predicate)
 			require.True(t, ok)
 			require.NotEmpty(t, protopred.Data)
-			require.Len(t, protopred.Parsed.(*sbom.Document).NodeList.RootElements, tc.expectRoot) //nolint:errcheck,forcetypeassert
-			require.Len(t, protopred.Parsed.(*sbom.Document).NodeList.Nodes, tc.expectNodes)       //nolint:errcheck,forcetypeassert
+			require.Len(t, protopred.Parsed.(*sbom.Document).GetNodeList().GetRootElements(), tc.expectRoot) //nolint:errcheck,forcetypeassert
+			require.Len(t, protopred.Parsed.(*sbom.Document).GetNodeList().GetNodes(), tc.expectNodes)       //nolint:errcheck,forcetypeassert
 		})
 	}
 }

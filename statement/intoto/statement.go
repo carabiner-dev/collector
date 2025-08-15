@@ -70,7 +70,7 @@ func (s *Statement) GetPredicate() attestation.Predicate {
 // ParsePredicate reparses the underlying intoto predicate and regenerates the
 // statement's predicate.
 func (s *Statement) ParsePredicate() error {
-	pred, err := predicate.Parsers.Parse([]byte(s.Statement.Predicate.String()))
+	pred, err := predicate.Parsers.Parse([]byte(s.Statement.GetPredicate().String()))
 	if err != nil {
 		return fmt.Errorf("parsing predicate: %w", err)
 	}

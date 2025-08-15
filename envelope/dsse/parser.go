@@ -29,7 +29,7 @@ func (p *Parser) ParseStream(r io.Reader) ([]attestation.Envelope, error) {
 		return nil, attestation.ErrNotCorrectFormat
 	}
 
-	for _, s := range env.Envelope.Signatures {
+	for _, s := range env.Envelope.GetSignatures() {
 		env.Signatures = append(env.Signatures, &Signature{
 			KeyID:     s.GetKeyid(),
 			Signature: s.GetSig(),

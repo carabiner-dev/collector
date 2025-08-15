@@ -8,12 +8,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/carabiner-dev/ampel/pkg/formats/predicate"
 	"github.com/carabiner-dev/attestation"
 	v1 "github.com/in-toto/attestation/go/v1"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/encoding/protojson"
-
-	"github.com/carabiner-dev/ampel/pkg/formats/predicate"
 )
 
 type Parser struct{}
@@ -40,12 +39,12 @@ func (p *Parser) Parse(b []byte) (attestation.Statement, error) {
 		return nil, attestation.ErrNotCorrectFormat
 	}
 
-	if stmt.Statement.PredicateType != "" {
-		stmt.PredicateType = attestation.PredicateType(stmt.Statement.PredicateType)
+	if stmt.Statement.GetPredicateType() != "" {
+		stmt.PredicateType = attestation.PredicateType(stmt.Statement.GetPredicateType())
 		stmt.Statement.PredicateType = ""
 	}
 
-	pdata, err := stmt.Statement.Predicate.MarshalJSON()
+	pdata, err := stmt.Statement.GetPredicate().MarshalJSON()
 	if err != nil {
 		return nil, fmt.Errorf("marshaling predicate data to JSON: %w", err)
 	}
