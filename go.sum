@@ -720,8 +720,6 @@ github.com/boombuler/barcode v1.0.0/go.mod h1:paBWMcWSl3LHKBqUq+rly7CNSldXjb2rDl
 github.com/boombuler/barcode v1.0.1/go.mod h1:paBWMcWSl3LHKBqUq+rly7CNSldXjb2rDl3JlRe0mD8=
 github.com/bradleyjkemp/cupaloy/v2 v2.8.0 h1:any4BmKE+jGIaMpnU8YgH/I2LPiLBufr6oMMlVBbn9M=
 github.com/bradleyjkemp/cupaloy/v2 v2.8.0/go.mod h1:bm7JXdkRd4BHJk9HpwqAI8BoAY1lps46Enkdqw6aRX0=
-github.com/carabiner-dev/ampel v0.0.1-pre9.0.20250813013412-d3e091feb3a1 h1:NrHPzuavrXUP0aRpj8x2NDv3MlSeeou8NrG8XKcF1aU=
-github.com/carabiner-dev/ampel v0.0.1-pre9.0.20250813013412-d3e091feb3a1/go.mod h1:KxLufLE6VjXDItxCxouua5JAgphUzA8gwBXDTM4r+9s=
 github.com/carabiner-dev/attestation v0.1.1 h1:IEVeej9k/N4wKpKWrBAT1TH1CFmlTsfJ5OdSwOariQQ=
 github.com/carabiner-dev/attestation v0.1.1/go.mod h1:dLPe3DPL/0YpKJpNDCQJZdtkZIuWTAH1G0N8V5LJ41c=
 github.com/carabiner-dev/ghrfs v0.3.2 h1:SBxmC7H2efJzebzrpZNsXB/03eZTeBORguXvKftpif4=
