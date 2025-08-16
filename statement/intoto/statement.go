@@ -36,9 +36,8 @@ func WithSubject(subjects ...*gointoto.ResourceDescriptor) StatementOption {
 func NewStatement(opts ...StatementOption) *Statement {
 	s := &Statement{
 		Predicate: nil,
-		Statement: gointoto.Statement{
-			Type: gointoto.StatementTypeUri,
-		},
+		Type:      gointoto.StatementTypeUri,
+		Statement: gointoto.Statement{},
 	}
 
 	for _, opt := range opts {
@@ -51,6 +50,7 @@ func NewStatement(opts ...StatementOption) *Statement {
 type Statement struct {
 	PredicateType attestation.PredicateType `json:"predicateType"`
 	Predicate     attestation.Predicate     `json:"predicate"`
+	Type          string                    `json:"_type"`
 	gointoto.Statement
 }
 
@@ -102,6 +102,7 @@ func (s *Statement) ToJson() ([]byte, error) {
 }
 
 func (s *Statement) WriteJson(w io.Writer) error {
+	s.Type = gointoto.StatementTypeUri // This needs to be coerced as it will not be read from proto
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 	if err := enc.Encode(s); err != nil {
