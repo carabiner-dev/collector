@@ -9,10 +9,11 @@ import (
 	"strings"
 
 	"github.com/carabiner-dev/attestation"
-	"github.com/carabiner-dev/collector/predicate"
 	v1 "github.com/in-toto/attestation/go/v1"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/encoding/protojson"
+
+	"github.com/carabiner-dev/collector/predicate"
 )
 
 type Parser struct{}
@@ -35,7 +36,7 @@ func (p *Parser) Parse(b []byte) (attestation.Statement, error) {
 	}
 
 	// Check if we got something meaningful
-	if stmt.Predicate == nil && len(stmt.Subject) == 0 {
+	if stmt.Statement.GetPredicateType() == "" && len(stmt.Subject) == 0 {
 		return nil, attestation.ErrNotCorrectFormat
 	}
 

@@ -8,10 +8,11 @@ import (
 	"testing"
 
 	"github.com/carabiner-dev/attestation"
+	"github.com/stretchr/testify/require"
+
 	"github.com/carabiner-dev/collector/predicate/generic"
 	"github.com/carabiner-dev/collector/predicate/json"
 	v02 "github.com/carabiner-dev/collector/predicate/slsa/provenance/v02"
-	"github.com/stretchr/testify/require"
 )
 
 func TestParse(t *testing.T) {
