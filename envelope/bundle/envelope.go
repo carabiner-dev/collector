@@ -15,6 +15,7 @@ import (
 	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 	"github.com/sigstore/sigstore-go/pkg/fulcio/certificate"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/carabiner-dev/collector/statement/intoto"
@@ -150,6 +151,12 @@ func (e *Envelope) Verify() error {
 	})
 
 	return nil
+}
+
+// MarshalJSON implements the json.Marshaler interface by wrapping the protojson
+// package. This allows the bundles to be marshaled correctly with the JSON module.
+func (e *Envelope) MarshalJSON() ([]byte, error) {
+	return protojson.Marshal(&e.Bundle)
 }
 
 func (e *Envelope) UnmarshalJSON(data []byte) error {
