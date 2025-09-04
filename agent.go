@@ -80,7 +80,9 @@ func (agent *Agent) Fetch(ctx context.Context, optFn ...FetchOptionsFunc) ([]att
 
 	opts := agent.Options.Fetch
 	if len(optFn) > 0 {
-		return nil, fmt.Errorf("functional options not yet implemented")
+		for _, o := range optFn {
+			o(&opts)
+		}
 	}
 
 	t := throttler.New((agent.Options.ParallelFetches), len(repos))
@@ -100,6 +102,14 @@ func (agent *Agent) Fetch(ctx context.Context, optFn ...FetchOptionsFunc) ([]att
 			t.Done(nil)
 		}()
 		t.Throttle()
+	}
+
+	if opts.Query != nil {
+		ret = opts.Query.Run(ret)
+	}
+
+	if opts.Limit != 0 {
+		ret = ret[0:opts.Limit]
 	}
 
 	return ret, t.Err()
