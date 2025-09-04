@@ -63,5 +63,12 @@ func WithQuery(q *attestation.Query) FetchOptionsFunc {
 	}
 }
 
+// WithLimit sets the maximum number of attestations to be returned by the agent
+func WithLimit(n int) FetchOptionsFunc {
+	return func(o *attestation.FetchOptions) {
+		o.Limit = n
+	}
+}
+
 // StoreOptionsFunc are functions to define options when fetching
 type StoreOptionsFunc func(*attestation.StoreOptions)
