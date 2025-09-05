@@ -12,6 +12,8 @@ import (
 	"github.com/carabiner-dev/attestation"
 	"github.com/nozzle/throttler"
 	"github.com/sirupsen/logrus"
+
+	"github.com/carabiner-dev/collector/filters"
 )
 
 var (
@@ -151,11 +153,29 @@ func (agent *Agent) FetchAttestationsBySubject(ctx context.Context, subjects []a
 
 	// If the cache returned data, skip fetching
 	if len(ret) == 0 {
+		m := []map[string]string{}
+		for _, s := range subjects {
+			m = append(m, s.GetDigest())
+		}
+
+		q := attestation.NewQuery().WithFilter(&filters.SubjectHashMatcher{
+			HashSets: m,
+		})
+
 		t := throttler.New((agent.Options.ParallelFetches), len(repos))
 
 		for _, r := range repos {
 			go func() {
-				atts, err := r.FetchBySubject(ctx, opts, subjects)
+				var err error
+				var atts []attestation.Envelope
+				if fr, ok := r.(attestation.FetcherBySubject); ok {
+					atts, err = fr.FetchBySubject(ctx, opts, subjects)
+				} else {
+					atts, err = r.Fetch(ctx, opts)
+					if err == nil {
+						atts = q.Run(atts)
+					}
+				}
 				if err != nil {
 					t.Done(err)
 					return
@@ -223,11 +243,26 @@ func (agent *Agent) FetchAttestationsByPredicateType(ctx context.Context, pt []a
 	// If the cache returned data, skip fetching here
 	if len(ret) == 0 {
 		t := throttler.New((agent.Options.ParallelFetches), len(repos))
-
+		m := map[attestation.PredicateType]struct{}{}
+		for _, predType := range pt {
+			m[predType] = struct{}{}
+		}
+		q := attestation.NewQuery().WithFilter(&filters.PredicateTypeMatcher{
+			PredicateTypes: m,
+		})
 		for _, r := range repos {
 			go func() {
-				// Call the repo driver's fetch method
-				atts, err := r.FetchByPredicateType(ctx, opts, pt)
+				var err error
+				var atts []attestation.Envelope
+
+				if fr, ok := r.(attestation.FetcherByPredicateType); ok {
+					atts, err = fr.FetchByPredicateType(ctx, opts, pt)
+				} else {
+					atts, err = r.Fetch(ctx, opts)
+					if err == nil {
+						atts = q.Run(atts)
+					}
+				}
 				if err != nil {
 					t.Done(err)
 					return

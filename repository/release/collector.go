@@ -10,6 +10,7 @@ import (
 	"github.com/carabiner-dev/attestation"
 	"github.com/carabiner-dev/ghrfs"
 
+	"github.com/carabiner-dev/collector/filters"
 	"github.com/carabiner-dev/collector/repository/filesystem"
 )
 
@@ -68,10 +69,45 @@ func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([
 	return c.Driver.Fetch(ctx, opts)
 }
 
+// FetchBySubject handles collecting by subject hash. If the driver implements
+// the FetcherBySubject interface we'll use it
 func (c *Collector) FetchBySubject(ctx context.Context, opts attestation.FetchOptions, subj []attestation.Subject) ([]attestation.Envelope, error) {
-	return c.Driver.FetchBySubject(ctx, opts, subj)
+	if fr, ok := c.Driver.(attestation.FetcherBySubject); ok {
+		return fr.FetchBySubject(ctx, opts, subj)
+	}
+	m := []map[string]string{}
+	for _, s := range subj {
+		m = append(m, s.GetDigest())
+	}
+
+	q := attestation.NewQuery().WithFilter(&filters.SubjectHashMatcher{
+		HashSets: m,
+	})
+
+	atts, err := c.Driver.Fetch(ctx, opts)
+	if err != nil {
+		return nil, fmt.Errorf("retrieving attestations from driver: %w", err)
+	}
+
+	return q.Run(atts), nil
 }
 
+// FetchByPredicateType fe
 func (c *Collector) FetchByPredicateType(ctx context.Context, opts attestation.FetchOptions, pts []attestation.PredicateType) ([]attestation.Envelope, error) {
-	return c.Driver.FetchByPredicateType(ctx, opts, pts)
+	if fr, ok := c.Driver.(attestation.FetcherByPredicateType); ok {
+		return fr.FetchByPredicateType(ctx, opts, pts)
+	}
+	m := map[attestation.PredicateType]struct{}{}
+	for _, predType := range pts {
+		m[predType] = struct{}{}
+	}
+	q := attestation.NewQuery().WithFilter(&filters.PredicateTypeMatcher{
+		PredicateTypes: m,
+	})
+
+	atts, err := c.Driver.Fetch(ctx, opts)
+	if err != nil {
+		return nil, fmt.Errorf("fetching attestations from driver: %w", err)
+	}
+	return q.Run(atts), nil
 }
