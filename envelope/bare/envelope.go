@@ -40,7 +40,7 @@ func (env *Envelope) GetCertificate() attestation.Certificate {
 
 // VerifySignature in bare envelopes never fails but it also always returns
 // nil as its signature verification
-func (env *Envelope) Verify() error {
+func (env *Envelope) Verify(_ ...any) error {
 	logrus.Debug("Bare envelope mock verification. Returning nil.")
 	return nil
 }

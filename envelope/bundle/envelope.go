@@ -89,7 +89,7 @@ func (env *Envelope) GetVerification() attestation.Verification {
 // Verify checks the bundle signatures and generatesit Verification data.
 // If the envelope is already verified, the signatures are not verified
 // again.
-func (e *Envelope) Verify() error {
+func (e *Envelope) Verify(_ ...any) error {
 	// If the bundle is already verified, don't retry
 	if e.GetVerification() != nil {
 		return nil
