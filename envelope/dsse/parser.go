@@ -4,11 +4,12 @@
 package dsse
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 
 	"github.com/carabiner-dev/attestation"
+	sdsse "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/carabiner-dev/collector/statement"
 )
@@ -18,13 +19,29 @@ type Parser struct{}
 
 // ParseFile parses a file and returns all envelopes in it.
 func (p *Parser) ParseStream(r io.Reader) ([]attestation.Envelope, error) {
-	env := Envelope{}
-	dec := json.NewDecoder(r)
-	if err := dec.Decode(&env); err != nil {
-		return nil, err
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return nil, fmt.Errorf("reading attestation envelope data: %w", err)
 	}
 
-	// If there is no payload, then don't treat the envelope as DSSE
+	// Parse the envelope to its protobuf representation
+	dsseEnvelope := &sdsse.Envelope{}
+	// Since the envelope is simple (just three fields) we discard all
+	// unknown JSON and check for the envelope integrity after parsing.
+	// This avoids string matching on the error.
+	unmarshler := protojson.UnmarshalOptions{
+		DiscardUnknown: true,
+	}
+	if err := unmarshler.Unmarshal(data, dsseEnvelope); err != nil {
+		return nil, fmt.Errorf("unmarshalling data: %w", err)
+	}
+
+	// Assign the proto to our envelope wrapper
+	env := Envelope{
+		Envelope: dsseEnvelope,
+	}
+
+	// If there is no payload and no sig, then don't treat the envelope as DSSE
 	if env.Payload == nil && len(env.Signatures) == 0 {
 		return nil, attestation.ErrNotCorrectFormat
 	}

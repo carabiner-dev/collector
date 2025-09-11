@@ -25,11 +25,16 @@ func (p *Predicate) SetType(pt attestation.PredicateType) error {
 	p.Type = pt
 	return nil
 }
-func (p *Predicate) GetParsed() any                              { return p.Parsed }
-func (p *Predicate) GetData() []byte                             { return p.Data }
-func (p *Predicate) GetOrigin() attestation.Subject              { return p.Source }
-func (p *Predicate) SetOrigin(src attestation.Subject)           { p.Source = src }
-func (p *Predicate) SetVerification(vf attestation.Verification) { p.Verification = vf }
+
+func (p *Predicate) GetParsed() any                    { return p.Parsed }
+func (p *Predicate) GetData() []byte                   { return p.Data }
+func (p *Predicate) GetOrigin() attestation.Subject    { return p.Source }
+func (p *Predicate) SetOrigin(src attestation.Subject) { p.Source = src }
+
+// SetVerification fixes the signature verification object.
+func (p *Predicate) SetVerification(vf attestation.Verification) {
+	p.Verification = vf
+}
 
 // GetVerifications returns the signature verifications from the predicate
 func (p *Predicate) GetVerification() attestation.Verification {
