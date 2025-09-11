@@ -3,7 +3,7 @@ module github.com/carabiner-dev/collector
 go 1.24.6
 
 require (
-	github.com/carabiner-dev/attestation v0.1.2
+	github.com/carabiner-dev/attestation v0.2.0
 	github.com/carabiner-dev/ghrfs v0.3.2
 	github.com/carabiner-dev/github v0.2.2
 	github.com/carabiner-dev/hasher v0.2.2
@@ -11,7 +11,7 @@ require (
 	github.com/carabiner-dev/openeox v0.0.0-20250606202227-fd40810cda47
 	github.com/carabiner-dev/osv v0.0.0-20250124012120-b8ce4531cd92
 	github.com/carabiner-dev/policy v0.1.0
-	github.com/carabiner-dev/signer v0.1.2
+	github.com/carabiner-dev/signer v0.2.0
 	github.com/carabiner-dev/vcslocator v0.3.2
 	github.com/go-git/go-billy/v5 v5.6.2
 	github.com/go-git/go-git/v5 v5.16.2
@@ -171,8 +171,8 @@ require (
 	golang.org/x/net v0.42.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
 	golang.org/x/sync v0.16.0 // indirect
-	golang.org/x/sys v0.35.0 // indirect
-	golang.org/x/term v0.34.0 // indirect
+	golang.org/x/sys v0.36.0 // indirect
+	golang.org/x/term v0.35.0 // indirect
 	golang.org/x/text v0.27.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
 	google.golang.org/api v0.242.0 // indirect
