@@ -5,7 +5,11 @@ package dsse
 
 import (
 	"github.com/carabiner-dev/attestation"
+	papi "github.com/carabiner-dev/policy/api/v1"
+	"github.com/carabiner-dev/signer"
+	"github.com/carabiner-dev/signer/key"
 	sigstoreProtoDSSE "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/carabiner-dev/collector/statement"
 )
@@ -44,7 +48,45 @@ func (env *Envelope) GetCertificate() attestation.Certificate {
 }
 
 // TODO(puerco): Implement
-func (env *Envelope) Verify() error {
+func (env *Envelope) Verify(args ...any) error {
+	// Prepare the keys to verify
+	keys := []key.PublicKeyProvider{}
+	for _, a := range args {
+		switch vm := a.(type) {
+		case []key.PublicKeyProvider:
+			keys = append(keys, vm...)
+		case *key.Private:
+			keys = append(keys, vm)
+		case *key.Public:
+			keys = append(keys, vm)
+		}
+	}
+
+	var ids []*papi.Identity
+	verifier := signer.NewVerifier()
+	for _, k := range keys {
+		res, err := verifier.VerifyParsedDSSE(&env.Envelope, []key.PublicKeyProvider{k})
+		if err != nil {
+			return err
+		}
+		if res.Verified {
+			ids = append(ids, &papi.Identity{
+				Key: &papi.IdentityKey{
+					Id:   "", // Not implemented yet
+					Type: string(res.Key.Scheme),
+					Data: res.Key.Data,
+				},
+			})
+		}
+	}
+
+	env.GetPredicate().SetVerification(&papi.Verification{
+		Signature: &papi.SignatureVerification{
+			Date:       timestamppb.Now(),
+			Verified:   len(ids) > 0,
+			Identities: ids,
+		},
+	})
 	return nil
 }
 
