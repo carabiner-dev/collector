@@ -736,8 +736,8 @@ github.com/carabiner-dev/osv v0.0.0-20250124012120-b8ce4531cd92 h1:BJ9+OCNezZGkU
 github.com/carabiner-dev/osv v0.0.0-20250124012120-b8ce4531cd92/go.mod h1:o7jXwi/fFZ9mQlvVlog0kcvyEkwQT3eWmVQmrorBGpE=
 github.com/carabiner-dev/policy v0.1.0 h1:0AAZzhDYtaXjKOKv3KQ6aAdD6KxDHUTWN5QqYYEdSvc=
 github.com/carabiner-dev/policy v0.1.0/go.mod h1:/YPikyoHjIMIHDJ0qOoBrSxXhrnUaYDrKAsqVCgVfUw=
-github.com/carabiner-dev/signer v0.2.0 h1:KzxoSSCDbaGeDV1ezR2rBjmSgzoBgh8dFCW9Ou0v3U4=
-github.com/carabiner-dev/signer v0.2.0/go.mod h1:tqssqxY6265xk1prZRzSslpp7pHv7DO8WvmQA6ga5IY=
+github.com/carabiner-dev/signer v0.2.1 h1:qNRzDFnG+uLWHPTIC36hrh572bs66hYhBOwkGLcsq1I=
+github.com/carabiner-dev/signer v0.2.1/go.mod h1:VvN+m//2sBUQuZUnVie0WpIy+D9+v8+eJDoMG8nugA8=
 github.com/carabiner-dev/vcslocator v0.3.2 h1:/rfhELG1mvqFq0xi8LQSkfpAVoQDCGlWoL6J5tX9Inw=
 github.com/carabiner-dev/vcslocator v0.3.2/go.mod h1:jvYlXLVyqQqkBuSH/CiE1pbHifoPaAhWtUjLquHaBb0=
 github.com/cenkalti/backoff/v4 v4.3.0 h1:MyRJ/UdXutAwSAT+s3wNd7MfTIcy71VQueUuFK343L8=
