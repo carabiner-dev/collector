@@ -4,6 +4,8 @@
 package dsse
 
 import (
+	"fmt"
+
 	"github.com/carabiner-dev/attestation"
 	papi "github.com/carabiner-dev/policy/api/v1"
 	"github.com/carabiner-dev/signer"
@@ -17,19 +19,21 @@ import (
 var _ attestation.Envelope = (*Envelope)(nil)
 
 type Envelope struct {
-	Signatures   []attestation.Signature  `json:"signatures"`
-	Statement    attestation.Statement    `json:"-"`
-	Verification attestation.Verification `json:"-"`
-	sigstoreProtoDSSE.Envelope
+	Signatures []attestation.Signature `json:"signatures"`
+	Statement  attestation.Statement   `json:"-"`
+	*sigstoreProtoDSSE.Envelope
 }
 
+// GetStatement parses the envelope state, stetement.
 func (env *Envelope) GetStatement() attestation.Statement {
-	// This should not happen here.
-	s, err := statement.Parsers.Parse(env.Payload)
-	if err == nil {
-		return s
+	// Parse the payload bytes if they have not been parsed yet
+	if env.Statement == nil {
+		s, err := statement.Parsers.Parse(env.Payload)
+		if err == nil {
+			env.Statement = s
+		}
 	}
-	return nil
+	return env.Statement
 }
 
 func (env *Envelope) GetPredicate() attestation.Predicate {
@@ -47,8 +51,18 @@ func (env *Envelope) GetCertificate() attestation.Certificate {
 	return nil
 }
 
-// TODO(puerco): Implement
+// Verify checks the payload using the supplied signatures. The function takes
+// either a slice of, or individual key.PublicKeyProvider objects. For more
+// information see the carabiner signer public key library:
+//
+//	https://github.com/carabiner-dev/signer/blob/main/key/public.go
+//
+// No signatures should not return an error, a verification status is returned
+// but without any identities matched.
 func (env *Envelope) Verify(args ...any) error {
+	if env.GetPredicate() == nil {
+		return fmt.Errorf("unable to set verification, envelope has no predicate")
+	}
 	// Prepare the keys to verify
 	keys := []key.PublicKeyProvider{}
 	for _, a := range args {
@@ -65,7 +79,7 @@ func (env *Envelope) Verify(args ...any) error {
 	var ids []*papi.Identity
 	verifier := signer.NewVerifier()
 	for _, k := range keys {
-		res, err := verifier.VerifyParsedDSSE(&env.Envelope, []key.PublicKeyProvider{k})
+		res, err := verifier.VerifyParsedDSSE(env.Envelope, []key.PublicKeyProvider{k})
 		if err != nil {
 			return err
 		}
@@ -80,6 +94,7 @@ func (env *Envelope) Verify(args ...any) error {
 		}
 	}
 
+	// Set the verification in the predicate
 	env.GetPredicate().SetVerification(&papi.Verification{
 		Signature: &papi.SignatureVerification{
 			Date:       timestamppb.Now(),
@@ -87,12 +102,17 @@ func (env *Envelope) Verify(args ...any) error {
 			Identities: ids,
 		},
 	})
+
+	// Ensure the predicate has the verificationd data
+	if env.GetPredicate().GetVerification() == nil {
+		return fmt.Errorf("unable to fixate signature verification result in predicate")
+	}
 	return nil
 }
 
 // GetVerifications returns the envelop signtature verifications
 func (env *Envelope) GetVerification() attestation.Verification {
-	if env.GetStatement() == nil {
+	if env.GetPredicate() == nil {
 		return nil
 	}
 	return env.GetStatement().GetVerification()
