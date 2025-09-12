@@ -78,17 +78,19 @@ func (env *Envelope) Verify(args ...any) error {
 
 	var ids []*papi.Identity
 	verifier := signer.NewVerifier()
-	for _, k := range keys {
-		res, err := verifier.VerifyParsedDSSE(env.Envelope, []key.PublicKeyProvider{k})
-		if err != nil {
-			return err
-		}
-		if res.Verified {
+	res, err := verifier.VerifyParsedDSSE(env.Envelope, keys)
+	if err != nil {
+		return err
+	}
+
+	// If verification passed, add the key identities
+	if res.Verified {
+		for _, k := range res.Keys {
 			ids = append(ids, &papi.Identity{
 				Key: &papi.IdentityKey{
-					Id:   "", // Not implemented yet
-					Type: string(res.Key.Scheme),
-					Data: res.Key.Data,
+					Id:   k.ID(), // Not implemented yet
+					Type: string(k.Scheme),
+					Data: k.Data,
 				},
 			})
 		}
