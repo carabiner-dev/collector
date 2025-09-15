@@ -4,10 +4,12 @@
 package dsse
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 
 	"github.com/carabiner-dev/attestation"
+	"github.com/carabiner-dev/hasher"
 	sdsse "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	"google.golang.org/protobuf/encoding/protojson"
 
@@ -58,8 +60,17 @@ func (p *Parser) ParseStream(r io.Reader) ([]attestation.Envelope, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error parsing the envelope payload: %w", err)
 	}
-
 	env.Statement = s
+
+	digests, err := hasher.New().HashReaders([]io.Reader{bytes.NewReader(data)})
+	if err != nil || len(*digests) == 0 {
+		return nil, fmt.Errorf("error hashing envelope data: %w", err)
+	}
+	// Reigster the attestation digests in its source
+	if env.GetPredicate() != nil {
+		env.GetPredicate().SetOrigin(digests.ToResourceDescriptors()[0])
+	}
+
 	return []attestation.Envelope{&env}, nil
 }
 
