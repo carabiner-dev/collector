@@ -6,48 +6,10 @@
 package http
 
 import (
-	"bytes"
 	"context"
-	"fmt"
-	"net/url"
-	"strings"
 
 	"github.com/carabiner-dev/attestation"
-	"sigs.k8s.io/release-utils/http"
-
-	"github.com/carabiner-dev/collector/envelope"
 )
-
-type optFn = func(*Options) error
-
-// WithReadJSONL sets the options to assume the data read will be in linear
-// json data.
-func WithReadJSONL(doit bool) optFn {
-	return func(opts *Options) error {
-		opts.ReadJSONL = doit
-		return nil
-	}
-}
-
-// WithRetries fetches the number of retires to read
-func WithRetries(num uint) optFn {
-	return func(opts *Options) error {
-		opts.Retries = num
-		return nil
-	}
-}
-
-// WithURL sets the URl to fetch the data
-func WithURL(uriString string) optFn {
-	return func(opts *Options) error {
-		_, err := url.Parse(uriString)
-		if err != nil {
-			return err
-		}
-		opts.URL = uriString
-		return nil
-	}
-}
 
 var TypeMoniker = "http"
 
@@ -56,16 +18,26 @@ var Build = func(uriString string) (attestation.Repository, error) {
 	return New(WithURL(uriString))
 }
 
-var _ attestation.Fetcher = (*Collector)(nil)
+// Ensure the collector variants implement the interfaces
+var (
+	_ attestation.Fetcher = (*Collector)(nil)
+	_ attestation.Fetcher = (*CollectorSubject)(nil)
+	_ attestation.Fetcher = (*CollectorPredicateType)(nil)
+	_ attestation.Fetcher = (*CollectorSubjectAndType)(nil)
+)
 
-type Collector struct {
+var (
+	_ attestation.FetcherByPredicateType = (*CollectorPredicateType)(nil)
+	_ attestation.FetcherByPredicateType = (*CollectorSubjectAndType)(nil)
+)
+
+var (
+	_ attestation.FetcherBySubject = (*CollectorSubject)(nil)
+	_ attestation.FetcherBySubject = (*CollectorSubjectAndType)(nil)
+)
+
+type CollectorPredicateTypeSubject struct {
 	Options Options
-}
-
-type Options struct {
-	URL       string
-	Retries   uint
-	ReadJSONL bool
 }
 
 var defaultOptions = Options{
@@ -73,42 +45,90 @@ var defaultOptions = Options{
 	ReadJSONL: true,
 }
 
-func New(funcs ...optFn) (*Collector, error) {
+// New creates a new collector. The type of collector returned varies according
+// to the specified URL templates.
+func New(funcs ...optFn) (attestation.Fetcher, error) {
 	opts := defaultOptions
 	for _, f := range funcs {
 		if err := f(&opts); err != nil {
 			return nil, err
 		}
 	}
-	return &Collector{
-		Options: opts,
-	}, nil
+
+	// Return the collector according to the defined capabilities
+	switch {
+	case opts.CanFetchPredicateType() && !opts.CanFetchSubject() && !opts.CanTemplatePredicateTypeSubject():
+		return &CollectorPredicateType{
+			Options: opts,
+		}, nil
+	case !opts.CanFetchPredicateType() && opts.CanFetchSubject() && !opts.CanTemplatePredicateTypeSubject():
+		return &CollectorSubject{
+			Options: opts,
+		}, nil
+	case opts.CanFetchPredicateType() && opts.CanFetchSubject() && !opts.CanTemplatePredicateTypeSubject():
+		return &CollectorSubjectAndType{
+			Options: opts,
+		}, nil
+	default:
+		return &Collector{
+			Options: opts,
+		}, nil
+	}
 }
 
-// Fetch fetches attestation data from the source
-func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
-	urlString := c.Options.URL
-	if urlString == "" {
-		return nil, fmt.Errorf("unable to do request, url empty")
-	}
-	a := http.NewAgent().WithRetries(c.Options.Retries).WithFailOnHTTPError(true)
-	data, err := a.Get(urlString)
-	if err != nil {
-		if strings.Contains(err.Error(), "HTTP error 404") {
-			return []attestation.Envelope{}, nil
-		}
-		return nil, fmt.Errorf("fetching http data: %w", err)
-	}
+// Collector is the general collector that supports fetching from a single URL
+type Collector struct {
+	Options Options
+}
 
-	var attestations []attestation.Envelope
-	// Parse the request output
-	if c.Options.ReadJSONL {
-		attestations, err = envelope.NewJSONL().Parse(data)
-	} else {
-		attestations, err = envelope.Parsers.Parse(bytes.NewReader(data))
-	}
-	if err != nil {
-		return nil, fmt.Errorf("parsing attestation data: %w", err)
-	}
-	return attestations, err
+func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
+	return fetchGeneral(ctx, &c.Options, opts)
+}
+
+// CollectorSubjectAndType implements the attestation.FetcherBySubject and attestation.FetcherByPredicateType interfaces
+// it is not the same as the PredicateTypeSubject interface
+type CollectorSubjectAndType struct {
+	Options Options
+}
+
+func (c *CollectorSubjectAndType) Fetch(ctx context.Context, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
+	return fetchGeneral(ctx, &c.Options, opts)
+}
+
+func (c *CollectorSubjectAndType) FetchBySubject(ctx context.Context, fo attestation.FetchOptions, subjects []attestation.Subject) ([]attestation.Envelope, error) {
+	return fetchBySubject(ctx, &c.Options, fo, subjects)
+}
+
+func (c *CollectorSubjectAndType) FetchByPredicateType(ctx context.Context, fo attestation.FetchOptions, types []attestation.PredicateType) ([]attestation.Envelope, error) {
+	return fetchByPredicateType(ctx, &c.Options, fo, types)
+}
+
+// CollectorSubject implements the attestation.FetcherBySubject interface
+type CollectorSubject struct {
+	Options Options
+}
+
+func (c *CollectorSubject) Fetch(ctx context.Context, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
+	return fetchGeneral(ctx, &c.Options, opts)
+}
+
+func (c *CollectorSubject) FetchBySubject(ctx context.Context, fo attestation.FetchOptions, subjects []attestation.Subject) ([]attestation.Envelope, error) {
+	return fetchBySubject(ctx, &c.Options, fo, subjects)
+}
+
+// CollectorPredicateType implements the attestation.FetcherByPredicateType interface
+type CollectorPredicateType struct {
+	Options Options
+}
+
+func (c *CollectorPredicateType) Fetch(ctx context.Context, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
+	return fetchGeneral(ctx, &c.Options, opts)
+}
+
+func (c *CollectorPredicateType) FetchByPredicateType(ctx context.Context, fo attestation.FetchOptions, types []attestation.PredicateType) ([]attestation.Envelope, error) {
+	return fetchByPredicateType(ctx, &c.Options, fo, types)
+}
+
+func (c *CollectorPredicateTypeSubject) Fetch(ctx context.Context, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
+	return fetchGeneral(ctx, &c.Options, opts)
 }
