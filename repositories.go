@@ -13,6 +13,7 @@ import (
 
 	"github.com/carabiner-dev/collector/repository/filesystem"
 	"github.com/carabiner-dev/collector/repository/github"
+	"github.com/carabiner-dev/collector/repository/http"
 	"github.com/carabiner-dev/collector/repository/jsonl"
 	"github.com/carabiner-dev/collector/repository/note"
 	"github.com/carabiner-dev/collector/repository/release"
@@ -53,12 +54,15 @@ func UnregisterCollectorType(moniker string) {
 	mtx.Unlock()
 }
 
+// LoadDefaultRepositoryTypes loads the default repository types into the
+// in-memory list to get them ready for instantiation.
 func LoadDefaultRepositoryTypes() error {
 	errs := []error{}
 	for t, factory := range map[string]RepositoryFactory{
 		filesystem.TypeMoniker: filesystem.Build,
 		jsonl.TypeMoniker:      jsonl.Build,
 		github.TypeMoniker:     github.Build,
+		http.TypeMoniker:       http.Build,
 		release.TypeMoniker:    release.Build,
 		note.TypeMoniker:       note.Build,
 	} {
