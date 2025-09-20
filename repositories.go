@@ -16,6 +16,7 @@ import (
 	"github.com/carabiner-dev/collector/repository/http"
 	"github.com/carabiner-dev/collector/repository/jsonl"
 	"github.com/carabiner-dev/collector/repository/note"
+	"github.com/carabiner-dev/collector/repository/ossrebuild"
 	"github.com/carabiner-dev/collector/repository/release"
 )
 
@@ -60,11 +61,12 @@ func LoadDefaultRepositoryTypes() error {
 	errs := []error{}
 	for t, factory := range map[string]RepositoryFactory{
 		filesystem.TypeMoniker: filesystem.Build,
-		jsonl.TypeMoniker:      jsonl.Build,
 		github.TypeMoniker:     github.Build,
 		http.TypeMoniker:       http.Build,
-		release.TypeMoniker:    release.Build,
+		jsonl.TypeMoniker:      jsonl.Build,
 		note.TypeMoniker:       note.Build,
+		ossrebuild.TypeMoniker: ossrebuild.Build,
+		release.TypeMoniker:    release.Build,
 	} {
 		if err := RegisterCollectorType(t, factory); err != nil {
 			if !errors.Is(err, ErrTypeAlreadyRegistered) {
