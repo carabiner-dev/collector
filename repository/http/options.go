@@ -10,7 +10,7 @@ type optFn = func(*Options) error
 // Options captures the URLs and templates for the http collector variants.
 // The options control the collector variant that gets returned by New()
 type Options struct {
-	URL                          string
+	URLs                         []string
 	TemplateSubject              string
 	TemplateSubjectDigest        string
 	TemplateSubjectName          string
@@ -51,13 +51,15 @@ func WithRetries(num uint) optFn {
 }
 
 // WithURL sets the URl to fetch the data
-func WithURL(uriString string) optFn {
+func WithURL(uriStrings ...string) optFn {
 	return func(opts *Options) error {
-		_, err := url.Parse(uriString)
-		if err != nil {
-			return err
+		for _, s := range uriStrings {
+			_, err := url.Parse(s)
+			if err != nil {
+				return err
+			}
 		}
-		opts.URL = uriString
+		opts.URLs = uriStrings
 		return nil
 	}
 }
