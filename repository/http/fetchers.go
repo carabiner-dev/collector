@@ -18,28 +18,35 @@ import (
 
 // fetchGeneral is the URL to retrieve all available attestations
 func fetchGeneral(_ context.Context, opts *Options, _ attestation.FetchOptions) ([]attestation.Envelope, error) {
-	urlString := opts.URL
-	if urlString == "" {
+	if len(opts.URLs) == 0 {
 		return nil, fmt.Errorf("unable to do request, url empty")
 	}
-	a := http.NewAgent().WithRetries(opts.Retries).WithFailOnHTTPError(true)
-	data, err := a.Get(urlString)
-	if err != nil {
-		if strings.Contains(err.Error(), "HTTP error 404") {
-			return []attestation.Envelope{}, nil
-		}
-		return nil, fmt.Errorf("fetching http data: %w", err)
-	}
 
-	// Parse the request output
+	// Create the agent
+	a := http.NewAgent().WithRetries(opts.Retries).WithFailOnHTTPError(true)
+
 	var attestations []attestation.Envelope
-	if opts.ReadJSONL {
-		attestations, err = envelope.NewJSONL().Parse(data)
-	} else {
-		attestations, err = envelope.Parsers.Parse(bytes.NewReader(data))
-	}
-	if err != nil {
-		return nil, fmt.Errorf("parsing attestation data: %w", err)
+	var err error
+	datas, errs := a.GetGroup(opts.URLs)
+	for i := range datas {
+		if errs[i] != nil {
+			if strings.Contains(errs[i].Error(), "HTTP error 404") {
+				return []attestation.Envelope{}, nil
+			}
+			return nil, fmt.Errorf("fetching http data: %w", errs[i])
+		}
+
+		// Parse the request output
+		var atts []attestation.Envelope
+		if opts.ReadJSONL {
+			atts, err = envelope.NewJSONL().Parse(datas[i])
+		} else {
+			atts, err = envelope.Parsers.Parse(bytes.NewReader(datas[i]))
+		}
+		if err != nil {
+			return nil, fmt.Errorf("parsing attestation data: %w", err)
+		}
+		attestations = append(attestations, atts...)
 	}
 	return attestations, err
 }
