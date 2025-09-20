@@ -30,8 +30,9 @@ func fetchGeneral(_ context.Context, opts *Options, _ attestation.FetchOptions) 
 	datas, errs := a.GetGroup(opts.URLs)
 	for i := range datas {
 		if errs[i] != nil {
+			// Don't take 404 as an error
 			if strings.Contains(errs[i].Error(), "HTTP error 404") {
-				return []attestation.Envelope{}, nil
+				continue
 			}
 			return nil, fmt.Errorf("fetching http data: %w", errs[i])
 		}
