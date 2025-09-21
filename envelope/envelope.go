@@ -8,8 +8,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 
 	"github.com/carabiner-dev/attestation"
+	"github.com/carabiner-dev/hasher"
 	"github.com/sirupsen/logrus"
 
 	"github.com/carabiner-dev/collector/envelope/bare"
@@ -32,6 +34,36 @@ type ParserList map[Format]attestation.EnvelopeParser
 var Parsers = ParserList{
 	FormatDSSE:     &dsse.Parser{},
 	FormatBundleV3: &bundle.Parser{},
+}
+
+// ParseFiles takes a list of paths and parses envelopes directly from them
+func (list *ParserList) ParseFiles(paths []string) ([]attestation.Envelope, error) {
+	atts := []attestation.Envelope{}
+	hashset, err := hasher.New().HashFiles(paths)
+	if err != nil {
+		return nil, fmt.Errorf("hashing attestations: %w", err)
+	}
+	for _, path := range paths {
+		f, err := os.Open(path)
+		if err != nil {
+			return nil, fmt.Errorf("opening file: %w", err)
+		}
+		defer f.Close() //nolint:errcheck
+		parsed, err := list.Parse(f)
+		if err != nil {
+			return nil, fmt.Errorf("parsing data: %w", err)
+		}
+
+		for j := range parsed {
+			hset := (*hashset)[path]
+			parsed[j].GetPredicate().SetOrigin(
+				hset.ToResourceDescriptor(),
+			)
+		}
+
+		atts = append(atts, parsed...)
+	}
+	return atts, nil
 }
 
 // Parse takes a reader and parses
