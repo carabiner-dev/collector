@@ -10,7 +10,7 @@ require (
 	github.com/carabiner-dev/jsonl v0.2.1
 	github.com/carabiner-dev/openeox v0.0.0-20250606202227-fd40810cda47
 	github.com/carabiner-dev/osv v0.0.0-20250124012120-b8ce4531cd92
-	github.com/carabiner-dev/policy v0.1.0
+	github.com/carabiner-dev/policy v0.2.0
 	github.com/carabiner-dev/signer v0.2.1
 	github.com/carabiner-dev/vcslocator v0.3.2
 	github.com/go-git/go-billy/v5 v5.6.2
@@ -18,6 +18,7 @@ require (
 	github.com/in-toto/attestation v1.1.2
 	github.com/nozzle/throttler v0.0.0-20180817012639-2ea982251481
 	github.com/openvex/go-vex v0.2.6
+	github.com/package-url/packageurl-go v0.1.3
 	github.com/protobom/protobom v0.5.4
 	github.com/sigstore/protobuf-specs v0.5.0
 	github.com/sigstore/sigstore-go v1.1.2
@@ -125,7 +126,6 @@ require (
 	github.com/olekukonko/tablewriter v1.0.9 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
-	github.com/package-url/packageurl-go v0.1.3 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
 	github.com/pjbgf/sha1cd v0.3.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
