@@ -21,7 +21,7 @@ var (
 	_ attestation.FetcherBySubject = (*Collector)(nil)
 )
 
-var TypeMoniker = "http"
+var TypeMoniker = "ossrebuild"
 
 // Implement the factory function
 var Build = func(uriString string) (attestation.Repository, error) {
