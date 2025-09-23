@@ -8,10 +8,13 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/carabiner-dev/attestation"
 )
+
+var cacheMutex = sync.Mutex{}
 
 type Cache interface {
 	StoreAttestationsByPredicateType(context.Context, []attestation.PredicateType, *[]attestation.Envelope) error
@@ -48,8 +51,10 @@ func buildKey[T ~string](getters []T) string {
 
 func (memcache *MemoryCache) StoreAttestationsByPredicateType(ctx context.Context, pt []attestation.PredicateType, atts *[]attestation.Envelope) error {
 	k := buildKey(pt)
+	cacheMutex.Lock()
 	memcache.predicateType[k] = atts
 	memcache.times[k] = time.Now()
+	cacheMutex.Lock()
 	return nil
 }
 
@@ -80,8 +85,10 @@ func (memcache *MemoryCache) StoreAttestationsBySubject(ctx context.Context, sub
 		keys = append(keys, subjectToKey(subject))
 	}
 	k := buildKey(keys)
+	cacheMutex.Lock()
 	memcache.subject[k] = atts
 	memcache.times[k] = time.Now()
+	cacheMutex.Lock()
 
 	return nil
 }
