@@ -54,7 +54,7 @@ func (memcache *MemoryCache) StoreAttestationsByPredicateType(ctx context.Contex
 	cacheMutex.Lock()
 	memcache.predicateType[k] = atts
 	memcache.times[k] = time.Now()
-	cacheMutex.Lock()
+	cacheMutex.Unlock()
 	return nil
 }
 
@@ -88,7 +88,7 @@ func (memcache *MemoryCache) StoreAttestationsBySubject(ctx context.Context, sub
 	cacheMutex.Lock()
 	memcache.subject[k] = atts
 	memcache.times[k] = time.Now()
-	cacheMutex.Lock()
+	cacheMutex.Unlock()
 
 	return nil
 }
