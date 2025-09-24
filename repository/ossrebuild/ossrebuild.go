@@ -88,7 +88,9 @@ func subjectsToOssRebuildURLS(subjects []attestation.Subject) []string {
 // purl in the subject's URI
 func (c *Collector) FetchBySubject(ctx context.Context, fo attestation.FetchOptions, subjects []attestation.Subject) ([]attestation.Envelope, error) {
 	urls := subjectsToOssRebuildURLS(subjects)
-
+	if len(urls) == 0 {
+		return nil, nil
+	}
 	// Piggy back on the http collector to fetch
 	hcollector, err := http.New(http.WithURL(urls...))
 	if err != nil {
