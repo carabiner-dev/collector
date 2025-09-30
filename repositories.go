@@ -11,6 +11,7 @@ import (
 
 	"github.com/carabiner-dev/attestation"
 
+	"github.com/carabiner-dev/collector/repository/coci"
 	"github.com/carabiner-dev/collector/repository/filesystem"
 	"github.com/carabiner-dev/collector/repository/github"
 	"github.com/carabiner-dev/collector/repository/http"
@@ -60,6 +61,7 @@ func UnregisterCollectorType(moniker string) {
 func LoadDefaultRepositoryTypes() error {
 	errs := []error{}
 	for t, factory := range map[string]RepositoryFactory{
+		coci.TypeMoniker:       coci.Build,
 		filesystem.TypeMoniker: filesystem.Build,
 		github.TypeMoniker:     github.Build,
 		http.TypeMoniker:       http.Build,
