@@ -12,9 +12,11 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/carabiner-dev/attestation"
+	"github.com/carabiner-dev/hasher"
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -297,6 +299,18 @@ func getAttestationBundle(ctx context.Context, imageInfo *ImageInfo, layer *ggcr
 			Content:              dsseEnv,
 		},
 	}
+
+	hset, err := hasher.New().HashReaders([]io.Reader{bytes.NewReader(dsseEnv.DsseEnvelope.GetPayload())})
+	if err != nil {
+		return nil, fmt.Errorf("hashing dsse envelope: %w", err)
+	}
+
+	origin := hset.ToResourceDescriptors()
+	origin[0].Uri = fmt.Sprintf(
+		"oci:%s/%s:%s.att", imageInfo.Registry, imageInfo.Repository,
+		strings.Replace(layer.Digest.String(), "sha256:", "sha256-", 1),
+	)
+	envelope.GetPredicate().SetOrigin(origin[0])
 
 	return envelope, nil
 }
