@@ -12,6 +12,7 @@ import (
 	"github.com/carabiner-dev/signer"
 	"github.com/carabiner-dev/signer/options"
 	sigstore "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
+	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 	"github.com/sigstore/sigstore-go/pkg/fulcio/certificate"
 	"github.com/sirupsen/logrus"
@@ -114,7 +115,17 @@ func (e *Envelope) Verify(_ ...any) error {
 		return fmt.Errorf("no verification material found in bundle")
 	}
 
-	cert := e.Bundle.GetVerificationMaterial().GetCertificate()
+	// Fetch the cert, depending on the verification material, it may
+	// be in the chain or just the certificate.
+	var cert *protocommon.X509Certificate
+	if c := e.Bundle.GetVerificationMaterial().GetCertificate(); c != nil {
+		cert = c
+	}
+
+	if chain := e.Bundle.GetVerificationMaterial().GetX509CertificateChain(); cert == nil && chain != nil && len(chain.GetCertificates()) > 0 {
+		cert = chain.GetCertificates()[0]
+	}
+
 	if cert == nil {
 		return fmt.Errorf("no certificate found in bundle")
 	}
