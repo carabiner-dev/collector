@@ -7,14 +7,28 @@ package http
 
 import (
 	"context"
+	"strings"
 
 	"github.com/carabiner-dev/attestation"
 )
 
-var TypeMoniker = "http"
+var (
+	TypeMoniker      = "http"
+	TypeMonikerHTTPS = "https"
+)
 
 // Implement the factory function
-var Build = func(uriString string) (attestation.Repository, error) {
+var BuildHTTP = func(uriString string) (attestation.Repository, error) {
+	if strings.HasPrefix(uriString, "//") {
+		uriString = "http:" + uriString
+	}
+	return New(WithURL(uriString))
+}
+
+var BuildHTTPs = func(uriString string) (attestation.Repository, error) {
+	if strings.HasPrefix(uriString, "//") {
+		uriString = "https:" + uriString
+	}
 	return New(WithURL(uriString))
 }
 
