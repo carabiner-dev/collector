@@ -1,10 +1,10 @@
 module github.com/carabiner-dev/collector
 
-go 1.24.6
+go 1.24.8
 
 require (
 	github.com/carabiner-dev/attestation v0.2.0
-	github.com/carabiner-dev/ghrfs v0.3.3
+	github.com/carabiner-dev/ghrfs v0.3.4
 	github.com/carabiner-dev/github v0.2.2
 	github.com/carabiner-dev/hasher v0.2.2
 	github.com/carabiner-dev/jsonl v0.2.1
