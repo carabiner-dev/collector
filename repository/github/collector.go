@@ -6,6 +6,7 @@
 package github
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -20,7 +21,18 @@ import (
 	"github.com/carabiner-dev/collector/envelope/bundle"
 )
 
-var TypeMoniker = "github"
+const (
+	// Endpoint to store attestation
+	gitHubAttestationsUploadEndpoint = `repos/%s/%s/attestations`
+	TypeMoniker                      = "github"
+)
+
+// Ensure the collector implements the interfaces
+var (
+	_ attestation.Fetcher          = (*Collector)(nil)
+	_ attestation.FetcherBySubject = (*Collector)(nil)
+	_ attestation.Storer           = (*Collector)(nil)
+)
 
 // Implement the factory function
 var Build = func(istr string) (attestation.Repository, error) {
@@ -159,6 +171,44 @@ func (c *Collector) fetchFromUrl(ctx context.Context, url string) ([]attestation
 	return ret, false, nil
 }
 
-func (c *Collector) FetchByPredicateType(ctx context.Context, opts attestation.FetchOptions, pts []attestation.PredicateType) ([]attestation.Envelope, error) {
-	return nil, attestation.ErrFetcherMethodNotImplemented
+type uploadRequestValueParsed struct {
+	Bundle preParsedBundle `json:"bundle"`
+}
+
+type preParsedBundle []byte
+
+func (ppb preParsedBundle) MarshalJSON() ([]byte, error) {
+	return ppb, nil
+}
+
+// Store implements the attestations.Storer interface
+func (c *Collector) Store(ctx context.Context, _ attestation.StoreOptions, envelopes []attestation.Envelope) error {
+	// Cal the API to upload the bundle
+	for _, env := range envelopes {
+		envelopeData, err := json.Marshal(env)
+		if err != nil {
+			return fmt.Errorf("marshaling envelope data: %w", err)
+		}
+
+		payload := uploadRequestValueParsed{
+			Bundle: preParsedBundle(envelopeData),
+		}
+
+		payloadData, err := json.Marshal(payload)
+		if err != nil {
+			return fmt.Errorf("marshaling payload: %w", err)
+		}
+
+		res, err := c.client.Call(
+			ctx, http.MethodPost,
+			fmt.Sprintf(gitHubAttestationsUploadEndpoint, c.Options.Owner, c.Options.Repo),
+			bytes.NewReader(payloadData),
+		)
+		if err != nil {
+			return fmt.Errorf("uploading attestation bundle: %w", err)
+		}
+		res.Body.Close() //nolint:errcheck,gosec
+	}
+
+	return nil
 }

@@ -297,3 +297,23 @@ func (agent *Agent) FetchAttestationsByPredicateType(ctx context.Context, pt []a
 
 	return ret, nil
 }
+
+// Store stores a list of envelopes in the configured storer repos
+func (agent *Agent) Store(ctx context.Context, envelopes []attestation.Envelope, optFn ...StoreOptionsFunc) error {
+	repos := agent.storerRepos()
+	if len(repos) == 0 {
+		return fmt.Errorf("no storer repositories configured")
+	}
+
+	opts := agent.Options.Store
+	for _, f := range optFn {
+		f(&opts)
+	}
+
+	for _, repo := range repos {
+		if err := repo.Store(ctx, opts, envelopes); err != nil {
+			return fmt.Errorf("storing attestation: %w", err)
+		}
+	}
+	return nil
+}
