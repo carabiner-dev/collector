@@ -158,7 +158,3 @@ func (c *Collector) fetchFromUrl(ctx context.Context, url string) ([]attestation
 	}
 	return ret, false, nil
 }
-
-func (c *Collector) FetchByPredicateType(ctx context.Context, opts attestation.FetchOptions, pts []attestation.PredicateType) ([]attestation.Envelope, error) {
-	return nil, attestation.ErrFetcherMethodNotImplemented
-}
