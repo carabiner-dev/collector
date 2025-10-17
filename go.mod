@@ -11,7 +11,7 @@ require (
 	github.com/carabiner-dev/openeox v0.0.0-20250606202227-fd40810cda47
 	github.com/carabiner-dev/osv v0.0.0-20250124012120-b8ce4531cd92
 	github.com/carabiner-dev/policy v0.3.1
-	github.com/carabiner-dev/signer v0.2.1
+	github.com/carabiner-dev/signer v0.3.1
 	github.com/carabiner-dev/vcslocator v0.3.2
 	github.com/go-git/go-billy/v5 v5.6.2
 	github.com/go-git/go-git/v5 v5.16.3
@@ -190,8 +190,8 @@ require (
 	golang.org/x/net v0.43.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
-	golang.org/x/sys v0.36.0 // indirect
-	golang.org/x/term v0.35.0 // indirect
+	golang.org/x/sys v0.37.0 // indirect
+	golang.org/x/term v0.36.0 // indirect
 	golang.org/x/text v0.29.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
 	google.golang.org/api v0.248.0 // indirect
