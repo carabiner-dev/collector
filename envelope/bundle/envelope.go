@@ -8,8 +8,8 @@ import (
 	"fmt"
 
 	"github.com/carabiner-dev/attestation"
-	papi "github.com/carabiner-dev/policy/api/v1"
 	"github.com/carabiner-dev/signer"
+	sapi "github.com/carabiner-dev/signer/api/v1"
 	"github.com/carabiner-dev/signer/options"
 	sigstore "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
@@ -146,13 +146,13 @@ func (e *Envelope) Verify(_ ...any) error {
 	logrus.Debugf("  Cert Issuer:  %s", summary.CertificateIssuer)
 
 	// Register the verification data
-	e.GetPredicate().SetVerification(&papi.Verification{
-		Signature: &papi.SignatureVerification{
+	e.GetPredicate().SetVerification(&sapi.Verification{
+		Signature: &sapi.SignatureVerification{
 			Date:     timestamppb.Now(),
 			Verified: true,
-			Identities: []*papi.Identity{
+			Identities: []*sapi.Identity{
 				{
-					Sigstore: &papi.IdentitySigstore{
+					Sigstore: &sapi.IdentitySigstore{
 						Issuer:   summary.Issuer,
 						Identity: summary.SubjectAlternativeName,
 					},
