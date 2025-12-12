@@ -9,9 +9,9 @@ import (
 	"slices"
 
 	"github.com/carabiner-dev/attestation"
+	ampel "github.com/carabiner-dev/predicates"
 	"github.com/sirupsen/logrus"
 
-	"github.com/carabiner-dev/collector/predicate/ampel"
 	"github.com/carabiner-dev/collector/predicate/cyclonedx"
 	"github.com/carabiner-dev/collector/predicate/json"
 	"github.com/carabiner-dev/collector/predicate/openeox"
@@ -31,23 +31,26 @@ type ParsersList map[attestation.PredicateType]attestation.PredicateParser
 
 // Parsers
 var Parsers = ParsersList{
-	protobom.PredicateType:       protobom.New(),
-	spdx.PredicateType:           spdx.New(),
-	cyclonedx.PredicateType:      cyclonedx.New(),
-	ampel.PredicateTypeResults:   ampel.New(),
-	ampel.PredicateTypePolicy:    ampel.New(),
-	ampel.PredicateTypePolicySet: ampel.New(),
-	vulns.PredicateType:          vulns.New(),
-	trivy.PredicateType:          trivy.New(),
-	osv.PredicateType:            osv.New(),
-	openvex.PredicateType:        openvex.New(),
-	openvex.PredicateType02:      openvex.New(),
-	openeox.PredicateTypeCore:    openeox.New(),
-	openeox.PredicateTypeShell:   openeox.New(),
-	slsa.PredicateType10:         slsa.NewParserV10(),
-	slsa.PredicateType11:         slsa.NewParserV11(),
-	slsa.PredicateType02:         slsa.NewParserV02(),
-	vsa.PredicateType:            vsa.NewParser(),
+	protobom.PredicateType:         protobom.New(),
+	spdx.PredicateType:             spdx.New(),
+	cyclonedx.PredicateType:        cyclonedx.New(),
+	ampel.PredicateTypePolicy:      ampel.NewParserPolicyPredicate(),
+	ampel.PredicateTypePolicyGroup: ampel.NewParserPolicyGroupPredicate(),
+	ampel.PredicateTypePolicySet:   ampel.NewParserPolicySetPredicate(),
+	ampel.PredicateTypeResult:      ampel.NewParserResultPredicate(),
+	ampel.PredicateTypeResultSet:   ampel.NewParserResultSetPredicate(),
+	ampel.PredicateTypeResultGroup: ampel.NewParserResultGroupPredicate(),
+	vulns.PredicateType:            vulns.New(),
+	trivy.PredicateType:            trivy.New(),
+	osv.PredicateType:              osv.New(),
+	openvex.PredicateType:          openvex.New(),
+	openvex.PredicateType02:        openvex.New(),
+	openeox.PredicateTypeCore:      openeox.New(),
+	openeox.PredicateTypeShell:     openeox.New(),
+	slsa.PredicateType10:           slsa.NewParserV10(),
+	slsa.PredicateType11:           slsa.NewParserV11(),
+	slsa.PredicateType02:           slsa.NewParserV02(),
+	vsa.PredicateType:              vsa.NewParser(),
 }
 
 type ParseOption func(*Options)
@@ -132,14 +135,14 @@ func (pl *ParsersList) Parse(data []byte, optFn ...ParseOption) (attestation.Pre
 
 	// by now we default to JSON unless the options say don't
 	if !opts.DefaultToJSON {
-		return nil, fmt.Errorf("unknown predictate type")
+		return nil, fmt.Errorf("unknown predicate type")
 	}
 
 	// Finally try the vanilla JSON parser
 	p := &json.Parser{}
 	pred, err := p.Parse(data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parsing generic json: %w", err)
 	}
 	logrus.Debug("Predicate parsed as generic JSON type")
 	return pred, nil

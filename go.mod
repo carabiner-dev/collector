@@ -10,7 +10,7 @@ require (
 	github.com/carabiner-dev/jsonl v0.2.1
 	github.com/carabiner-dev/openeox v0.0.0-20250606202227-fd40810cda47
 	github.com/carabiner-dev/osv v0.0.0-20250124012120-b8ce4531cd92
-	github.com/carabiner-dev/policy v0.3.1
+	github.com/carabiner-dev/predicates v0.1.0
 	github.com/carabiner-dev/signer v0.3.4-0.20251212022954-32a3a1d0c994
 	github.com/carabiner-dev/vcslocator v0.3.2
 	github.com/go-git/go-billy/v5 v5.6.2
@@ -26,7 +26,7 @@ require (
 	github.com/sigstore/sigstore-go v1.1.3
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.11.1
-	google.golang.org/protobuf v1.36.10
+	google.golang.org/protobuf v1.36.11
 	sigs.k8s.io/release-utils v0.12.2
 )
 
@@ -60,6 +60,7 @@ require (
 	github.com/aws/smithy-go v1.23.0 // indirect
 	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
+	github.com/carabiner-dev/policy v0.4.1-0.20251211203139-302be2dfaf0d // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cloudflare/circl v1.6.1 // indirect
