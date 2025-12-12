@@ -7,8 +7,8 @@ import (
 	"fmt"
 
 	"github.com/carabiner-dev/attestation"
-	papi "github.com/carabiner-dev/policy/api/v1"
 	"github.com/carabiner-dev/signer"
+	sapi "github.com/carabiner-dev/signer/api/v1"
 	"github.com/carabiner-dev/signer/key"
 	sigstoreProtoDSSE "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -76,7 +76,7 @@ func (env *Envelope) Verify(args ...any) error {
 		}
 	}
 
-	var ids []*papi.Identity
+	var ids []*sapi.Identity
 	verifier := signer.NewVerifier()
 	res, err := verifier.VerifyParsedDSSE(env.Envelope, keys)
 	if err != nil {
@@ -86,8 +86,8 @@ func (env *Envelope) Verify(args ...any) error {
 	// If verification passed, add the key identities
 	if res.Verified {
 		for _, k := range res.Keys {
-			ids = append(ids, &papi.Identity{
-				Key: &papi.IdentityKey{
+			ids = append(ids, &sapi.Identity{
+				Key: &sapi.IdentityKey{
 					Id:   k.ID(), // Not implemented yet
 					Type: string(k.Scheme),
 					Data: k.Data,
@@ -97,8 +97,8 @@ func (env *Envelope) Verify(args ...any) error {
 	}
 
 	// Set the verification in the predicate
-	env.GetPredicate().SetVerification(&papi.Verification{
-		Signature: &papi.SignatureVerification{
+	env.GetPredicate().SetVerification(&sapi.Verification{
+		Signature: &sapi.SignatureVerification{
 			Date:       timestamppb.Now(),
 			Verified:   len(ids) > 0,
 			Identities: ids,
