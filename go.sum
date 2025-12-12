@@ -734,14 +734,10 @@ github.com/carabiner-dev/osv v0.0.0-20250124012120-b8ce4531cd92 h1:BJ9+OCNezZGkU
 github.com/carabiner-dev/osv v0.0.0-20250124012120-b8ce4531cd92/go.mod h1:o7jXwi/fFZ9mQlvVlog0kcvyEkwQT3eWmVQmrorBGpE=
 github.com/carabiner-dev/policy v0.4.1-0.20251211203139-302be2dfaf0d h1:nfzLqV09Ray2NvjUxH//o5NE/jP/AnCKOmj/xEixvZk=
 github.com/carabiner-dev/policy v0.4.1-0.20251211203139-302be2dfaf0d/go.mod h1:ufVsPpVkUZPxsdI8yxokSSd5dqqDhp1nebbVpjLvvqg=
-github.com/carabiner-dev/predicates v0.0.0-20251212201331-040b81e01435 h1:44t55Kxg4ppxVPjSeyVWYfHnQIOkDSgDUl7Y/weIfW0=
-github.com/carabiner-dev/predicates v0.0.0-20251212201331-040b81e01435/go.mod h1:jL6EAD+LiI6GW/rOdRYAJF4HaA88/V2Q4n7yUGNQ7XM=
-github.com/carabiner-dev/predicates v0.0.0-20251212202800-757a5454bf01 h1:Y3c+BCoYgQvO8/kzUHSQrn8CRcIwvPX8rzd2TyjYTl8=
-github.com/carabiner-dev/predicates v0.0.0-20251212202800-757a5454bf01/go.mod h1:jL6EAD+LiI6GW/rOdRYAJF4HaA88/V2Q4n7yUGNQ7XM=
 github.com/carabiner-dev/predicates v0.1.0 h1:t6tQF9gFdr6TIccWtuNk3kFasx8eu88INFVGkCUnjL4=
 github.com/carabiner-dev/predicates v0.1.0/go.mod h1:jL6EAD+LiI6GW/rOdRYAJF4HaA88/V2Q4n7yUGNQ7XM=
-github.com/carabiner-dev/signer v0.3.4-0.20251212022954-32a3a1d0c994 h1:V3q1lZe8jg4f3XsCLZTd9V7oMv4WrTcdRnxse4NqrMQ=
-github.com/carabiner-dev/signer v0.3.4-0.20251212022954-32a3a1d0c994/go.mod h1:ajyQ8HHnPAFn08sx7g4WgaiVxSM/naeaNIVWkuFoUVQ=
+github.com/carabiner-dev/signer v0.3.4 h1:r7F//81Zl6a6fLbre1bLohuEBJDrc6FFuqDwVbfqhUM=
+github.com/carabiner-dev/signer v0.3.4/go.mod h1:ajyQ8HHnPAFn08sx7g4WgaiVxSM/naeaNIVWkuFoUVQ=
 github.com/carabiner-dev/vcslocator v0.3.2 h1:/rfhELG1mvqFq0xi8LQSkfpAVoQDCGlWoL6J5tX9Inw=
 github.com/carabiner-dev/vcslocator v0.3.2/go.mod h1:jvYlXLVyqQqkBuSH/CiE1pbHifoPaAhWtUjLquHaBb0=
 github.com/cenkalti/backoff/v4 v4.3.0 h1:MyRJ/UdXutAwSAT+s3wNd7MfTIcy71VQueUuFK343L8=
