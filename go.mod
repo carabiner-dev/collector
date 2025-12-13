@@ -6,7 +6,7 @@ require (
 	github.com/carabiner-dev/attestation v0.2.0
 	github.com/carabiner-dev/ghrfs v0.3.4
 	github.com/carabiner-dev/github v0.2.2
-	github.com/carabiner-dev/hasher v0.2.2
+	github.com/carabiner-dev/hasher v0.2.3
 	github.com/carabiner-dev/jsonl v0.2.1
 	github.com/carabiner-dev/openeox v0.0.0-20250606202227-fd40810cda47
 	github.com/carabiner-dev/osv v0.0.0-20250124012120-b8ce4531cd92
@@ -189,7 +189,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.38.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
-	golang.org/x/crypto v0.44.0 // indirect
+	golang.org/x/crypto v0.45.0 // indirect
 	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b // indirect
 	golang.org/x/mod v0.30.0 // indirect
 	golang.org/x/net v0.47.0 // indirect
