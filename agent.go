@@ -90,7 +90,7 @@ func (agent *Agent) Fetch(ctx context.Context, optFn ...FetchOptionsFunc) ([]att
 	t := throttler.New((agent.Options.ParallelFetches), len(repos))
 
 	for _, r := range repos {
-		go func() {
+		go func(r attestation.Fetcher) {
 			// Call the repo driver's fetch method
 			atts, err := r.Fetch(ctx, opts)
 			if err != nil {
@@ -102,7 +102,7 @@ func (agent *Agent) Fetch(ctx context.Context, optFn ...FetchOptionsFunc) ([]att
 			ret = append(ret, atts...)
 			mutex.Unlock()
 			t.Done(nil)
-		}()
+		}(r)
 		t.Throttle()
 	}
 
@@ -165,7 +165,7 @@ func (agent *Agent) FetchAttestationsBySubject(ctx context.Context, subjects []a
 		t := throttler.New((agent.Options.ParallelFetches), len(repos))
 
 		for _, r := range repos {
-			go func() {
+			go func(r attestation.Fetcher) {
 				var err error
 				var atts []attestation.Envelope
 				if fr, ok := r.(attestation.FetcherBySubject); ok {
@@ -185,7 +185,7 @@ func (agent *Agent) FetchAttestationsBySubject(ctx context.Context, subjects []a
 				ret = append(ret, atts...)
 				mutex.Unlock()
 				t.Done(nil)
-			}()
+			}(r)
 			t.Throttle()
 		}
 		if err := t.Err(); err != nil {
@@ -251,7 +251,7 @@ func (agent *Agent) FetchAttestationsByPredicateType(ctx context.Context, pt []a
 			PredicateTypes: m,
 		})
 		for _, r := range repos {
-			go func() {
+			go func(r attestation.Fetcher) {
 				var err error
 				var atts []attestation.Envelope
 
@@ -272,7 +272,7 @@ func (agent *Agent) FetchAttestationsByPredicateType(ctx context.Context, pt []a
 				ret = append(ret, atts...)
 				mutex.Unlock()
 				t.Done(nil)
-			}()
+			}(r)
 			t.Throttle()
 		}
 		if err := t.Err(); err != nil {
