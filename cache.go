@@ -59,6 +59,8 @@ func (memcache *MemoryCache) StoreAttestationsByPredicateType(ctx context.Contex
 }
 
 func (memcache *MemoryCache) GetAttestationsByPredicateType(ctx context.Context, pt []attestation.PredicateType) (*[]attestation.Envelope, error) {
+	cacheMutex.Lock()
+	defer cacheMutex.Unlock()
 	if v, ok := memcache.predicateType[buildKey(pt)]; ok {
 		return v, nil
 	}
@@ -99,6 +101,8 @@ func (memcache *MemoryCache) GetAttestationsBySubject(ctx context.Context, subje
 		keys = append(keys, subjectToKey(subject))
 	}
 	k := buildKey(keys)
+	cacheMutex.Lock()
+	defer cacheMutex.Unlock()
 	if v, ok := memcache.subject[k]; ok {
 		return v, nil
 	}
