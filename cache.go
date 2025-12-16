@@ -88,7 +88,12 @@ func (memcache *MemoryCache) StoreAttestationsBySubject(ctx context.Context, sub
 	}
 	k := buildKey(keys)
 	cacheMutex.Lock()
-	memcache.subject[k] = atts
+
+	// Copy the slice poiinter to ensure the source is not modified.
+	storecopy := []attestation.Envelope{}
+	storecopy = append(storecopy, *atts...)
+
+	memcache.subject[k] = &storecopy
 	memcache.times[k] = time.Now()
 	cacheMutex.Unlock()
 
