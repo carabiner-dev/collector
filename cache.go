@@ -59,6 +59,8 @@ func (memcache *MemoryCache) StoreAttestationsByPredicateType(ctx context.Contex
 }
 
 func (memcache *MemoryCache) GetAttestationsByPredicateType(ctx context.Context, pt []attestation.PredicateType) (*[]attestation.Envelope, error) {
+	cacheMutex.Lock()
+	defer cacheMutex.Unlock()
 	if v, ok := memcache.predicateType[buildKey(pt)]; ok {
 		return v, nil
 	}
@@ -86,7 +88,12 @@ func (memcache *MemoryCache) StoreAttestationsBySubject(ctx context.Context, sub
 	}
 	k := buildKey(keys)
 	cacheMutex.Lock()
-	memcache.subject[k] = atts
+
+	// Copy the slice poiinter to ensure the source is not modified.
+	storecopy := []attestation.Envelope{}
+	storecopy = append(storecopy, *atts...)
+
+	memcache.subject[k] = &storecopy
 	memcache.times[k] = time.Now()
 	cacheMutex.Unlock()
 
@@ -99,6 +106,8 @@ func (memcache *MemoryCache) GetAttestationsBySubject(ctx context.Context, subje
 		keys = append(keys, subjectToKey(subject))
 	}
 	k := buildKey(keys)
+	cacheMutex.Lock()
+	defer cacheMutex.Unlock()
 	if v, ok := memcache.subject[k]; ok {
 		return v, nil
 	}

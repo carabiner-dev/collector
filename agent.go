@@ -90,7 +90,7 @@ func (agent *Agent) Fetch(ctx context.Context, optFn ...FetchOptionsFunc) ([]att
 	t := throttler.New((agent.Options.ParallelFetches), len(repos))
 
 	for _, r := range repos {
-		go func() {
+		go func(r attestation.Fetcher) {
 			// Call the repo driver's fetch method
 			atts, err := r.Fetch(ctx, opts)
 			if err != nil {
@@ -102,7 +102,7 @@ func (agent *Agent) Fetch(ctx context.Context, optFn ...FetchOptionsFunc) ([]att
 			ret = append(ret, atts...)
 			mutex.Unlock()
 			t.Done(nil)
-		}()
+		}(r)
 		t.Throttle()
 	}
 
@@ -117,10 +117,15 @@ func (agent *Agent) Fetch(ctx context.Context, optFn ...FetchOptionsFunc) ([]att
 	return ret, t.Err()
 }
 
+// fetchMutex protects the entire fetch operation to prevent concurrent fetches
+// from seeing partial cache results
+var fetchMutex sync.Mutex
+
 // FetchAttestationsBySubject requests all attestations about a list of subjects
 // from the configured repositories. It is understood that the repos will return
 // all attestations available about the specified subjects.
 func (agent *Agent) FetchAttestationsBySubject(ctx context.Context, subjects []attestation.Subject, optFn ...FetchOptionsFunc) ([]attestation.Envelope, error) {
+	// Lock the entire fetch operation to prevent cache races
 	mutex := sync.Mutex{}
 	ret := []attestation.Envelope{}
 
@@ -153,6 +158,8 @@ func (agent *Agent) FetchAttestationsBySubject(ctx context.Context, subjects []a
 
 	// If the cache returned data, skip fetching
 	if len(ret) == 0 {
+		fetchMutex.Lock()
+		defer fetchMutex.Unlock()
 		m := []map[string]string{}
 		for _, s := range subjects {
 			m = append(m, s.GetDigest())
@@ -165,7 +172,7 @@ func (agent *Agent) FetchAttestationsBySubject(ctx context.Context, subjects []a
 		t := throttler.New((agent.Options.ParallelFetches), len(repos))
 
 		for _, r := range repos {
-			go func() {
+			go func(r attestation.Fetcher) {
 				var err error
 				var atts []attestation.Envelope
 				if fr, ok := r.(attestation.FetcherBySubject); ok {
@@ -185,7 +192,7 @@ func (agent *Agent) FetchAttestationsBySubject(ctx context.Context, subjects []a
 				ret = append(ret, atts...)
 				mutex.Unlock()
 				t.Done(nil)
-			}()
+			}(r)
 			t.Throttle()
 		}
 		if err := t.Err(); err != nil {
@@ -251,7 +258,7 @@ func (agent *Agent) FetchAttestationsByPredicateType(ctx context.Context, pt []a
 			PredicateTypes: m,
 		})
 		for _, r := range repos {
-			go func() {
+			go func(r attestation.Fetcher) {
 				var err error
 				var atts []attestation.Envelope
 
@@ -272,7 +279,7 @@ func (agent *Agent) FetchAttestationsByPredicateType(ctx context.Context, pt []a
 				ret = append(ret, atts...)
 				mutex.Unlock()
 				t.Done(nil)
-			}()
+			}(r)
 			t.Throttle()
 		}
 		if err := t.Err(); err != nil {
