@@ -53,6 +53,9 @@ func New(funcs ...optFn) (*Collector, error) {
 
 type Options struct {
 	Locator string
+	// Push determines whether to push notes to remote after storing.
+	// If nil, defaults to true for remote repos, false for local file:// repos.
+	Push *bool
 }
 
 var defaultOptions Options
@@ -62,6 +65,12 @@ type optFn = func(*Options)
 func WithLocator(locator string) optFn {
 	return func(opts *Options) {
 		opts.Locator = locator
+	}
+}
+
+func WithPush(push bool) optFn {
+	return func(opts *Options) {
+		opts.Push = &push
 	}
 }
 
