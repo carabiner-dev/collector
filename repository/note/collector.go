@@ -56,6 +56,9 @@ type Options struct {
 	// Push determines whether to push notes to remote after storing.
 	// If nil, defaults to true for remote repos, false for local file:// repos.
 	Push *bool
+
+	// Username and password to use when git connects via HTTP
+	HttpUsername, HttpPassword string
 }
 
 var defaultOptions Options
@@ -71,6 +74,13 @@ func WithLocator(locator string) optFn {
 func WithPush(push bool) optFn {
 	return func(opts *Options) {
 		opts.Push = &push
+	}
+}
+
+func WithHttpAuth(username, password string) optFn {
+	return func(opts *Options) {
+		opts.HttpUsername = username
+		opts.HttpPassword = password
 	}
 }
 
@@ -163,6 +173,7 @@ func (c *Collector) extractCommitBundle() (io.Reader, error) {
 	// ops. Note that this will always err, so we don't check the error immediately.
 	err = vcslocator.CopyFileGroup(
 		[]string{uriShard, uriFile}, []io.Writer{&bufferShard, &bufferFile},
+		vcslocator.WithHttpAuth(c.Options.HttpUsername, c.Options.HttpPassword),
 	)
 
 	// Depending on wether the notes data was sharded or not, one of the VCS
