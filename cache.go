@@ -82,7 +82,7 @@ func subjectToKey(s attestation.Subject) string {
 }
 
 func (memcache *MemoryCache) StoreAttestationsBySubject(ctx context.Context, subjects []attestation.Subject, atts *[]attestation.Envelope) error {
-	keys := []string{}
+	keys := make([]string, 0, len(subjects))
 	for _, subject := range subjects {
 		keys = append(keys, subjectToKey(subject))
 	}
@@ -90,7 +90,7 @@ func (memcache *MemoryCache) StoreAttestationsBySubject(ctx context.Context, sub
 	cacheMutex.Lock()
 
 	// Copy the slice poiinter to ensure the source is not modified.
-	storecopy := []attestation.Envelope{}
+	storecopy := make([]attestation.Envelope, 0, len(*atts))
 	storecopy = append(storecopy, *atts...)
 
 	memcache.subject[k] = &storecopy
@@ -101,7 +101,7 @@ func (memcache *MemoryCache) StoreAttestationsBySubject(ctx context.Context, sub
 }
 
 func (memcache *MemoryCache) GetAttestationsBySubject(ctx context.Context, subjects []attestation.Subject) (*[]attestation.Envelope, error) {
-	keys := []string{}
+	keys := make([]string, 0, len(subjects))
 	for _, subject := range subjects {
 		keys = append(keys, subjectToKey(subject))
 	}
