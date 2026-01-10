@@ -16,6 +16,7 @@ import (
 	"github.com/carabiner-dev/attestation"
 	git "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/stretchr/testify/require"
 
 	"github.com/carabiner-dev/collector/envelope/dsse"
@@ -43,7 +44,12 @@ func TestStoreWithLocalRepo(t *testing.T) {
 	_, err = wt.Add("test.txt")
 	require.NoError(t, err)
 
-	commitHash, err := wt.Commit("Initial commit", &git.CommitOptions{})
+	commitHash, err := wt.Commit("Initial commit", &git.CommitOptions{
+		Author: &object.Signature{
+			Name:  "Carabiner Test Robot",
+			Email: "bot@carabeenr.com",
+		},
+	})
 	require.NoError(t, err)
 
 	// Create a test attestation
@@ -91,7 +97,12 @@ func TestStoreAppendToExisting(t *testing.T) {
 	_, err = wt.Add("test.txt")
 	require.NoError(t, err)
 
-	commitHash, err := wt.Commit("Initial commit", &git.CommitOptions{})
+	commitHash, err := wt.Commit("Initial commit", &git.CommitOptions{
+		Author: &object.Signature{
+			Name:  "Carabiner Test Robot",
+			Email: "bot@carabeenr.com",
+		},
+	})
 	require.NoError(t, err)
 
 	// Create test attestations
@@ -139,7 +150,12 @@ func TestStoreAndReadWithGitCommand(t *testing.T) {
 	_, err = wt.Add("test.txt")
 	require.NoError(t, err)
 
-	commitHash, err := wt.Commit("Initial commit", &git.CommitOptions{})
+	commitHash, err := wt.Commit("Initial commit", &git.CommitOptions{
+		Author: &object.Signature{
+			Name:  "Carabiner Test Robot",
+			Email: "bot@carabeenr.com",
+		},
+	})
 	require.NoError(t, err)
 
 	// Create a test attestation
