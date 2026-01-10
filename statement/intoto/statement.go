@@ -81,7 +81,7 @@ func (s *Statement) ParsePredicate() error {
 
 // GetSubjects returns the statement's subjects
 func (s *Statement) GetSubjects() []attestation.Subject {
-	ret := []attestation.Subject{}
+	ret := make([]attestation.Subject, 0, len(s.Subject))
 	for i := range s.Subject {
 		ret = append(ret, s.Subject[i])
 	}

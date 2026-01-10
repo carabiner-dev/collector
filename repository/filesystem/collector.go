@@ -135,7 +135,7 @@ func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([
 }
 
 func (c *Collector) FetchBySubject(ctx context.Context, opts attestation.FetchOptions, subj []attestation.Subject) ([]attestation.Envelope, error) {
-	sets := []map[string]string{}
+	sets := make([]map[string]string, 0, len(subj))
 	for _, s := range subj {
 		sets = append(sets, s.GetDigest())
 	}
