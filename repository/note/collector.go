@@ -65,6 +65,10 @@ var defaultOptions Options
 
 type optFn = func(*Options)
 
+func WithInit(init string) optFn {
+	return WithLocator(strings.TrimPrefix(init, TypeMoniker+":"))
+}
+
 func WithLocator(locator string) optFn {
 	return func(opts *Options) {
 		opts.Locator = locator
