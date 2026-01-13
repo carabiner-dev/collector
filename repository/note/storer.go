@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -420,6 +421,11 @@ func (c *Collector) createUpdatedTree(repo *git.Repository, baseTree *object.Tre
 			Hash: blobHash,
 		})
 	}
+
+	// Sort entries by name (required by git)
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].Name < entries[j].Name
+	})
 
 	// Create the root tree
 	tree := &object.Tree{
