@@ -13,6 +13,7 @@ import (
 	"github.com/nozzle/throttler"
 	"github.com/sirupsen/logrus"
 
+	"github.com/carabiner-dev/collector/envelope"
 	"github.com/carabiner-dev/collector/filters"
 )
 
@@ -323,4 +324,14 @@ func (agent *Agent) Store(ctx context.Context, envelopes []attestation.Envelope,
 		}
 	}
 	return nil
+}
+
+// StoreFromFiles calls Store but takes a list of file paths which are parsed before
+// sending them to any configured storage repositories.
+func (agent *Agent) StoreFromFiles(ctx context.Context, paths []string, optFn ...StoreOptionsFunc) error {
+	envs, err := envelope.Parsers.ParseFiles(paths)
+	if err != nil {
+		return err
+	}
+	return agent.Store(ctx, envs, optFn...)
 }
