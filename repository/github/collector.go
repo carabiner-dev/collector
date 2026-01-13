@@ -47,9 +47,21 @@ type Collector struct {
 type Options struct {
 	Owner string
 	Repo  string
+	// Access token (uses GITHUB_TOKEN if unset)
+	Token string
 }
 
 type optFn = func(*Options)
+
+func WithInit(init string) optFn {
+	return WithRepo(strings.TrimPrefix(init, TypeMoniker+":"))
+}
+
+func WithToken(token string) optFn {
+	return func(opts *Options) {
+		opts.Token = token
+	}
+}
 
 func WithOwner(owner string) optFn {
 	return func(opts *Options) {
@@ -81,7 +93,7 @@ func New(funcs ...optFn) (*Collector, error) {
 		fn(&opts)
 	}
 
-	c, err := gh.NewClient()
+	c, err := gh.NewClient(gh.WithToken(opts.Token))
 	if err != nil {
 		return nil, err
 	}
