@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -194,6 +195,68 @@ func TestStoreAndReadWithGitCommand(t *testing.T) {
 	fetched, err := collector.Fetch(context.Background(), attestation.FetchOptions{})
 	require.NoError(t, err)
 	require.Len(t, fetched, 1, "should have one attestation")
+}
+
+// This test specifically checks that tree entries are sorted correctly
+// when storing notes for multiple commits. Without sorting, git would
+// reject the tree with "entries in tree are not sorted" error.
+
+func TestStoreMultipleCommitsUnsorted(t *testing.T) {
+	tmpDir := t.TempDir()
+	repoPath := filepath.Join(tmpDir, "test-repo")
+
+	// Initialize a git repository
+	repo, err := git.PlainInit(repoPath, false)
+	require.NoError(t, err)
+
+	wt, err := repo.Worktree()
+	require.NoError(t, err)
+
+	// Create multiple commits with SHAs that would be unsorted alphabetically
+	// We'll create commits and store notes in an order that ensures unsorted entries
+	commits := make([]plumbing.Hash, 0, 3)
+
+	for i := range 3 {
+		// Create a test file
+		testFile := filepath.Join(repoPath, fmt.Sprintf("test%d.txt", i))
+		err = os.WriteFile(testFile, []byte(fmt.Sprintf("content %d", i)), 0o600)
+		require.NoError(t, err)
+
+		_, err = wt.Add(fmt.Sprintf("test%d.txt", i))
+		require.NoError(t, err)
+
+		commitHash, err := wt.Commit(fmt.Sprintf("Commit %d", i), &git.CommitOptions{
+			Author: &object.Signature{
+				Name:  "Carabiner Test Robot",
+				Email: "bot@carabiner.com",
+			},
+		})
+		require.NoError(t, err)
+		commits = append(commits, commitHash)
+	}
+
+	// Store notes for commits in reverse order to ensure tree entries
+	// would be unsorted if we don't sort them explicitly
+	for i := len(commits) - 1; i >= 0; i-- {
+		locator := "file://" + repoPath + "@" + commits[i].String()
+		collector, err := New(WithLocator(locator), WithPush(false))
+		require.NoError(t, err)
+
+		testAttestation := createTestAttestation(t)
+		err = collector.Store(context.Background(), attestation.StoreOptions{}, []attestation.Envelope{testAttestation})
+		require.NoError(t, err, "storing notes for commit %d should succeed", i)
+	}
+
+	// Verify we can read back all notes
+	for i, commitHash := range commits {
+		locator := "file://" + repoPath + "@" + commitHash.String()
+		collector, err := New(WithLocator(locator), WithPush(false))
+		require.NoError(t, err)
+
+		fetched, err := collector.Fetch(context.Background(), attestation.FetchOptions{})
+		require.NoError(t, err)
+		require.Len(t, fetched, 1, "should have one attestation for commit %d", i)
+	}
 }
 
 // createTestAttestation creates a simple DSSE envelope for testing
