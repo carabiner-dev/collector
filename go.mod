@@ -12,7 +12,7 @@ require (
 	github.com/carabiner-dev/osv v0.0.0-20250124012120-b8ce4531cd92
 	github.com/carabiner-dev/predicates v0.1.0
 	github.com/carabiner-dev/signer v0.3.6
-	github.com/carabiner-dev/vcslocator v0.3.3-0.20260110024210-a5602e9845b5
+	github.com/carabiner-dev/vcslocator v0.4.0
 	github.com/go-git/go-billy/v5 v5.7.0
 	github.com/go-git/go-git/v5 v5.16.5
 	github.com/gogo/protobuf v1.3.2

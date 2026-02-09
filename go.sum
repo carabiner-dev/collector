@@ -104,8 +104,8 @@ github.com/carabiner-dev/predicates v0.1.0 h1:t6tQF9gFdr6TIccWtuNk3kFasx8eu88INF
 github.com/carabiner-dev/predicates v0.1.0/go.mod h1:jL6EAD+LiI6GW/rOdRYAJF4HaA88/V2Q4n7yUGNQ7XM=
 github.com/carabiner-dev/signer v0.3.6 h1:5XaekH256qoUR4k94o1Sqq0O1NU4524lKIKjD5+yjhc=
 github.com/carabiner-dev/signer v0.3.6/go.mod h1:XSCERHZozvq3UJM5VaipFPOqs5G6Kp3U+Mxf5Hx5unQ=
-github.com/carabiner-dev/vcslocator v0.3.3-0.20260110024210-a5602e9845b5 h1:+p6WdncLRAgDGpGy5VWmcy49MTRMCrGsCAZxIth4UmA=
-github.com/carabiner-dev/vcslocator v0.3.3-0.20260110024210-a5602e9845b5/go.mod h1:B3JFnwypdrRVQPJKNK3BOlRw6DbgmsiHGmoT3ZELpp8=
+github.com/carabiner-dev/vcslocator v0.4.0 h1:HxU8F7FWJatnIhR6NowsPpfki8xw2uNDRLuikcBHFao=
+github.com/carabiner-dev/vcslocator v0.4.0/go.mod h1:B3JFnwypdrRVQPJKNK3BOlRw6DbgmsiHGmoT3ZELpp8=
 github.com/cenkalti/backoff/v4 v4.3.0 h1:MyRJ/UdXutAwSAT+s3wNd7MfTIcy71VQueUuFK343L8=
 github.com/cenkalti/backoff/v4 v4.3.0/go.mod h1:Y3VNntkOUPxTVeUxJ/G5vcM//AlwfmyYozVcomhLiZE=
 github.com/cenkalti/backoff/v5 v5.0.3 h1:ZN+IMa753KfX5hd8vVaMixjnqRZ3y8CuJKRKj1xcsSM=
