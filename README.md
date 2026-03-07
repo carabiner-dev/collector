@@ -4,6 +4,12 @@ This repository contains the carabiner attestation collector and various
 parsers for envelopes, statment types (well, only in-toto is upported ATM!)
 and predicates.
 
+For more detailed documentation see the [`docs/`](docs/) directory:
+
+- [**collectors.md**](docs/collectors.md) — overview of each built-in repository collector
+- [**limits.md**](docs/limits.md) — how read size and attestation count limits work
+- [**api.md**](docs/api.md) — how to write your own repository collector
+
 The two main consumers of this repository are 
 [🔴🟡🟢 AMPEL](https://github.com/carabiner-dev/ampel)
 and [🥨 bnd](https://github.com/carabiner-dev/bnd) but any project that
@@ -41,7 +47,8 @@ The following table lists all repository drivers currently implemented in the pr
 | **Release** | `release` | Reads attestations from GitHub release assets | `release:owner/repo@v1.0.0` | ✓ | ✗ |
 
 All of these drivers can be used with tools that use Carabiner's collector such
-as AMPEL or bnd.
+as AMPEL or bnd. For more details on each driver see
+[collectors.md](docs/collectors.md).
 
 ## Concepts
 
@@ -99,10 +106,20 @@ This means an agent loads a configured collector driver to communicate with an
 instance of a repository type. For example, to read data from two jsonl files,
 the agent loads two collectors for each driver.
 
-Collectors can expose more advanced capabilities of a backend, for example if a 
+Collectors can expose more advanced capabilities of a backend, for example if a
 collector implementes the `attestation.FetcherByPredicateType` interface, the agent
 will use it to fetch by predicate type instead of pulling data and then filtering
 it in memory.
+
+To learn how to write your own collector, see [api.md](docs/api.md).
+
+### Resource Limits
+
+The collector agent enforces read size limits and attestation count limits to
+prevent resource exhaustion. By default, no single source can deliver more than
+7 MiB of data, and callers can cap the number of returned attestations per fetch.
+Both limits are propagated from the agent to every repository collector through
+`FetchOptions`. For full details, see [limits.md](docs/limits.md).
 
 ## Attestation Queries
 
