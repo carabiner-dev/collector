@@ -82,6 +82,7 @@ func (agent *Agent) Fetch(ctx context.Context, optFn ...FetchOptionsFunc) ([]att
 	}
 
 	opts := agent.Options.Fetch
+	opts.MaxReadSize = agent.Options.MaxReadSize
 	if len(optFn) > 0 {
 		for _, o := range optFn {
 			o(&opts)
@@ -141,6 +142,7 @@ func (agent *Agent) FetchAttestationsBySubject(ctx context.Context, subjects []a
 	}
 
 	opts := agent.Options.Fetch
+	opts.MaxReadSize = agent.Options.MaxReadSize
 	for _, f := range optFn {
 		f(&opts)
 	}
@@ -232,6 +234,7 @@ func (agent *Agent) FetchAttestationsByPredicateType(ctx context.Context, pt []a
 	}
 
 	opts := agent.Options.Fetch
+	opts.MaxReadSize = agent.Options.MaxReadSize
 	for _, f := range optFn {
 		f(&opts)
 	}

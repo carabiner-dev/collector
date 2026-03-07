@@ -18,6 +18,7 @@ import (
 
 	"github.com/carabiner-dev/collector/envelope"
 	"github.com/carabiner-dev/collector/filters"
+	"github.com/carabiner-dev/collector/internal/readlimit"
 )
 
 var TypeMoniker = "jsonl"
@@ -50,13 +51,13 @@ type Collector struct {
 }
 
 // readAttestations
-func (c *Collector) readAttestations(paths []string, filterset *attestation.FilterSet) ([]attestation.Envelope, error) {
+func (c *Collector) readAttestations(opts *attestation.FetchOptions, paths []string, filterset *attestation.FilterSet) ([]attestation.Envelope, error) {
 	t := throttler.New(c.Options.MaxParallel, len(paths))
 	ret := []attestation.Envelope{}
 	mtx := sync.Mutex{}
 	for _, path := range paths {
 		go func() {
-			moreAtts, err := parseJsonlFile(path, filterset)
+			moreAtts, err := parseJsonlFile(opts, path, filterset)
 			if err != nil {
 				t.Done(err)
 				return
@@ -76,7 +77,7 @@ func (c *Collector) readAttestations(paths []string, filterset *attestation.Filt
 
 // parseJsonlFile uses the carabiner jsonl module to parse a jsonl bundle and
 // get all the attestations in it.
-func parseJsonlFile(path string, filterset *attestation.FilterSet) ([]attestation.Envelope, error) {
+func parseJsonlFile(opts *attestation.FetchOptions, path string, filterset *attestation.FilterSet) ([]attestation.Envelope, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("opening %q: %w", path, err)
@@ -86,7 +87,7 @@ func parseJsonlFile(path string, filterset *attestation.FilterSet) ([]attestatio
 	}
 	ret := []attestation.Envelope{}
 
-	for i, r := range cjsonl.IterateBundle(f) {
+	for i, r := range cjsonl.IterateBundle(readlimit.Reader(f, opts.MaxReadSize)) {
 		if r == nil {
 			continue
 		}
@@ -115,6 +116,10 @@ func parseJsonlFile(path string, filterset *attestation.FilterSet) ([]attestatio
 			envelopes[0].GetStatement().GetPredicate().SetOrigin(rd)
 		}
 		ret = append(ret, filterset.FilterList(envelopes)...)
+
+		if opts.Limit > 0 && len(ret) >= opts.Limit {
+			return ret[:opts.Limit], nil
+		}
 	}
 
 	return ret, nil
@@ -122,7 +127,7 @@ func parseJsonlFile(path string, filterset *attestation.FilterSet) ([]attestatio
 
 // Fetch queries the repository and retrieves any attestations matching the query
 func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
-	return c.readAttestations(c.Options.Paths, &attestation.FilterSet{})
+	return c.readAttestations(&opts, c.Options.Paths, &attestation.FilterSet{})
 }
 
 // FetchBySubject calls the attestation reader with a filter preconfigured
@@ -136,7 +141,7 @@ func (c *Collector) FetchBySubject(ctx context.Context, opts attestation.FetchOp
 		matcher.HashSets = append(matcher.HashSets, s.GetDigest())
 	}
 
-	atts, err := c.readAttestations(c.Options.Paths, &attestation.FilterSet{matcher})
+	atts, err := c.readAttestations(&opts, c.Options.Paths, &attestation.FilterSet{matcher})
 	if err != nil {
 		return nil, fmt.Errorf("reading attestation: %w", err)
 	}

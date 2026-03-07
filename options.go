@@ -5,12 +5,17 @@ package collector
 
 import "github.com/carabiner-dev/attestation"
 
+// DefaultMaxReadSize is the default maximum number of bytes the collector will
+// read from any single external source (7 MiB).
+const DefaultMaxReadSize int64 = 7 << 20
+
 var defaultOptions = Options{
 	UserAgentString:  "carabiner-collector/v1",
 	FailIfNoFetchers: false,
 	UseCache:         true,
 	ParallelFetches:  4,
 	ParallelStores:   4,
+	MaxReadSize:      DefaultMaxReadSize,
 	Fetch:            attestation.FetchOptions{},
 	Store:            attestation.StoreOptions{},
 }
@@ -27,8 +32,14 @@ type Options struct {
 
 	ParallelFetches int
 	ParallelStores  int
-	Fetch           attestation.FetchOptions
-	Store           attestation.StoreOptions
+
+	// MaxReadSize is the maximum number of bytes the collector will read from
+	// any single external source (HTTP response, file, OCI blob, etc.).
+	// A value of 0 means no limit. Defaults to DefaultMaxReadSize (7 MiB).
+	MaxReadSize int64
+
+	Fetch attestation.FetchOptions
+	Store attestation.StoreOptions
 }
 
 type InitFunction func(*Agent) error
@@ -49,6 +60,15 @@ func WithParallelFetches(threads int) InitFunction {
 func WithParallelStores(threads int) InitFunction {
 	return func(agent *Agent) error {
 		agent.Options.ParallelStores = threads
+		return nil
+	}
+}
+
+// WithMaxReadSize sets the maximum number of bytes the collector will read from
+// any single external source. A value of 0 means no limit.
+func WithMaxReadSize(n int64) InitFunction {
+	return func(agent *Agent) error {
+		agent.Options.MaxReadSize = n
 		return nil
 	}
 }

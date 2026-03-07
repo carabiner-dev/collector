@@ -20,6 +20,7 @@ import (
 
 	"github.com/carabiner-dev/collector/envelope"
 	"github.com/carabiner-dev/collector/filters"
+	"github.com/carabiner-dev/collector/internal/readlimit"
 )
 
 var TypeMoniker = "note"
@@ -101,7 +102,7 @@ func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([
 		return nil, err
 	}
 
-	for i, r := range jsonl.IterateBundle(reader) {
+	for i, r := range jsonl.IterateBundle(readlimit.Reader(reader, opts.MaxReadSize)) {
 		if r == nil {
 			continue
 		}
@@ -131,6 +132,10 @@ func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([
 		}
 
 		ret = append(ret, envelopes...)
+
+		if opts.Limit > 0 && len(ret) >= opts.Limit {
+			return ret[:opts.Limit], nil
+		}
 	}
 
 	return ret, nil

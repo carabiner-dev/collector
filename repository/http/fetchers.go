@@ -14,13 +14,16 @@ import (
 	"sigs.k8s.io/release-utils/http"
 
 	"github.com/carabiner-dev/collector/envelope"
+	"github.com/carabiner-dev/collector/internal/readlimit"
 )
 
 // fetchGeneral is the URL to retrieve all available attestations
-func fetchGeneral(_ context.Context, opts *Options, _ attestation.FetchOptions) ([]attestation.Envelope, error) {
+func fetchGeneral(_ context.Context, opts *Options, fo attestation.FetchOptions) ([]attestation.Envelope, error) {
 	if len(opts.URLs) == 0 {
 		return nil, fmt.Errorf("unable to do request, url empty")
 	}
+
+	maxSize := readlimit.Resolve(fo.MaxReadSize)
 
 	// Create the agent
 	a := http.NewAgent().WithRetries(opts.Retries).WithFailOnHTTPError(true)
@@ -37,6 +40,10 @@ func fetchGeneral(_ context.Context, opts *Options, _ attestation.FetchOptions) 
 			return nil, fmt.Errorf("fetching http data: %w", errs[i])
 		}
 
+		if int64(len(datas[i])) > maxSize {
+			return nil, fmt.Errorf("response from %s exceeds max read size (%d bytes)", opts.URLs[i], maxSize)
+		}
+
 		// Parse the request output
 		var atts []attestation.Envelope
 		if opts.ReadJSONL {
@@ -48,6 +55,10 @@ func fetchGeneral(_ context.Context, opts *Options, _ attestation.FetchOptions) 
 			return nil, fmt.Errorf("parsing attestation data: %w", err)
 		}
 		attestations = append(attestations, atts...)
+
+		if fo.Limit > 0 && len(attestations) >= fo.Limit {
+			return attestations[:fo.Limit], nil
+		}
 	}
 	return attestations, err
 }
@@ -55,7 +66,7 @@ func fetchGeneral(_ context.Context, opts *Options, _ attestation.FetchOptions) 
 // fetchBySubject fetches the subject from the subject URL. If the collector
 // has specialized URL templates defined for name, digest or uri, then
 // those will be used to fetch data.
-func fetchBySubject(_ context.Context, opts *Options, _ attestation.FetchOptions, subjects []attestation.Subject) ([]attestation.Envelope, error) {
+func fetchBySubject(_ context.Context, opts *Options, fo attestation.FetchOptions, subjects []attestation.Subject) ([]attestation.Envelope, error) {
 	var subjectNameTemplate, subjectDigestTemplate, subjectUriTemplate *template.Template
 	var err error
 
@@ -127,6 +138,7 @@ func fetchBySubject(_ context.Context, opts *Options, _ attestation.FetchOptions
 		}
 	}
 
+	maxSize := readlimit.Resolve(fo.MaxReadSize)
 	attestations := []attestation.Envelope{}
 	datas, errs := http.NewAgent().WithRetries(opts.Retries).WithFailOnHTTPError(true).GetGroup(urls)
 	for i, data := range datas {
@@ -135,6 +147,10 @@ func fetchBySubject(_ context.Context, opts *Options, _ attestation.FetchOptions
 				continue
 			}
 			return nil, fmt.Errorf("error requesting data: %w", errs[i])
+		}
+
+		if int64(len(data)) > maxSize {
+			return nil, fmt.Errorf("response exceeds max read size (%d bytes)", maxSize)
 		}
 
 		var atts []attestation.Envelope
@@ -147,12 +163,15 @@ func fetchBySubject(_ context.Context, opts *Options, _ attestation.FetchOptions
 			return nil, fmt.Errorf("parsing attestation data: %w", err)
 		}
 		attestations = append(attestations, atts...)
+
+		if fo.Limit > 0 && len(attestations) >= fo.Limit {
+			return attestations[:fo.Limit], nil
+		}
 	}
-	// TODO(puerco): Trim attestations to max
 	return attestations, nil
 }
 
-func fetchByPredicateType(_ context.Context, opts *Options, _ attestation.FetchOptions, types []attestation.PredicateType) ([]attestation.Envelope, error) {
+func fetchByPredicateType(_ context.Context, opts *Options, fo attestation.FetchOptions, types []attestation.PredicateType) ([]attestation.Envelope, error) {
 	tmpl, err := template.New("urltemplate").Parse(opts.TemplatePredicateType)
 	if err != nil {
 		return nil, fmt.Errorf("parsing predicate URL template: %w", err)
@@ -165,6 +184,7 @@ func fetchByPredicateType(_ context.Context, opts *Options, _ attestation.FetchO
 		}
 		urls = append(urls, b.String())
 	}
+	maxSize := readlimit.Resolve(fo.MaxReadSize)
 	attestations := []attestation.Envelope{}
 	datas, errs := http.NewAgent().WithRetries(opts.Retries).WithFailOnHTTPError(true).GetGroup(urls)
 	for i, data := range datas {
@@ -173,6 +193,10 @@ func fetchByPredicateType(_ context.Context, opts *Options, _ attestation.FetchO
 				continue
 			}
 			return nil, fmt.Errorf("error requesting data: %w", err)
+		}
+
+		if int64(len(data)) > maxSize {
+			return nil, fmt.Errorf("response exceeds max read size (%d bytes)", maxSize)
 		}
 
 		var atts []attestation.Envelope
@@ -185,7 +209,10 @@ func fetchByPredicateType(_ context.Context, opts *Options, _ attestation.FetchO
 			return nil, fmt.Errorf("parsing attestation data: %w", err)
 		}
 		attestations = append(attestations, atts...)
+
+		if fo.Limit > 0 && len(attestations) >= fo.Limit {
+			return attestations[:fo.Limit], nil
+		}
 	}
-	// TODO(puerco): Trim attestations to max
 	return attestations, nil
 }
