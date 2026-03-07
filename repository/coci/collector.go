@@ -28,6 +28,7 @@ import (
 	sbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 
 	"github.com/carabiner-dev/collector/envelope/bundle"
+	"github.com/carabiner-dev/collector/internal/readlimit"
 )
 
 var TypeMoniker = "coci"
@@ -161,18 +162,22 @@ func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([
 			continue
 		}
 
-		envelope, err := getAttestationBundle(ctx, imageInfo, &manifest.Layers[i])
+		envelope, err := getAttestationBundle(ctx, &opts, imageInfo, &manifest.Layers[i])
 		if err != nil {
 			return nil, fmt.Errorf("generating bundle from layer %d: %w", i, err)
 		}
 
 		atts = append(atts, envelope)
+
+		if opts.Limit > 0 && len(atts) >= opts.Limit {
+			break
+		}
 	}
 	return atts, nil
 }
 
 // dsseEnvelopeFromOCILayer this reads the DSSE envelope containing the attestation
-func dsseEnvelopeFromOCILayer(ctx context.Context, imageInfo *ImageInfo, l *ggcr.Descriptor) (*protobundle.Bundle_DsseEnvelope, error) {
+func dsseEnvelopeFromOCILayer(ctx context.Context, opts *attestation.FetchOptions, imageInfo *ImageInfo, l *ggcr.Descriptor) (*protobundle.Bundle_DsseEnvelope, error) {
 	// Build the attestation blob reference
 	attRef := imageInfo.Registry + "/" + imageInfo.Repository + "@" + l.Digest.String()
 	layer, err := crane.PullLayer(attRef, crane.WithContext(ctx))
@@ -191,7 +196,7 @@ func dsseEnvelopeFromOCILayer(ctx context.Context, imageInfo *ImageInfo, l *ggcr
 
 	// Unmarshal the data
 	dsseEnv := &protodsse.Envelope{}
-	if err := unmarshaler.Unmarshal(blob, dsseEnv); err != nil {
+	if err := unmarshaler.Unmarshal(readlimit.Reader(blob, opts.MaxReadSize), dsseEnv); err != nil {
 		return nil, fmt.Errorf("unmarshaling dsse envelope: %w", err)
 	}
 
@@ -276,8 +281,8 @@ func getVerificationMaterialTimestampEntries(manifestLayer *ggcr.Descriptor) (*p
 
 // getAttestationBundle reads the signes contents from a layer and returns a synthesized bundle
 // to use in ouor standard verification process
-func getAttestationBundle(ctx context.Context, imageInfo *ImageInfo, layer *ggcr.Descriptor) (*bundle.Envelope, error) {
-	dsseEnv, err := dsseEnvelopeFromOCILayer(ctx, imageInfo, layer)
+func getAttestationBundle(ctx context.Context, opts *attestation.FetchOptions, imageInfo *ImageInfo, layer *ggcr.Descriptor) (*bundle.Envelope, error) {
+	dsseEnv, err := dsseEnvelopeFromOCILayer(ctx, opts, imageInfo, layer)
 	if err != nil {
 		return nil, fmt.Errorf("error getting dsse envelope from layer: %w", err)
 	}

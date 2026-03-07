@@ -19,6 +19,7 @@ import (
 	ita "github.com/in-toto/attestation/go/v1"
 
 	"github.com/carabiner-dev/collector/envelope/bundle"
+	"github.com/carabiner-dev/collector/internal/readlimit"
 )
 
 const (
@@ -135,19 +136,22 @@ func (c *Collector) FetchBySubject(ctx context.Context, opts attestation.FetchOp
 		}
 	}
 	ret := []attestation.Envelope{}
-	// Get all the attestations up to Options.
+	// Get all the attestations up to the configured limit
 	for digest := range subjects {
 		url := fmt.Sprintf("users/%s/attestations/%s", c.Options.Owner, digest)
 		if c.Options.Repo != "" {
 			url = fmt.Sprintf("/repos/%s/%s/attestations/%s", c.Options.Owner, c.Options.Repo, digest)
 		}
 
-		envs, _, err := c.fetchFromUrl(ctx, url)
-		// TODO(puerco): Keep fetching until limit
+		envs, _, err := c.fetchFromUrl(ctx, url, opts.MaxReadSize)
 		if err != nil {
 			return nil, fmt.Errorf("fetching attestations: %w", err)
 		}
 		ret = append(ret, envs...)
+
+		if opts.Limit > 0 && len(ret) >= opts.Limit {
+			return ret[:opts.Limit], nil
+		}
 	}
 	return ret, nil
 }
@@ -156,7 +160,7 @@ func (c *Collector) FetchBySubject(ctx context.Context, opts attestation.FetchOp
 // this will return true in the boolean if more requests are needed.
 //
 //nolint:unparam
-func (c *Collector) fetchFromUrl(ctx context.Context, url string) ([]attestation.Envelope, bool, error) {
+func (c *Collector) fetchFromUrl(ctx context.Context, url string, maxReadSize int64) ([]attestation.Envelope, bool, error) {
 	ret := []attestation.Envelope{}
 
 	// Call the API:
@@ -172,7 +176,7 @@ func (c *Collector) fetchFromUrl(ctx context.Context, url string) ([]attestation
 	defer resp.Body.Close() //nolint:errcheck
 	res := &attResponse{}
 
-	dec := json.NewDecoder(resp.Body)
+	dec := json.NewDecoder(readlimit.Reader(resp.Body, maxReadSize))
 	if err := dec.Decode(res); err != nil {
 		return nil, false, fmt.Errorf("parsing response: %w", err)
 	}

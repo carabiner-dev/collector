@@ -19,6 +19,7 @@ import (
 
 	"github.com/carabiner-dev/collector/envelope"
 	"github.com/carabiner-dev/collector/filters"
+	"github.com/carabiner-dev/collector/internal/readlimit"
 )
 
 var TypeMoniker = "fs"
@@ -103,6 +104,16 @@ func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([
 			}
 		}
 
+		// Check file size before reading
+		maxSize := readlimit.Resolve(opts.MaxReadSize)
+		info, err := d.Info()
+		if err != nil {
+			return fmt.Errorf("getting file info for %s: %w", path, err)
+		}
+		if info.Size() > maxSize {
+			return fmt.Errorf("file %s (%d bytes) exceeds max read size (%d bytes)", path, info.Size(), maxSize)
+		}
+
 		// Read the file data from the filesystem
 		bs, err := fs.ReadFile(c.FS, path)
 		if err != nil {
@@ -127,12 +138,21 @@ func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([
 		}
 		ret = append(ret, attestations...)
 
+		if opts.Limit > 0 && len(ret) >= opts.Limit {
+			ret = ret[:opts.Limit]
+			return errLimitReached
+		}
+
 		return nil
-	}); err != nil {
+	}); err != nil && !errors.Is(err, errLimitReached) {
 		return nil, fmt.Errorf("scanning filesystem at %s: %w", c.Path, err)
 	}
 	return ret, nil
 }
+
+// errLimitReached is a sentinel error used to break out of fs.WalkDir
+// when the attestation limit has been reached.
+var errLimitReached = errors.New("limit reached")
 
 func (c *Collector) FetchBySubject(ctx context.Context, opts attestation.FetchOptions, subj []attestation.Subject) ([]attestation.Envelope, error) {
 	sets := make([]map[string]string, 0, len(subj))

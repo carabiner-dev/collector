@@ -6,6 +6,7 @@ package jsonl
 import (
 	"testing"
 
+	"github.com/carabiner-dev/attestation"
 	"github.com/stretchr/testify/require"
 )
 
@@ -23,7 +24,7 @@ func TestParseJsonlFile(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			atts, err := parseJsonlFile(tc.srcData, nil)
+			atts, err := parseJsonlFile(&attestation.FetchOptions{}, tc.srcData, nil)
 			if tc.mustErr {
 				require.Error(t, err)
 				return
@@ -55,7 +56,7 @@ func TestReadAttestations(t *testing.T) {
 					Paths:       []string{},
 				},
 			}
-			atts, err := c.readAttestations(tc.files, nil)
+			atts, err := c.readAttestations(&attestation.FetchOptions{}, tc.files, nil)
 			if tc.mustErr {
 				require.Error(t, err)
 				return
