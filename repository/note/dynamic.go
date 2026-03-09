@@ -86,7 +86,10 @@ func (c *Dynamic) FetchBySubject(ctx context.Context, opts attestation.FetchOpti
 	}
 
 	for commit := range commits {
-		notesCollector, err := New(WithLocator(fmt.Sprintf("%s@%s", c.Options.DynamicRepoURL, commit)))
+		notesCollector, err := New(
+			WithLocator(fmt.Sprintf("%s@%s", c.Options.DynamicRepoURL, commit)),
+			WithHttpAuth(c.Options.HttpUsername, c.Options.HttpPassword),
+		)
 		if err != nil {
 			return nil, fmt.Errorf("building collector for commit %s: %w", commit, err)
 		}
