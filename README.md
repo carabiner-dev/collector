@@ -43,6 +43,7 @@ The following table lists all repository drivers currently implemented in the pr
 | **HTTP/HTTPS** | `http`, `https` | Fetches attestations from HTTP(S) endpoints serving JSONL or bundle formats | `https://example.com/attestations.jsonl` | ✓ | ✗ |
 | **JSONL** | `jsonl` | Reads attestations from JSON Lines (JSONL) formatted files | `jsonl:/path/to/file.jsonl` | ✓ | ✗ |
 | **Git Notes** | `note` | Reads and writes attestations stored as git notes on repository commits | `note:git+https://github.com/owner/repo@abc123` or `note:file:///path/to/repo` | ✓ | ✓ |
+| **Dynamic Git Notes** | `dnote` | Dynamically reads attestations from git notes for any commit without preconfiguration | `dnote:https://github.com/owner/repo` | ✓ | ✗ |
 | **OSS Rebuild** | `ossrebuild` | Fetches rebuild attestations from the OSS Rebuild project storage | `ossrebuild:` | ✓ | ✗ |
 | **Release** | `release` | Reads attestations from GitHub release assets | `release:owner/repo@v1.0.0` | ✓ | ✗ |
 
