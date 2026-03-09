@@ -48,6 +48,15 @@ and extracts JSONL-formatted attestation bundles from the note associated
 with a specific commit SHA. Also supports storing attestations by pushing
 notes back to the remote.
 
+## dnote (Dynamic Git Notes)
+
+A dynamic variant of the **note** collector. Instead of being preconfigured to
+read from a specific commit, the dynamic notes collector creates a fixed notes
+collector on the fly for each subject it encounters. When `FetchBySubject` is
+called, it inspects the subjects for SHA-1 or `gitCommit` digests and
+automatically constructs a notes collector targeting each commit. This makes it
+suitable for scenarios where the set of commits is not known in advance.
+
 ## coci (Container OCI)
 
 Fetches attestations attached to OCI container images. Reads the `.att`

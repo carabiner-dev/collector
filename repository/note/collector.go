@@ -60,6 +60,9 @@ type Options struct {
 
 	// Username and password to use when git connects via HTTP
 	HttpUsername, HttpPassword string
+
+	// DynamicRepoURL holds the repostory URL for the dynamic notes collector
+	DynamicRepoURL string
 }
 
 var defaultOptions Options
@@ -68,6 +71,12 @@ type optFn = func(*Options)
 
 func WithInit(init string) optFn {
 	return WithLocator(strings.TrimPrefix(init, TypeMoniker+":"))
+}
+
+func DynamicRepoURL(url string) optFn {
+	return func(opts *Options) {
+		opts.DynamicRepoURL = url
+	}
 }
 
 func WithLocator(locator string) optFn {
