@@ -61,15 +61,16 @@ func UnregisterCollectorType(moniker string) {
 func LoadDefaultRepositoryTypes() error {
 	errs := []error{}
 	for t, factory := range map[string]RepositoryFactory{
-		coci.TypeMoniker:       coci.Build,
-		filesystem.TypeMoniker: filesystem.Build,
-		github.TypeMoniker:     github.Build,
-		http.TypeMoniker:       http.BuildHTTP,
-		http.TypeMonikerHTTPS:  http.BuildHTTPs,
-		jsonl.TypeMoniker:      jsonl.Build,
-		note.TypeMoniker:       note.Build,
-		ossrebuild.TypeMoniker: ossrebuild.Build,
-		release.TypeMoniker:    release.Build,
+		coci.TypeMoniker:        coci.Build,
+		filesystem.TypeMoniker:  filesystem.Build,
+		github.TypeMoniker:      github.Build,
+		http.TypeMoniker:        http.BuildHTTP,
+		http.TypeMonikerHTTPS:   http.BuildHTTPs,
+		jsonl.TypeMoniker:       jsonl.Build,
+		note.TypeMoniker:        note.Build,
+		note.TypeMonikerDynamic: note.BuildDynamic,
+		ossrebuild.TypeMoniker:  ossrebuild.Build,
+		release.TypeMoniker:     release.Build,
 	} {
 		if err := RegisterCollectorType(t, factory); err != nil {
 			if !errors.Is(err, ErrTypeAlreadyRegistered) {
