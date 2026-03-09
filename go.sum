@@ -246,8 +246,8 @@ github.com/google/go-cmp v0.5.9/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeN
 github.com/google/go-cmp v0.6.0/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
 github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=
 github.com/google/go-cmp v0.7.0/go.mod h1:pXiqmnSA92OHEEa9HXL2W4E7lf9JzCmGVUdgjX3N/iU=
-github.com/google/go-containerregistry v0.21.1 h1:sOt/o9BS2b87FnR7wxXPvRKU1XVJn2QCwOS5g8zQXlc=
-github.com/google/go-containerregistry v0.21.1/go.mod h1:ctO5aCaewH4AK1AumSF5DPW+0+R+d2FmylMJdp5G7p0=
+github.com/google/go-containerregistry v0.21.2 h1:vYaMU4nU55JJGFC9JR/s8NZcTjbE9DBBbvusTW9NeS0=
+github.com/google/go-containerregistry v0.21.2/go.mod h1:ctO5aCaewH4AK1AumSF5DPW+0+R+d2FmylMJdp5G7p0=
 github.com/google/gofuzz v1.2.0 h1:xRy4A+RhZaiKjJ1bPfwQ8sedCA+YS2YcCHW6ec7JMi0=
 github.com/google/gofuzz v1.2.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/M65Eg=
 github.com/google/s2a-go v0.1.9 h1:LGD7gtMgezd8a/Xak7mEWL0PjoTQFvpRudN895yqKW0=
@@ -363,8 +363,8 @@ github.com/opencontainers/image-spec v1.1.1 h1:y0fUlFfIZhPF1W537XOLg0/fcx6zcHCJw
 github.com/opencontainers/image-spec v1.1.1/go.mod h1:qpqAh3Dmcf36wStyyWU+kCeDgrGnAve2nCC8+7h8Q0M=
 github.com/openvex/go-vex v0.2.7 h1:/pN3bqvS4QOc6WkkL0hbKzJuAtsUD9vmvk9IZkzD3Zc=
 github.com/openvex/go-vex v0.2.7/go.mod h1:ZyQC3NXl9jjS53JOpBG3LAUXySkW8IlJ/GIhsnf5D54=
-github.com/package-url/packageurl-go v0.1.4 h1:RHfiiN1SSY+Kic537DXch6fy593rxGJW6WDzAiOwNdk=
-github.com/package-url/packageurl-go v0.1.4/go.mod h1:nKAWB8E6uk1MHqiS/lQb9pYBGH2+mdJ2PJc2s50dQY0=
+github.com/package-url/packageurl-go v0.1.5 h1:O4efRXja2XQ5CtiiYiCZ22k/m7i5ugLiAghgcC+eDgk=
+github.com/package-url/packageurl-go v0.1.5/go.mod h1:nKAWB8E6uk1MHqiS/lQb9pYBGH2+mdJ2PJc2s50dQY0=
 github.com/pjbgf/sha1cd v0.5.0 h1:a+UkboSi1znleCDUNT3M5YxjOnN1fz2FhN48FlwCxs0=
 github.com/pjbgf/sha1cd v0.5.0/go.mod h1:lhpGlyHLpQZoxMv8HcgXvZEhcGs0PG/vsZnEJ7H0iCM=
 github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c h1:+mdjkGKdHQG3305AYmdv1U2eRNDiU2ErMBj1gwrq8eQ=
