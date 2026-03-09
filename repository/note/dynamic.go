@@ -93,7 +93,7 @@ func (c *Dynamic) FetchBySubject(ctx context.Context, opts attestation.FetchOpti
 
 		cAtts, err := notesCollector.Fetch(ctx, opts)
 		if err != nil {
-			return nil, fmt.Errorf("")
+			return nil, err
 		}
 		all = append(all, cAtts...)
 	}
