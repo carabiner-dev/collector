@@ -5,6 +5,7 @@ package note
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/carabiner-dev/attestation"
@@ -17,6 +18,7 @@ var (
 	TypeMonikerDynamic                              = "dnote"
 	_                  attestation.Fetcher          = (*Dynamic)(nil)
 	_                  attestation.FetcherBySubject = (*Dynamic)(nil)
+	_                  attestation.Storer           = (*Dynamic)(nil)
 )
 
 // Implement the factory function
@@ -102,4 +104,66 @@ func (c *Dynamic) FetchBySubject(ctx context.Context, opts attestation.FetchOpti
 	}
 
 	return attestation.NewQuery().WithFilter(matcher).Run(all), nil
+}
+
+// Store implements the attestation.Storer interface. It inspects all envelopes
+// to extract sha1/gitCommit subjects, groups them by commit, and stores each
+// group using a dedicated notes collector. If any envelope lacks a sha1 or
+// gitCommit subject, an error is returned before any writes occur.
+func (c *Dynamic) Store(ctx context.Context, opts attestation.StoreOptions, envelopes []attestation.Envelope) error {
+	// First pass: validate all envelopes and group by commit digest.
+	commitEnvelopes := map[string][]attestation.Envelope{}
+	for i, env := range envelopes {
+		commits := extractCommitDigests(env)
+		if len(commits) == 0 {
+			return fmt.Errorf("envelope %d has no sha1 or gitCommit subject", i)
+		}
+		for _, commit := range commits {
+			commitEnvelopes[commit] = append(commitEnvelopes[commit], env)
+		}
+	}
+
+	// Second pass: store attestations per commit.
+	errs := []error{}
+	for commit, envs := range commitEnvelopes {
+		notesCollector, err := New(
+			WithLocator(fmt.Sprintf("%s@%s", c.Options.DynamicRepoURL, commit)),
+			WithHttpAuth(c.Options.HttpUsername, c.Options.HttpPassword),
+			WithPush(*c.Options.Push),
+		)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("building collector for commit %s: %w", commit, err))
+			continue
+		}
+
+		if err := notesCollector.Store(ctx, opts, envs); err != nil {
+			errs = append(errs, fmt.Errorf("storing attestations for commit %s: %w", commit, err))
+		}
+	}
+
+	return errors.Join(errs...)
+}
+
+// extractCommitDigests returns deduplicated commit hashes from an envelope's
+// subjects by looking for sha1 and gitCommit digest algorithms.
+func extractCommitDigests(env attestation.Envelope) []string {
+	stmt := env.GetStatement()
+	if stmt == nil {
+		return nil
+	}
+
+	seen := map[string]struct{}{}
+	for _, subj := range stmt.GetSubjects() {
+		for algo, val := range subj.GetDigest() {
+			if algo == intoto.AlgorithmSHA1.String() || algo == intoto.AlgorithmGitCommit.String() {
+				seen[val] = struct{}{}
+			}
+		}
+	}
+
+	commits := make([]string, 0, len(seen))
+	for c := range seen {
+		commits = append(commits, c)
+	}
+	return commits
 }
