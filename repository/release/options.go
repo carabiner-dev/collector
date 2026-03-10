@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/carabiner-dev/github"
+	"github.com/carabiner-dev/signer/key"
 )
 
 var defaultOptions = Options{
@@ -53,6 +54,13 @@ func WithRepo(repo string) optFn {
 func WithTag(tag string) optFn {
 	return func(c *Collector) error {
 		c.Options.Tag = tag
+		return nil
+	}
+}
+
+func WithKey(keys ...key.PublicKeyProvider) optFn {
+	return func(c *Collector) error {
+		c.Keys = append(c.Keys, keys...)
 		return nil
 	}
 }
