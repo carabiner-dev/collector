@@ -57,6 +57,12 @@ called, it inspects the subjects for SHA-1 or `gitCommit` digests and
 automatically constructs a notes collector targeting each commit. This makes it
 suitable for scenarios where the set of commits is not known in advance.
 
+Also supports storing attestations. When `Store` is called, the collector
+inspects all envelope subjects looking for SHA-1 or `gitCommit` digests, groups
+the envelopes by commit, and creates a notes collector per commit to write
+them. All envelopes are validated before any writes occur — if any envelope
+lacks a SHA-1 or `gitCommit` subject, an error is returned.
+
 ## coci (Container OCI)
 
 Fetches attestations attached to OCI container images. Reads the `.att`
