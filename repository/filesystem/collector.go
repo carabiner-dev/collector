@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/carabiner-dev/attestation"
+	"github.com/carabiner-dev/signer/key"
 
 	"github.com/carabiner-dev/collector/envelope"
 	"github.com/carabiner-dev/collector/filters"
@@ -31,9 +32,10 @@ var Build = func(istr string) (attestation.Repository, error) {
 
 func New(opts ...fnOpts) (*Collector, error) {
 	c := &Collector{
-		Extensions:       []string{"json", "jsonl", "spdx", "cdx", "bundle"},
-		IgnoreOtherFiles: true,
-		Path:             ".",
+		Extensions:          []string{"json", "jsonl", "spdx", "cdx", "bundle"},
+		SignatureExtensions: append([]string{}, defaultSignatureExtensions...),
+		IgnoreOtherFiles:    true,
+		Path:                ".",
 	}
 	for _, f := range opts {
 		if err := f(c); err != nil {
@@ -69,14 +71,30 @@ var WithPath = func(path string) fnOpts {
 	}
 }
 
+var WithSignatureExtensions = func(exts []string) fnOpts {
+	return func(c *Collector) error {
+		c.SignatureExtensions = exts
+		return nil
+	}
+}
+
+var WithKey = func(keys ...key.PublicKeyProvider) fnOpts {
+	return func(c *Collector) error {
+		c.Keys = append(c.Keys, keys...)
+		return nil
+	}
+}
+
 var _ attestation.Fetcher = (*Collector)(nil)
 
 // Collector is the filesystem collector
 type Collector struct {
-	Extensions       []string
-	IgnoreOtherFiles bool
-	Path             string
-	FS               fs.FS
+	Extensions          []string
+	SignatureExtensions []string
+	IgnoreOtherFiles    bool
+	Path                string
+	FS                  fs.FS
+	Keys                []key.PublicKeyProvider
 }
 
 // Fetch queries the repository and retrieves any attestations matching the query
@@ -86,6 +104,7 @@ func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([
 	}
 
 	ret := []attestation.Envelope{}
+	var allFiles []string
 
 	// Walk the filesystem and read any attestations
 	if err := fs.WalkDir(c.FS, c.Path, func(path string, d fs.DirEntry, err error) error {
@@ -94,6 +113,15 @@ func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([
 		}
 
 		if d.IsDir() {
+			return nil
+		}
+
+		// Collect all file paths for signature pair processing
+		allFiles = append(allFiles, path)
+
+		// Skip paired signature files from inline processing.
+		// They will be handled by processSignaturePairs after the walk.
+		if c.isSignaturePairFile(path) {
 			return nil
 		}
 
@@ -147,6 +175,18 @@ func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([
 	}); err != nil && !errors.Is(err, errLimitReached) {
 		return nil, fmt.Errorf("scanning filesystem at %s: %w", c.Path, err)
 	}
+
+	// Process signature pairs after the walk
+	sigAtts, err := c.processSignaturePairs(allFiles, opts)
+	if err != nil {
+		return nil, fmt.Errorf("processing signature pairs: %w", err)
+	}
+	ret = append(ret, sigAtts...)
+
+	if opts.Limit > 0 && len(ret) > opts.Limit {
+		ret = ret[:opts.Limit]
+	}
+
 	return ret, nil
 }
 
