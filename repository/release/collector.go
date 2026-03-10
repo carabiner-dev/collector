@@ -9,6 +9,7 @@ import (
 
 	"github.com/carabiner-dev/attestation"
 	"github.com/carabiner-dev/ghrfs"
+	"github.com/carabiner-dev/signer/key"
 
 	"github.com/carabiner-dev/collector/filters"
 	"github.com/carabiner-dev/collector/repository/filesystem"
@@ -43,14 +44,17 @@ func New(funcs ...optFn) (*Collector, error) {
 		),
 		ghrfs.WithCache(true),
 		ghrfs.WithCacheExtensions(
-			[]string{"jsonl", "json", "pub", "sig", "crt", "key", "pub", "pem", "spdx", "cdx", "bundle"},
+			[]string{"jsonl", "json", "pub", "sig", "crt", "key", "pub", "pem", "spdx", "cdx", "bundle", "asc", "gpg"},
 		),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("creating GHRFS from: %w", err)
 	}
 
-	fscollector, err := filesystem.New(filesystem.WithFS(fs))
+	fscollector, err := filesystem.New(
+		filesystem.WithFS(fs),
+		filesystem.WithKey(c.Keys...),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("creating filesystem collector driver: %w", err)
 	}
@@ -61,6 +65,7 @@ func New(funcs ...optFn) (*Collector, error) {
 
 type Collector struct {
 	Options Options
+	Keys    []key.PublicKeyProvider
 	Driver  attestation.Fetcher
 }
 
