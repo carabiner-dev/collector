@@ -20,12 +20,12 @@ func TestGetSignatureExtension(t *testing.T) {
 		want string
 	}{
 		{"artifact.txt.sig", ".sig"},
-		{"artifact.txt.sigstore.json", ".sigstore.json"},
 		{"artifact.txt", ""},
 		{"some/path/file.exe.sig", ".sig"},
-		{"bundle.sigstore.json", ".sigstore.json"},
 		{"file.json", ""},
 		{"file.sig.bak", ""},
+		{"artifact.txt.gpg", ".gpg"},
+		{"artifact.txt.asc", ".asc"},
 	} {
 		t.Run(tc.path, func(t *testing.T) {
 			t.Parallel()
@@ -33,6 +33,15 @@ func TestGetSignatureExtension(t *testing.T) {
 			require.Equal(t, tc.want, got)
 		})
 	}
+
+	t.Run("sigstore-bundle-extensions", func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, ".sigstore.json", getSignatureExtension("artifact.txt.sigstore.json", defaultSigstoreBundleExtensions))
+		require.Equal(t, ".sigstore.json", getSignatureExtension("bundle.sigstore.json", defaultSigstoreBundleExtensions))
+		require.Empty(t, getSignatureExtension("file.json", defaultSigstoreBundleExtensions))
+		// .sigstore.json should NOT match default signature extensions
+		require.Empty(t, getSignatureExtension("artifact.txt.sigstore.json", defaultSignatureExtensions))
+	})
 }
 
 func TestGetSignatureExtensionCustom(t *testing.T) {
@@ -43,57 +52,36 @@ func TestGetSignatureExtensionCustom(t *testing.T) {
 	require.Empty(t, getSignatureExtension("file.tar.gz.sig", custom))
 }
 
-func TestIsSignaturePairFile(t *testing.T) {
+func TestHasSignatureExtension(t *testing.T) {
 	t.Parallel()
 
-	t.Run("paired-sig", func(t *testing.T) {
-		t.Parallel()
-		fsys := fstest.MapFS{
-			"artifact.txt":     &fstest.MapFile{Data: []byte("content")},
-			"artifact.txt.sig": &fstest.MapFile{Data: []byte("sig")},
-		}
-		c := &Collector{FS: fsys, SignatureExtensions: defaultSignatureExtensions}
-		require.True(t, c.isSignaturePairFile("artifact.txt.sig"))
-	})
+	c := &Collector{
+		SignatureExtensions:      defaultSignatureExtensions,
+		SigstoreBundleExtensions: defaultSigstoreBundleExtensions,
+	}
 
-	t.Run("unpaired-sig", func(t *testing.T) {
-		t.Parallel()
-		fsys := fstest.MapFS{
-			"artifact.txt.sig": &fstest.MapFile{Data: []byte("sig")},
-		}
-		c := &Collector{FS: fsys, SignatureExtensions: defaultSignatureExtensions}
-		require.False(t, c.isSignaturePairFile("artifact.txt.sig"))
-	})
+	require.True(t, c.hasSignatureExtension("artifact.txt.sig"))
+	require.True(t, c.hasSignatureExtension("artifact.txt.sigstore.json"))
+	require.True(t, c.hasSignatureExtension("artifact.txt.gpg"))
+	require.True(t, c.hasSignatureExtension("artifact.txt.asc"))
+	require.False(t, c.hasSignatureExtension("artifact.txt"))
+	require.False(t, c.hasSignatureExtension("artifact.json"))
 
-	t.Run("not-sig-file", func(t *testing.T) {
+	t.Run("custom-signature-extension", func(t *testing.T) {
 		t.Parallel()
-		fsys := fstest.MapFS{
-			"artifact.txt": &fstest.MapFile{Data: []byte("content")},
-		}
-		c := &Collector{FS: fsys, SignatureExtensions: defaultSignatureExtensions}
-		require.False(t, c.isSignaturePairFile("artifact.txt"))
-	})
-
-	t.Run("paired-sigstore", func(t *testing.T) {
-		t.Parallel()
-		fsys := fstest.MapFS{
-			"artifact.txt":               &fstest.MapFile{Data: []byte("content")},
-			"artifact.txt.sigstore.json": &fstest.MapFile{Data: []byte("{}")},
-		}
-		c := &Collector{FS: fsys, SignatureExtensions: defaultSignatureExtensions}
-		require.True(t, c.isSignaturePairFile("artifact.txt.sigstore.json"))
-	})
-
-	t.Run("custom-extension", func(t *testing.T) {
-		t.Parallel()
-		fsys := fstest.MapFS{
-			"artifact.txt":     &fstest.MapFile{Data: []byte("content")},
-			"artifact.txt.p7s": &fstest.MapFile{Data: []byte("sig")},
-		}
-		c := &Collector{FS: fsys, SignatureExtensions: []string{".p7s"}}
-		require.True(t, c.isSignaturePairFile("artifact.txt.p7s"))
+		custom := &Collector{SignatureExtensions: []string{".p7s"}}
+		require.True(t, custom.hasSignatureExtension("artifact.txt.p7s"))
 		// Default extensions should not match when overridden
-		require.False(t, c.isSignaturePairFile("artifact.txt.sig"))
+		require.False(t, custom.hasSignatureExtension("artifact.txt.sig"))
+		// Sigstore bundle extensions not set, so .sigstore.json won't match
+		require.False(t, custom.hasSignatureExtension("artifact.txt.sigstore.json"))
+	})
+
+	t.Run("custom-sigstore-extension", func(t *testing.T) {
+		t.Parallel()
+		custom := &Collector{SigstoreBundleExtensions: []string{".bundle.json"}}
+		require.True(t, custom.hasSignatureExtension("artifact.txt.bundle.json"))
+		require.False(t, custom.hasSignatureExtension("artifact.txt.sigstore.json"))
 	})
 }
 
@@ -312,6 +300,20 @@ func TestWithSignatureExtensions(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, atts, 1)
 	require.Equal(t, SignaturePredicateType, atts[0].GetPredicate().GetType())
+}
+
+func TestWithSigstoreBundleExtensions(t *testing.T) {
+	t.Parallel()
+
+	// Verify that custom sigstore bundle extensions override the default
+	collector, err := New(WithFS(fstest.MapFS{}), WithSigstoreBundleExtensions([]string{".bundle.json"}))
+	require.NoError(t, err)
+	require.Equal(t, []string{".bundle.json"}, collector.SigstoreBundleExtensions)
+
+	// Default should not match
+	require.False(t, collector.hasSignatureExtension("artifact.txt.sigstore.json"))
+	// Custom should match
+	require.True(t, collector.hasSignatureExtension("artifact.txt.bundle.json"))
 }
 
 func TestUnverifiableSignatureIgnored(t *testing.T) {
