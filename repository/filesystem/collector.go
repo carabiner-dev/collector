@@ -177,11 +177,7 @@ func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([
 	}
 
 	// Process signature pairs after the walk
-	sigAtts, err := c.processSignaturePairs(allFiles, opts)
-	if err != nil {
-		return nil, fmt.Errorf("processing signature pairs: %w", err)
-	}
-	ret = append(ret, sigAtts...)
+	ret = append(ret, c.processSignaturePairs(allFiles, opts)...)
 
 	if opts.Limit > 0 && len(ret) > opts.Limit {
 		ret = ret[:opts.Limit]

@@ -67,7 +67,7 @@ func (c *Collector) isSignaturePairFile(path string) bool {
 // signature file as a normal attestation. If that succeeds, it uses the
 // parsed attestation. Otherwise, it attempts verification and generates
 // a virtual attestation.
-func (c *Collector) processSignaturePairs(allFiles []string, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
+func (c *Collector) processSignaturePairs(allFiles []string, opts attestation.FetchOptions) []attestation.Envelope {
 	// Build a set for O(1) lookup
 	fileSet := make(map[string]struct{}, len(allFiles))
 	for _, f := range allFiles {
@@ -125,7 +125,7 @@ func (c *Collector) processSignaturePairs(allFiles []string, opts attestation.Fe
 		ret = append(ret, envs...)
 	}
 
-	return ret, nil
+	return ret
 }
 
 // verifySignature attempts to verify a detached signature. It first tries
@@ -200,7 +200,7 @@ func (c *Collector) verifyMessageDigest(artifactPath string, ms *protocommon.Mes
 	bundleDigest := fmt.Sprintf("%x", md.GetDigest())
 
 	rd := rds[0]
-	if artifactDigest, ok := rd.Digest[algName]; ok {
+	if artifactDigest, ok := rd.GetDigest()[algName]; ok {
 		if artifactDigest != bundleDigest {
 			return fmt.Errorf("digest mismatch: bundle=%s artifact=%s", bundleDigest, artifactDigest)
 		}
