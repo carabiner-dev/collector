@@ -18,6 +18,7 @@ import (
 	sapi "github.com/carabiner-dev/signer/api/v1"
 	"github.com/carabiner-dev/signer/key"
 	"github.com/carabiner-dev/signer/options"
+	gointoto "github.com/in-toto/attestation/go/v1"
 	sigstore "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
@@ -34,9 +35,30 @@ import (
 // SignaturePredicateType is the predicate type for virtual signature attestations.
 const SignaturePredicateType = attestation.PredicateType("https://carabiner.dev/ampel/signature/v1")
 
-// defaultSignatureExtensions lists recognized signature file extensions.
-// Longest suffixes come first to handle multi-part extensions correctly.
-var defaultSignatureExtensions = []string{".sigstore.json", ".sig", ".gpg", ".asc"}
+// defaultSignatureExtensions lists recognized raw signature file extensions.
+var defaultSignatureExtensions = []string{".sig", ".gpg", ".asc"}
+
+// defaultSigstoreBundleExtensions lists recognized sigstore bundle extensions.
+var defaultSigstoreBundleExtensions = []string{".sigstore.json"}
+
+// sigstoreHashAlgNames maps sigstore hash algorithm enum values to in-toto
+// digest names used by the hasher package.
+var sigstoreHashAlgNames = map[protocommon.HashAlgorithm]string{
+	protocommon.HashAlgorithm_SHA2_256: "sha256",
+	protocommon.HashAlgorithm_SHA2_384: "sha384",
+	protocommon.HashAlgorithm_SHA2_512: "sha512",
+	protocommon.HashAlgorithm_SHA3_256: "sha3_256",
+	protocommon.HashAlgorithm_SHA3_384: "sha3_384",
+}
+
+// sigstoreHashToIntoto converts a sigstore HashAlgorithm to the in-toto
+// digest name. Returns the lowercased string representation as fallback.
+func sigstoreHashToIntoto(alg protocommon.HashAlgorithm) string {
+	if name, ok := sigstoreHashAlgNames[alg]; ok {
+		return name
+	}
+	return strings.ToLower(alg.String())
+}
 
 // getSignatureExtension returns the matching signature extension suffix
 // for a path, or empty string if none matches. Checks longest suffixes
@@ -50,23 +72,19 @@ func getSignatureExtension(path string, extensions []string) string {
 	return ""
 }
 
-// isSignaturePairFile returns true if the file has a recognized signature
-// extension AND the companion artifact file exists in the filesystem.
-func (c *Collector) isSignaturePairFile(path string) bool {
-	ext := getSignatureExtension(path, c.SignatureExtensions)
-	if ext == "" {
-		return false
-	}
-	artifactPath := strings.TrimSuffix(path, ext)
-	_, err := fs.Stat(c.FS, artifactPath)
-	return err == nil
+// hasSignatureExtension returns true if the file has a recognized signature
+// or sigstore bundle extension. These files are deferred to
+// processSignaturePairs and skipped from inline attestation parsing
+// during the walk.
+func (c *Collector) hasSignatureExtension(path string) bool {
+	return getSignatureExtension(path, c.SignatureExtensions) != "" ||
+		getSignatureExtension(path, c.SigstoreBundleExtensions) != ""
 }
 
 // processSignaturePairs identifies signature pairs from the collected file
-// list and processes them. For each pair, it first tries to parse the
-// signature file as a normal attestation. If that succeeds, it uses the
-// parsed attestation. Otherwise, it attempts verification and generates
-// a virtual attestation.
+// list and processes them. Sigstore bundles are processed first (digest
+// extracted from the bundle, no artifact read needed). Raw signature files
+// require a companion artifact for hashing and key-based verification.
 func (c *Collector) processSignaturePairs(allFiles []string, opts attestation.FetchOptions) []attestation.Envelope {
 	// Build a set for O(1) lookup
 	fileSet := make(map[string]struct{}, len(allFiles))
@@ -77,137 +95,132 @@ func (c *Collector) processSignaturePairs(allFiles []string, opts attestation.Fe
 	var ret []attestation.Envelope
 
 	for _, path := range allFiles {
-		ext := getSignatureExtension(path, c.SignatureExtensions)
-		if ext == "" {
+		var envs []attestation.Envelope
+
+		// Check sigstore bundle extensions first. Sigstore bundles carry
+		// the artifact digest inside the messageSignature so there is no
+		// need to read the companion artifact.
+		if ext := getSignatureExtension(path, c.SigstoreBundleExtensions); ext != "" {
+			envs = c.processSigstoreBundle(path, ext, opts)
+		} else if ext := getSignatureExtension(path, c.SignatureExtensions); ext != "" {
+			// Raw signature extensions require a companion artifact.
+			envs = c.processRawSignature(path, ext, fileSet, opts)
+		} else {
 			continue
 		}
 
-		artifactPath := strings.TrimSuffix(path, ext)
-		if _, ok := fileSet[artifactPath]; !ok {
-			continue
-		}
-
-		// Read the signature file
-		sigData, err := fs.ReadFile(c.FS, path)
-		if err != nil {
-			logrus.Debugf("reading signature file %s: %v", path, err)
-			continue
-		}
-
-		// Try to parse as a normal attestation (DSSE/bundle)
-		parsed, err := envelope.Parsers.Parse(bytes.NewReader(sigData))
-		if err == nil && len(parsed) > 0 {
-			if opts.Query != nil {
-				parsed = opts.Query.Run(parsed)
-			}
-			ret = append(ret, parsed...)
-			continue
-		}
-
-		// Parsing failed — try to verify as a raw signature and generate
-		// a virtual attestation
-		verification, err := c.verifySignature(artifactPath, sigData)
-		if err != nil {
-			logrus.Debugf("verifying signature for %s: %v", artifactPath, err)
-			continue
-		}
-
-		env, err := c.buildVirtualAttestation(artifactPath, verification)
-		if err != nil {
-			logrus.Debugf("building virtual attestation for %s: %v", artifactPath, err)
-			continue
-		}
-
-		envs := []attestation.Envelope{env}
-		if opts.Query != nil {
-			envs = opts.Query.Run(envs)
-		}
 		ret = append(ret, envs...)
 	}
 
 	return ret
 }
 
-// verifySignature attempts to verify a detached signature. It first tries
-// sigstore bundle verification, then falls back to known key verification.
-func (c *Collector) verifySignature(artifactPath string, sigData []byte) (*sapi.Verification, error) {
-	// Try sigstore bundle verification first
-	verification, err := c.verifySigstoreSignature(artifactPath, sigData)
-	if err == nil {
-		return verification, nil
+// processSigstoreBundle handles files with sigstore bundle extensions.
+// It extracts the subject digest directly from the bundle's messageSignature
+// without reading or hashing the companion artifact.
+func (c *Collector) processSigstoreBundle(path, ext string, opts attestation.FetchOptions) []attestation.Envelope {
+	artifactPath := strings.TrimSuffix(path, ext)
+
+	sigData, err := fs.ReadFile(c.FS, path)
+	if err != nil {
+		logrus.Debugf("reading sigstore bundle %s: %v", path, err)
+		return nil
 	}
-	logrus.Debugf("sigstore verification failed for %s: %v", artifactPath, err)
 
-	// Fallback: try known keys
-	return c.verifyWithKeys(artifactPath, sigData)
-}
+	// Try to parse as a normal attestation (DSSE bundle)
+	parsed, err := envelope.Parsers.Parse(bytes.NewReader(sigData))
+	if err == nil && len(parsed) > 0 {
+		if opts.Query != nil {
+			parsed = opts.Query.Run(parsed)
+		}
+		return parsed
+	}
 
-// verifySigstoreSignature tries to parse sigData as a sigstore bundle
-// and verify it against the artifact.
-func (c *Collector) verifySigstoreSignature(artifactPath string, sigData []byte) (*sapi.Verification, error) {
+	// Parse as sigstore bundle proto
 	var bundle sigstore.Bundle
 	if err := protojson.Unmarshal(sigData, &bundle); err != nil {
-		return nil, fmt.Errorf("parsing sigstore bundle: %w", err)
-	}
-
-	// If it has a messageSignature, verify the digest matches the artifact
-	if ms := bundle.GetMessageSignature(); ms != nil {
-		if err := c.verifyMessageDigest(artifactPath, ms); err != nil {
-			return nil, fmt.Errorf("digest mismatch: %w", err)
-		}
+		logrus.Debugf("parsing sigstore bundle %s: %v", path, err)
+		return nil
 	}
 
 	// Verify the bundle
+	verification, err := c.verifySigstoreBundle(&bundle)
+	if err != nil {
+		logrus.Debugf("verifying sigstore bundle %s: %v", path, err)
+		return nil
+	}
+
+	// Build virtual attestation with digest from the bundle
+	env, err := c.buildSigstoreVirtualAttestation(artifactPath, &bundle, verification)
+	if err != nil {
+		logrus.Debugf("building virtual attestation for %s: %v", path, err)
+		return nil
+	}
+
+	envs := []attestation.Envelope{env}
+	if opts.Query != nil {
+		envs = opts.Query.Run(envs)
+	}
+	return envs
+}
+
+// processRawSignature handles files with raw signature extensions (.sig, .gpg, .asc).
+// These require a companion artifact for key-based verification and hashing.
+func (c *Collector) processRawSignature(path, ext string, fileSet map[string]struct{}, opts attestation.FetchOptions) []attestation.Envelope {
+	artifactPath := strings.TrimSuffix(path, ext)
+	if _, ok := fileSet[artifactPath]; !ok {
+		return nil
+	}
+
+	sigData, err := fs.ReadFile(c.FS, path)
+	if err != nil {
+		logrus.Debugf("reading signature file %s: %v", path, err)
+		return nil
+	}
+
+	// Try to parse as a normal attestation (DSSE/bundle)
+	parsed, err := envelope.Parsers.Parse(bytes.NewReader(sigData))
+	if err == nil && len(parsed) > 0 {
+		if opts.Query != nil {
+			parsed = opts.Query.Run(parsed)
+		}
+		return parsed
+	}
+
+	// Verify with configured keys (handles GPG, ECDSA, RSA, Ed25519)
+	verification, err := c.verifyWithKeys(artifactPath, sigData)
+	if err != nil {
+		logrus.Debugf("verifying signature for %s: %v", artifactPath, err)
+		return nil
+	}
+
+	env, err := c.buildVirtualAttestation(artifactPath, verification)
+	if err != nil {
+		logrus.Debugf("building virtual attestation for %s: %v", artifactPath, err)
+		return nil
+	}
+
+	envs := []attestation.Envelope{env}
+	if opts.Query != nil {
+		envs = opts.Query.Run(envs)
+	}
+	return envs
+}
+
+// verifySigstoreBundle verifies a parsed sigstore bundle and extracts
+// the signing identity from its certificate.
+func (c *Collector) verifySigstoreBundle(bundle *sigstore.Bundle) (*sapi.Verification, error) {
 	verifier := signer.NewVerifier()
 	verifier.Options.SkipIdentityCheck = true
 
 	if _, err := verifier.VerifyParsedBundle(
-		&sgbundle.Bundle{Bundle: &bundle},
+		&sgbundle.Bundle{Bundle: bundle},
 		options.WithSkipIdentityCheck(true),
 	); err != nil {
 		return nil, fmt.Errorf("verifying sigstore bundle: %w", err)
 	}
 
-	// Extract identity from certificate
-	return c.extractSigstoreIdentity(&bundle)
-}
-
-// verifyMessageDigest checks that the bundle's message digest matches the
-// companion artifact's hash.
-func (c *Collector) verifyMessageDigest(artifactPath string, ms *protocommon.MessageSignature) error {
-	md := ms.GetMessageDigest()
-	if md == nil {
-		return nil // No digest to check
-	}
-
-	artifactData, err := fs.ReadFile(c.FS, artifactPath)
-	if err != nil {
-		return fmt.Errorf("reading artifact: %w", err)
-	}
-
-	hsets, err := hasher.New().HashReaders([]io.Reader{bytes.NewReader(artifactData)})
-	if err != nil {
-		return fmt.Errorf("hashing artifact: %w", err)
-	}
-
-	rds := hsets.ToResourceDescriptors()
-	if len(rds) == 0 {
-		return fmt.Errorf("no hash computed for artifact")
-	}
-
-	// Map the sigstore hash algorithm to a digest string for comparison
-	algName := strings.ToLower(strings.TrimPrefix(md.GetAlgorithm().String(), "HASH_ALGORITHM_"))
-	bundleDigest := fmt.Sprintf("%x", md.GetDigest())
-
-	rd := rds[0]
-	if artifactDigest, ok := rd.GetDigest()[algName]; ok {
-		if artifactDigest != bundleDigest {
-			return fmt.Errorf("digest mismatch: bundle=%s artifact=%s", bundleDigest, artifactDigest)
-		}
-		return nil
-	}
-
-	return fmt.Errorf("hash algorithm %s not found in artifact digests", algName)
+	return c.extractSigstoreIdentity(bundle)
 }
 
 // extractSigstoreIdentity extracts the signing identity from the sigstore
@@ -306,8 +319,47 @@ func (c *Collector) verifyWithKeys(artifactPath string, sigData []byte) (*sapi.V
 	}, nil
 }
 
+// buildSigstoreVirtualAttestation creates a virtual attestation for a verified
+// sigstore bundle. The subject digest is extracted directly from the bundle's
+// messageSignature, avoiding the need to read and hash the companion artifact.
+func (c *Collector) buildSigstoreVirtualAttestation(artifactPath string, bundle *sigstore.Bundle, verification *sapi.Verification) (attestation.Envelope, error) {
+	ms := bundle.GetMessageSignature()
+	if ms == nil {
+		return nil, fmt.Errorf("no message signature in bundle")
+	}
+
+	md := ms.GetMessageDigest()
+	if md == nil {
+		return nil, fmt.Errorf("no message digest in bundle")
+	}
+
+	algName := sigstoreHashToIntoto(md.GetAlgorithm())
+	digestHex := fmt.Sprintf("%x", md.GetDigest())
+
+	rd := &gointoto.ResourceDescriptor{
+		Name: filepath.Base(artifactPath),
+		Digest: map[string]string{
+			algName: digestHex,
+		},
+	}
+
+	pred := &generic.Predicate{
+		Type:         SignaturePredicateType,
+		Data:         []byte("{}"),
+		Verification: verification,
+	}
+
+	stmt := intoto.NewStatement(
+		intoto.WithPredicate(pred),
+		intoto.WithSubject(rd),
+	)
+
+	return &virtualEnvelope{statement: stmt}, nil
+}
+
 // buildVirtualAttestation creates a virtual attestation envelope for a
-// verified detached signature.
+// verified detached signature. It reads and hashes the artifact to form
+// the subject.
 func (c *Collector) buildVirtualAttestation(artifactPath string, verification *sapi.Verification) (attestation.Envelope, error) {
 	artifactData, err := fs.ReadFile(c.FS, artifactPath)
 	if err != nil {

@@ -32,10 +32,11 @@ var Build = func(istr string) (attestation.Repository, error) {
 
 func New(opts ...fnOpts) (*Collector, error) {
 	c := &Collector{
-		Extensions:          []string{"json", "jsonl", "spdx", "cdx", "bundle"},
-		SignatureExtensions: append([]string{}, defaultSignatureExtensions...),
-		IgnoreOtherFiles:    true,
-		Path:                ".",
+		Extensions:               []string{"json", "jsonl", "spdx", "cdx", "bundle"},
+		SignatureExtensions:      append([]string{}, defaultSignatureExtensions...),
+		SigstoreBundleExtensions: append([]string{}, defaultSigstoreBundleExtensions...),
+		IgnoreOtherFiles:         true,
+		Path:                     ".",
 	}
 	for _, f := range opts {
 		if err := f(c); err != nil {
@@ -78,6 +79,13 @@ var WithSignatureExtensions = func(exts []string) fnOpts {
 	}
 }
 
+var WithSigstoreBundleExtensions = func(exts []string) fnOpts {
+	return func(c *Collector) error {
+		c.SigstoreBundleExtensions = exts
+		return nil
+	}
+}
+
 var WithKey = func(keys ...key.PublicKeyProvider) fnOpts {
 	return func(c *Collector) error {
 		c.Keys = append(c.Keys, keys...)
@@ -89,12 +97,13 @@ var _ attestation.Fetcher = (*Collector)(nil)
 
 // Collector is the filesystem collector
 type Collector struct {
-	Extensions          []string
-	SignatureExtensions []string
-	IgnoreOtherFiles    bool
-	Path                string
-	FS                  fs.FS
-	Keys                []key.PublicKeyProvider
+	Extensions               []string
+	SignatureExtensions      []string
+	SigstoreBundleExtensions []string
+	IgnoreOtherFiles         bool
+	Path                     string
+	FS                       fs.FS
+	Keys                     []key.PublicKeyProvider
 }
 
 // Fetch queries the repository and retrieves any attestations matching the query
@@ -119,9 +128,9 @@ func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([
 		// Collect all file paths for signature pair processing
 		allFiles = append(allFiles, path)
 
-		// Skip paired signature files from inline processing.
+		// Skip files with signature extensions from inline processing.
 		// They will be handled by processSignaturePairs after the walk.
-		if c.isSignaturePairFile(path) {
+		if c.hasSignatureExtension(path) {
 			return nil
 		}
 
