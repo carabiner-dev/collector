@@ -69,6 +69,18 @@ type Collector struct {
 	Driver  attestation.Fetcher
 }
 
+// SetKeys sets the verification keys on the release collector and propagates
+// them to the inner driver if it supports key acceptance.
+func (c *Collector) SetKeys(keys []key.PublicKeyProvider) {
+	c.Keys = keys
+	type keyAcceptor interface {
+		SetKeys([]key.PublicKeyProvider)
+	}
+	if ka, ok := c.Driver.(keyAcceptor); ok {
+		ka.SetKeys(keys)
+	}
+}
+
 // Fetch queries the repository and retrieves any attestations matching the query
 func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
 	return c.Driver.Fetch(ctx, opts)

@@ -3,7 +3,13 @@
 
 package collector
 
-import "github.com/carabiner-dev/attestation"
+import (
+	"fmt"
+	"os"
+
+	"github.com/carabiner-dev/attestation"
+	"github.com/carabiner-dev/signer/key"
+)
 
 // DefaultMaxReadSize is the default maximum number of bytes the collector will
 // read from any single external source (7 MiB).
@@ -40,6 +46,10 @@ type Options struct {
 
 	Fetch attestation.FetchOptions
 	Store attestation.StoreOptions
+
+	// Keys are verification keys that the agent distributes to repositories
+	// implementing the repository.SignatureVerifier interface.
+	Keys []key.PublicKeyProvider
 }
 
 type InitFunction func(*Agent) error
@@ -87,6 +97,48 @@ func WithQuery(q *attestation.Query) FetchOptionsFunc {
 func WithLimit(n int) FetchOptionsFunc {
 	return func(o *attestation.FetchOptions) {
 		o.Limit = n
+	}
+}
+
+// WithKeys registers verification keys at the agent level. Before each fetch,
+// the agent distributes these keys to any repository that implements repository.SignatureVerifier.
+func WithKeys(keys ...key.PublicKeyProvider) InitFunction {
+	return func(agent *Agent) error {
+		agent.Options.Keys = append(agent.Options.Keys, keys...)
+		return nil
+	}
+}
+
+// WithKeyFiles reads public keys from the given file paths and registers them
+// at the agent level. Each file is tried first as a GPG public key, then as a
+// PEM public key. An error is returned if any file cannot be parsed.
+func WithKeyFiles(paths ...string) InitFunction {
+	return func(agent *Agent) error {
+		for _, p := range paths {
+			data, err := os.ReadFile(p)
+			if err != nil {
+				return fmt.Errorf("reading key file %q: %w", p, err)
+			}
+
+			// Try GPG first
+			gpgKeys, err := key.ParseGPGPublicKey(data)
+			if err == nil && len(gpgKeys) > 0 {
+				for _, k := range gpgKeys {
+					agent.Options.Keys = append(agent.Options.Keys, k)
+				}
+				continue
+			}
+
+			// Fall back to PEM
+			pub, err := key.NewParser().ParsePublicKey(data)
+			if err == nil {
+				agent.Options.Keys = append(agent.Options.Keys, pub)
+				continue
+			}
+
+			return fmt.Errorf("unable to parse key file %q as GPG or PEM", p)
+		}
+		return nil
 	}
 }
 
