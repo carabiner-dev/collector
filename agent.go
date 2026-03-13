@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/carabiner-dev/attestation"
+	"github.com/carabiner-dev/signer/key"
 	"github.com/nozzle/throttler"
 	"github.com/sirupsen/logrus"
 
@@ -77,6 +78,13 @@ func (agent *Agent) AddRepositoryFromString(init string) error {
 	agent.Repositories = append(agent.Repositories, repo)
 	agent.distributeKeysTo(repo)
 	return nil
+}
+
+// AddKeys appends verification keys to the agent and distributes them
+// to all currently registered repositories that support signature verification.
+func (agent *Agent) AddKeys(keys ...key.PublicKeyProvider) {
+	agent.Options.Keys = append(agent.Options.Keys, keys...)
+	agent.distributeKeysTo(agent.Repositories...)
 }
 
 // AddRepsitory adds a new repository to collect attestations

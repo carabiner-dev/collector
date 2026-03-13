@@ -11,7 +11,7 @@ require (
 	github.com/carabiner-dev/openeox v0.0.0-20251126193927-142e907140f5
 	github.com/carabiner-dev/osv v0.0.0-20250124012120-b8ce4531cd92
 	github.com/carabiner-dev/predicates v0.1.0
-	github.com/carabiner-dev/signer v0.3.8-0.20260310160610-a37998585604
+	github.com/carabiner-dev/signer v0.3.8-0.20260313052054-634848231120
 	github.com/carabiner-dev/vcslocator v0.4.0
 	github.com/go-git/go-billy/v5 v5.8.0
 	github.com/go-git/go-git/v5 v5.17.0
