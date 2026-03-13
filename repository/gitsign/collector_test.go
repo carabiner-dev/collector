@@ -1,0 +1,264 @@
+// SPDX-FileCopyrightText: Copyright 2026 Carabiner Systems, Inc
+// SPDX-License-Identifier: Apache-2.0
+
+package gitsign
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/carabiner-dev/attestation"
+	gogit "github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing/object"
+	intoto "github.com/in-toto/attestation/go/v1"
+	gspredicate "github.com/sigstore/gitsign/pkg/predicate"
+	"github.com/stretchr/testify/require"
+)
+
+// initTestRepo creates a local git repo with a signed commit and returns
+// the repo path, the commit hash, and the repo object.
+func initTestRepo(t *testing.T) (repoPath, commitHash string) {
+	t.Helper()
+
+	repoPath = filepath.Join(t.TempDir(), "test-repo")
+	repo, err := gogit.PlainInit(repoPath, false)
+	require.NoError(t, err)
+
+	wt, err := repo.Worktree()
+	require.NoError(t, err)
+
+	testFile := filepath.Join(repoPath, "file.txt")
+	err = os.WriteFile(testFile, []byte("content"), 0o600)
+	require.NoError(t, err)
+
+	_, err = wt.Add("file.txt")
+	require.NoError(t, err)
+
+	hash, err := wt.Commit("Test commit", &gogit.CommitOptions{
+		Author: &object.Signature{
+			Name:  "Test",
+			Email: "test@example.com",
+		},
+	})
+	require.NoError(t, err)
+
+	_ = repo
+	commitHash = hash.String()
+	return
+}
+
+func TestFetchBySubject(t *testing.T) {
+	repoPath, commitHash := initTestRepo(t)
+
+	c, err := New(WithRepoPath(repoPath))
+	require.NoError(t, err)
+
+	subj := &intoto.ResourceDescriptor{
+		Digest: map[string]string{
+			"sha1": commitHash,
+		},
+	}
+
+	envs, err := c.FetchBySubject(context.Background(), attestation.FetchOptions{}, []attestation.Subject{subj})
+	require.NoError(t, err)
+	require.Len(t, envs, 1)
+
+	env := envs[0]
+	require.NotNil(t, env.GetStatement())
+	require.NotNil(t, env.GetPredicate())
+	require.Equal(t, attestation.PredicateType(gspredicate.TypeV01), env.GetPredicate().GetType())
+
+	// Subject should contain the commit hash.
+	subjects := env.GetStatement().GetSubjects()
+	require.Len(t, subjects, 1)
+	require.Equal(t, commitHash, subjects[0].GetDigest()["sha1"])
+}
+
+func TestFetchBySubjectGitCommitAlgo(t *testing.T) {
+	repoPath, commitHash := initTestRepo(t)
+
+	c, err := New(WithRepoPath(repoPath))
+	require.NoError(t, err)
+
+	// Use gitCommit algorithm instead of sha1.
+	subj := &intoto.ResourceDescriptor{
+		Digest: map[string]string{
+			intoto.AlgorithmGitCommit.String(): commitHash,
+		},
+	}
+
+	envs, err := c.FetchBySubject(context.Background(), attestation.FetchOptions{}, []attestation.Subject{subj})
+	require.NoError(t, err)
+	require.Len(t, envs, 1)
+}
+
+func TestFetchBySubjectNoMatch(t *testing.T) {
+	repoPath, _ := initTestRepo(t)
+
+	c, err := New(WithRepoPath(repoPath))
+	require.NoError(t, err)
+
+	// Subject with only sha256 — should return nothing.
+	subj := &intoto.ResourceDescriptor{
+		Digest: map[string]string{
+			"sha256": "deadbeef",
+		},
+	}
+
+	envs, err := c.FetchBySubject(context.Background(), attestation.FetchOptions{}, []attestation.Subject{subj})
+	require.NoError(t, err)
+	require.Nil(t, envs)
+}
+
+func TestFetchBySubjectNonexistentCommit(t *testing.T) {
+	repoPath, _ := initTestRepo(t)
+
+	c, err := New(WithRepoPath(repoPath))
+	require.NoError(t, err)
+
+	subj := &intoto.ResourceDescriptor{
+		Digest: map[string]string{
+			"sha1": "0000000000000000000000000000000000000000",
+		},
+	}
+
+	// Should return empty (commit doesn't exist, skipped via logrus.Debug).
+	envs, err := c.FetchBySubject(context.Background(), attestation.FetchOptions{}, []attestation.Subject{subj})
+	require.NoError(t, err)
+	require.Empty(t, envs)
+}
+
+func TestFetchBySubjectMultipleCommits(t *testing.T) {
+	repoPath := filepath.Join(t.TempDir(), "test-repo")
+	repo, err := gogit.PlainInit(repoPath, false)
+	require.NoError(t, err)
+
+	wt, err := repo.Worktree()
+	require.NoError(t, err)
+
+	commits := make([]string, 0, 3)
+	for i := range 3 {
+		testFile := filepath.Join(repoPath, fmt.Sprintf("file%d.txt", i))
+		err = os.WriteFile(testFile, fmt.Appendf(nil, "content %d", i), 0o600)
+		require.NoError(t, err)
+
+		_, err = wt.Add(fmt.Sprintf("file%d.txt", i))
+		require.NoError(t, err)
+
+		hash, err := wt.Commit(fmt.Sprintf("Commit %d", i), &gogit.CommitOptions{
+			Author: &object.Signature{
+				Name:  "Test",
+				Email: "test@example.com",
+			},
+		})
+		require.NoError(t, err)
+		commits = append(commits, hash.String())
+	}
+
+	c, err := New(WithRepoPath(repoPath))
+	require.NoError(t, err)
+
+	// Request all three commits at once.
+	subjs := make([]attestation.Subject, 0, len(commits))
+	for _, h := range commits {
+		subjs = append(subjs, &intoto.ResourceDescriptor{
+			Digest: map[string]string{"sha1": h},
+		})
+	}
+
+	envs, err := c.FetchBySubject(context.Background(), attestation.FetchOptions{}, subjs)
+	require.NoError(t, err)
+	require.Len(t, envs, 3)
+}
+
+func TestFetchNoop(t *testing.T) {
+	repoPath, _ := initTestRepo(t)
+
+	c, err := New(WithRepoPath(repoPath))
+	require.NoError(t, err)
+
+	envs, err := c.Fetch(context.Background(), attestation.FetchOptions{})
+	require.NoError(t, err)
+	require.Empty(t, envs)
+}
+
+func TestNewRequiresPath(t *testing.T) {
+	_, err := New()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "required")
+}
+
+func TestOpenRepoLocal(t *testing.T) {
+	repoPath, _ := initTestRepo(t)
+
+	c, err := New(WithRepoPath(repoPath))
+	require.NoError(t, err)
+
+	repo, err := c.openRepo()
+	require.NoError(t, err)
+	require.NotNil(t, repo)
+}
+
+func TestOpenRepoFileLocator(t *testing.T) {
+	repoPath, _ := initTestRepo(t)
+
+	c, err := New(WithInitString("file://" + repoPath))
+	require.NoError(t, err)
+
+	repo, err := c.openRepo()
+	require.NoError(t, err)
+	require.NotNil(t, repo)
+}
+
+func TestWithLimit(t *testing.T) {
+	repoPath := filepath.Join(t.TempDir(), "test-repo")
+	repo, err := gogit.PlainInit(repoPath, false)
+	require.NoError(t, err)
+
+	wt, err := repo.Worktree()
+	require.NoError(t, err)
+
+	subjs := make([]attestation.Subject, 0, 3)
+	for i := range 3 {
+		testFile := filepath.Join(repoPath, fmt.Sprintf("file%d.txt", i))
+		err = os.WriteFile(testFile, fmt.Appendf(nil, "content %d", i), 0o600)
+		require.NoError(t, err)
+
+		_, err = wt.Add(fmt.Sprintf("file%d.txt", i))
+		require.NoError(t, err)
+
+		hash, err := wt.Commit(fmt.Sprintf("Commit %d", i), &gogit.CommitOptions{
+			Author: &object.Signature{
+				Name:  "Test",
+				Email: "test@example.com",
+			},
+		})
+		require.NoError(t, err)
+		subjs = append(subjs, &intoto.ResourceDescriptor{
+			Digest: map[string]string{"sha1": hash.String()},
+		})
+	}
+
+	c, err := New(WithRepoPath(repoPath))
+	require.NoError(t, err)
+
+	envs, err := c.FetchBySubject(context.Background(), attestation.FetchOptions{Limit: 1}, subjs)
+	require.NoError(t, err)
+	require.Len(t, envs, 1)
+
+	_ = repo
+}
+
+func TestSetKeys(t *testing.T) {
+	repoPath, _ := initTestRepo(t)
+
+	c, err := New(WithRepoPath(repoPath))
+	require.NoError(t, err)
+	require.Empty(t, c.Keys)
+
+	c.SetKeys(nil)
+	require.Nil(t, c.Keys)
+}
