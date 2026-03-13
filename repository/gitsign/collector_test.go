@@ -185,6 +185,33 @@ func TestFetchNoop(t *testing.T) {
 	require.Empty(t, envs)
 }
 
+func TestFetchWithCommitInLocator(t *testing.T) {
+	repoPath, commitHash := initTestRepo(t)
+
+	// Plain path doesn't parse as a vcslocator, so Fetch returns empty.
+	c, err := New(WithRepoPath(repoPath))
+	require.NoError(t, err)
+
+	envs, err := c.Fetch(context.Background(), attestation.FetchOptions{})
+	require.NoError(t, err)
+	require.Empty(t, envs)
+
+	// Use a file:// locator with the commit hash. This makes vcslocator
+	// populate Components.Commit and Fetch will build a virtual attestation.
+	c, err = New(WithInitString("file://" + repoPath + "@" + commitHash))
+	require.NoError(t, err)
+
+	envs, err = c.Fetch(context.Background(), attestation.FetchOptions{})
+	require.NoError(t, err)
+	require.Len(t, envs, 1)
+
+	env := envs[0]
+	require.NotNil(t, env.GetStatement())
+	subjects := env.GetStatement().GetSubjects()
+	require.Len(t, subjects, 1)
+	require.Equal(t, commitHash, subjects[0].GetDigest()["sha1"])
+}
+
 func TestNewRequiresPath(t *testing.T) {
 	_, err := New()
 	require.Error(t, err)

@@ -121,10 +121,34 @@ func (c *Collector) SetKeys(keys []key.PublicKeyProvider) {
 	c.Keys = keys
 }
 
-// Fetch is a noop. The gitsign collector only produces attestations for
-// specific commits requested via FetchBySubject.
-func (c *Collector) Fetch(_ context.Context, _ attestation.FetchOptions) ([]attestation.Envelope, error) {
-	return []attestation.Envelope{}, nil
+// Fetch parses the locator and, if it contains a commit reference, builds a
+// virtual attestation for that commit. Otherwise it returns an empty list.
+func (c *Collector) Fetch(_ context.Context, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
+	components, err := vcslocator.Locator(c.Options.Locator).Parse()
+	if err != nil {
+		return []attestation.Envelope{}, nil //nolint:nilerr // unparseable locator means no commit to fetch
+	}
+	if components.Commit == "" {
+		return []attestation.Envelope{}, nil
+	}
+
+	repo, err := c.openRepo()
+	if err != nil {
+		return nil, err
+	}
+
+	env, err := c.buildVirtualAttestation(repo, components.Commit)
+	if err != nil {
+		return nil, fmt.Errorf("building attestation for commit %s: %w", components.Commit, err)
+	}
+
+	ret := []attestation.Envelope{env}
+
+	if opts.Limit > 0 && len(ret) > opts.Limit {
+		ret = ret[:opts.Limit]
+	}
+
+	return ret, nil
 }
 
 // FetchBySubject looks for sha1 or gitCommit digest algorithms in the
