@@ -7,6 +7,7 @@ and predicates.
 For more detailed documentation see the [`docs/`](docs/) directory:
 
 - [**collectors.md**](docs/collectors.md) — overview of each built-in repository collector
+- [**virtual-attestations.md**](docs/virtual-attestations.md) — how detached signatures become attestations
 - [**limits.md**](docs/limits.md) — how read size and attestation count limits work
 - [**api.md**](docs/api.md) — how to write your own repository collector
 
@@ -121,6 +122,25 @@ prevent resource exhaustion. By default, no single source can deliver more than
 7 MiB of data, and callers can cap the number of returned attestations per fetch.
 Both limits are propagated from the agent to every repository collector through
 `FetchOptions`. For full details, see [limits.md](docs/limits.md).
+
+## Virtual Attestations from Detached Signatures
+
+Filesystem-derived collectors (**fs**, **release**, and **git**) can synthesize
+"virtual" attestations from detached signature files found alongside artifacts.
+When a file like `artifact.tar.gz.sig` or `artifact.tar.gz.sigstore.json` is
+found next to `artifact.tar.gz`, the collector verifies the signature and
+produces an in-toto attestation with predicate type
+`https://carabiner.dev/ampel/signature/v1` whose subject is the signed artifact.
+
+Two kinds of detached signatures are supported:
+
+- **Raw signatures** (`.sig`, `.gpg`, `.asc`) — verified against public keys
+  registered on the agent via `WithKeys` or `WithKeyFiles`.
+- **Sigstore message-signature bundles** (`.sigstore.json`) — verified using the
+  Sigstore trust root; the artifact digest is extracted directly from the bundle
+  so the companion file does not need to be read.
+
+For full details see [virtual-attestations.md](docs/virtual-attestations.md).
 
 ## Attestation Queries
 
