@@ -15,6 +15,7 @@ import (
 
 	"github.com/carabiner-dev/collector/envelope"
 	"github.com/carabiner-dev/collector/filters"
+	"github.com/carabiner-dev/collector/repository"
 )
 
 var (
@@ -30,6 +31,7 @@ func New(funcs ...InitFunction) (*Agent, error) {
 			return nil, err
 		}
 	}
+	agent.distributeKeysTo(agent.Repositories...)
 	return agent, nil
 }
 
@@ -54,18 +56,33 @@ type Agent struct {
 	Repositories []attestation.Repository
 }
 
+// distributeKeysTo sends the agent's verification keys to the given
+// repositories if they implement the repository.SignatureVerifier interface.
+func (agent *Agent) distributeKeysTo(repos ...attestation.Repository) {
+	if len(agent.Options.Keys) == 0 {
+		return
+	}
+	for _, r := range repos {
+		if sv, ok := r.(repository.SignatureVerifier); ok {
+			sv.SetKeys(agent.Options.Keys)
+		}
+	}
+}
+
 func (agent *Agent) AddRepositoryFromString(init string) error {
 	repo, err := RepositoryFromString(init)
 	if err != nil {
 		return fmt.Errorf("building repo: %w", err)
 	}
 	agent.Repositories = append(agent.Repositories, repo)
+	agent.distributeKeysTo(repo)
 	return nil
 }
 
 // AddRepsitory adds a new repository to collect attestations
 func (agent *Agent) AddRepository(repos ...attestation.Repository) error {
 	agent.Repositories = append(agent.Repositories, repos...)
+	agent.distributeKeysTo(repos...)
 	return nil
 }
 

@@ -106,6 +106,11 @@ type Collector struct {
 	Keys                     []key.PublicKeyProvider
 }
 
+// SetKeys sets the verification keys used by the collector.
+func (c *Collector) SetKeys(keys []key.PublicKeyProvider) {
+	c.Keys = keys
+}
+
 // Fetch queries the repository and retrieves any attestations matching the query
 func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
 	if c.FS == nil {
