@@ -169,6 +169,12 @@ func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([
 			return nil, fmt.Errorf("generating envelope from layer %d: %w", i, err)
 		}
 
+		// Skip layers whose payload could not be parsed into a statement.
+		if envelope.GetStatement() == nil {
+			logrus.Debugf("coci: skipping layer %d: payload could not be parsed into a statement", i)
+			continue
+		}
+
 		atts = append(atts, envelope)
 
 		if opts.Limit > 0 && len(atts) >= opts.Limit {
