@@ -4,11 +4,64 @@
 package coci
 
 import (
+	"encoding/base64"
 	"testing"
 
 	"github.com/carabiner-dev/attestation"
+	ggcr "github.com/google/go-containerregistry/pkg/v1"
+	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
+	protodsse "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	"github.com/stretchr/testify/require"
 )
+
+func TestVerificationMaterialMissingCert(t *testing.T) {
+	t.Parallel()
+	// Layer with empty cosign annotations should fail gracefully.
+	layer := &ggcr.Descriptor{
+		Annotations: map[string]string{
+			"dev.sigstore.cosign/certificate": "",
+			"dev.sigstore.cosign/chain":       "",
+			"dev.sigstore.cosign/signature":   "",
+		},
+	}
+	_, err := verificationMaterialFromOCILayer(layer)
+	require.Error(t, err)
+}
+
+func TestVerificationMaterialNoCertAnnotation(t *testing.T) {
+	t.Parallel()
+	layer := &ggcr.Descriptor{
+		Annotations: map[string]string{},
+	}
+	_, err := verificationMaterialFromOCILayer(layer)
+	require.Error(t, err)
+}
+
+func TestBuildPlainDSSEEnvelope(t *testing.T) {
+	t.Parallel()
+	payload := []byte(`{"_type":"https://in-toto.io/Statement/v1","subject":[],"predicateType":"https://slsa.dev/provenance/v0.2","predicate":{}}`)
+
+	dsseEnv := &protobundle.Bundle_DsseEnvelope{
+		DsseEnvelope: &protodsse.Envelope{
+			PayloadType: "application/vnd.in-toto+json",
+			Payload:     payload,
+			Signatures: []*protodsse.Signature{
+				{
+					Keyid: "test-key",
+					Sig:   []byte(base64.StdEncoding.EncodeToString([]byte("fake-sig"))),
+				},
+			},
+		},
+	}
+
+	env, err := buildPlainDSSEEnvelope(dsseEnv, "oci:example.com/repo:sha256-abc.att")
+	require.NoError(t, err)
+	require.NotNil(t, env)
+	require.NotNil(t, env.GetStatement())
+	require.NotNil(t, env.GetPredicate())
+	require.Equal(t, attestation.PredicateType("https://slsa.dev/provenance/v0.2"), env.GetPredicate().GetType())
+	require.Len(t, env.GetSignatures(), 1)
+}
 
 func TestFetch(t *testing.T) {
 	t.Parallel()

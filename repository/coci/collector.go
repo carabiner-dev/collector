@@ -26,8 +26,10 @@ import (
 	protodsse "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	protorekor "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 	sbundle "github.com/sigstore/sigstore-go/pkg/bundle"
+	"github.com/sirupsen/logrus"
 
 	"github.com/carabiner-dev/collector/envelope/bundle"
+	"github.com/carabiner-dev/collector/envelope/dsse"
 	"github.com/carabiner-dev/collector/internal/readlimit"
 )
 
@@ -162,9 +164,9 @@ func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([
 			continue
 		}
 
-		envelope, err := getAttestationBundle(ctx, &opts, imageInfo, &manifest.Layers[i])
+		envelope, err := getAttestationEnvelope(ctx, &opts, imageInfo, &manifest.Layers[i])
 		if err != nil {
-			return nil, fmt.Errorf("generating bundle from layer %d: %w", i, err)
+			return nil, fmt.Errorf("generating envelope from layer %d: %w", i, err)
 		}
 
 		atts = append(atts, envelope)
@@ -279,17 +281,29 @@ func getVerificationMaterialTimestampEntries(manifestLayer *ggcr.Descriptor) (*p
 	}, nil
 }
 
-// getAttestationBundle reads the signes contents from a layer and returns a synthesized bundle
-// to use in ouor standard verification process
-func getAttestationBundle(ctx context.Context, opts *attestation.FetchOptions, imageInfo *ImageInfo, layer *ggcr.Descriptor) (*bundle.Envelope, error) {
+// getAttestationEnvelope reads a DSSE layer from the OCI image and returns an
+// attestation envelope. If the layer contains cosign verification material
+// (certificate, tlog entries, etc.) a full sigstore bundle is returned.
+// Otherwise the payload is returned as a plain DSSE envelope that can be
+// verified with a public key.
+func getAttestationEnvelope(ctx context.Context, opts *attestation.FetchOptions, imageInfo *ImageInfo, layer *ggcr.Descriptor) (attestation.Envelope, error) {
 	dsseEnv, err := dsseEnvelopeFromOCILayer(ctx, opts, imageInfo, layer)
 	if err != nil {
 		return nil, fmt.Errorf("error getting dsse envelope from layer: %w", err)
 	}
 
+	originURI := fmt.Sprintf(
+		"oci:%s/%s:%s.att", imageInfo.Registry, imageInfo.Repository,
+		strings.Replace(layer.Digest.String(), "sha256:", "sha256-", 1),
+	)
+
 	material, err := verificationMaterialFromOCILayer(layer)
 	if err != nil {
-		return nil, fmt.Errorf("getting verification material: %w", err)
+		// No usable verification material. Fall back to a plain DSSE
+		// envelope so the attestation is still returned and can be
+		// verified with a public key.
+		logrus.Debugf("coci: no verification material in layer, falling back to plain DSSE: %v", err)
+		return buildPlainDSSEEnvelope(dsseEnv, originURI)
 	}
 
 	mt, err := sbundle.MediaTypeString("v0.3")
@@ -311,13 +325,39 @@ func getAttestationBundle(ctx context.Context, opts *attestation.FetchOptions, i
 	}
 
 	origin := hset.ToResourceDescriptors()
-	origin[0].Uri = fmt.Sprintf(
-		"oci:%s/%s:%s.att", imageInfo.Registry, imageInfo.Repository,
-		strings.Replace(layer.Digest.String(), "sha256:", "sha256-", 1),
-	)
+	origin[0].Uri = originURI
 	envelope.GetPredicate().SetOrigin(origin[0])
 
 	return envelope, nil
+}
+
+// buildPlainDSSEEnvelope wraps a raw DSSE protobuf envelope into the
+// collector's dsse.Envelope type so it can be returned without sigstore
+// verification material and verified with a public key instead.
+func buildPlainDSSEEnvelope(dsseEnv *protobundle.Bundle_DsseEnvelope, originURI string) (attestation.Envelope, error) {
+	env := &dsse.Envelope{
+		Envelope: dsseEnv.DsseEnvelope,
+	}
+
+	for _, s := range dsseEnv.DsseEnvelope.GetSignatures() {
+		env.Signatures = append(env.Signatures, &dsse.Signature{
+			KeyID:     s.GetKeyid(),
+			Signature: s.GetSig(),
+		})
+	}
+
+	hset, err := hasher.New().HashReaders([]io.Reader{bytes.NewReader(dsseEnv.DsseEnvelope.GetPayload())})
+	if err != nil {
+		return nil, fmt.Errorf("hashing dsse envelope: %w", err)
+	}
+
+	origin := hset.ToResourceDescriptors()
+	origin[0].Uri = originURI
+	if env.GetPredicate() != nil {
+		env.GetPredicate().SetOrigin(origin[0])
+	}
+
+	return env, nil
 }
 
 // getVerificationMaterialTlogEntries returns any transparency log entries found in the layer
