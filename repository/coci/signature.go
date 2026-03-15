@@ -174,9 +174,17 @@ func buildSignatureBundleEnvelope(imageInfo *ImageInfo, material *protobundle.Ve
 	}
 
 	pred := &generic.Predicate{
-		Type:         CosignSignaturePredicateType,
-		Data:         payload,
-		Verification: verification,
+		Type: CosignSignaturePredicateType,
+		Data: payload,
+	}
+
+	// Only set Verification when non-nil to avoid the Go nil interface
+	// gotcha: a typed nil *sapi.Verification assigned to the
+	// attestation.Verification interface field produces a non-nil
+	// interface, which would cause bundle.Envelope.Verify() to
+	// short-circuit without actually performing sigstore verification.
+	if verification != nil {
+		pred.Verification = verification
 	}
 
 	stmt := intoto.NewStatement(
