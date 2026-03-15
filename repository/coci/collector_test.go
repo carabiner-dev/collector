@@ -70,7 +70,7 @@ func TestFetch(t *testing.T) {
 		ref          string
 		expectedAtts int
 	}{
-		{"chainguard", "cgr.dev/chainguard/go", 3},
+		{"chainguard", "cgr.dev/chainguard/go", 4},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
