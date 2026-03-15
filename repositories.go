@@ -18,6 +18,7 @@ import (
 	"github.com/carabiner-dev/collector/repository/http"
 	"github.com/carabiner-dev/collector/repository/jsonl"
 	"github.com/carabiner-dev/collector/repository/note"
+	"github.com/carabiner-dev/collector/repository/oci"
 	"github.com/carabiner-dev/collector/repository/ossrebuild"
 	"github.com/carabiner-dev/collector/repository/release"
 )
@@ -64,6 +65,7 @@ func LoadDefaultRepositoryTypes() error {
 	for t, factory := range map[string]RepositoryFactory{
 		coci.TypeMoniker:        coci.Build,
 		filesystem.TypeMoniker:  filesystem.Build,
+		oci.TypeMoniker:         oci.Build,
 		gitsign.TypeMoniker:     gitsign.Build,
 		github.TypeMoniker:      github.Build,
 		http.TypeMoniker:        http.BuildHTTP,
