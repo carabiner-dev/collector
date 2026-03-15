@@ -8,6 +8,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
@@ -122,7 +123,16 @@ func (c *Collector) getSignatureEnvelope(ctx context.Context, opts *attestation.
 	// is deferred to the downstream Verify() call on the envelope.
 	material, err := verificationMaterialFromOCILayer(layer)
 	if err == nil {
-		return buildSignatureBundleEnvelope(imageInfo, material, signatureBytes, payloadDigest[:], payload)
+		return buildSignatureBundleEnvelope(imageInfo, material, signatureBytes, payloadDigest[:], payload, nil)
+	}
+
+	// Try extracting the public key from the rekor hashedrekord bundle.
+	// This handles images signed with `cosign sign --key` (e.g. Red Hat UBI)
+	// where no Fulcio certificate is present but the key is in the tlog entry.
+	if env, rekorErr := verifyWithRekorKey(layer, imageInfo, payload, signatureBytes, payloadDigest[:]); rekorErr == nil {
+		return env, nil
+	} else {
+		logrus.Debugf("coci: rekor key verification: %v", rekorErr)
 	}
 
 	// Fall back to key-based verification when no sigstore material
@@ -142,8 +152,9 @@ func (c *Collector) getSignatureEnvelope(ctx context.Context, opts *attestation.
 // This produces the same envelope shape as the .att path so that
 // downstream Verify() works uniformly. The payloadDigest must be the
 // SHA-256 hash of the simple signing payload (the artifact that was
-// signed and recorded in rekor).
-func buildSignatureBundleEnvelope(imageInfo *ImageInfo, material *protobundle.VerificationMaterial, signatureBytes, payloadDigest, payload []byte) (attestation.Envelope, error) {
+// signed and recorded in rekor). When verification is non-nil, it is
+// pre-set on the predicate so that Verify() short-circuits.
+func buildSignatureBundleEnvelope(imageInfo *ImageInfo, material *protobundle.VerificationMaterial, signatureBytes, payloadDigest, payload []byte, verification *sapi.Verification) (attestation.Envelope, error) {
 	mt, err := sbundle.MediaTypeString("v0.3")
 	if err != nil {
 		return nil, err
@@ -163,8 +174,9 @@ func buildSignatureBundleEnvelope(imageInfo *ImageInfo, material *protobundle.Ve
 	}
 
 	pred := &generic.Predicate{
-		Type: CosignSignaturePredicateType,
-		Data: payload,
+		Type:         CosignSignaturePredicateType,
+		Data:         payload,
+		Verification: verification,
 	}
 
 	stmt := intoto.NewStatement(
@@ -188,6 +200,121 @@ func buildSignatureBundleEnvelope(imageInfo *ImageInfo, material *protobundle.Ve
 		},
 		Statement: stmt,
 	}, nil
+}
+
+// verifyWithRekorKey attempts to extract a public key from the rekor
+// hashedrekord bundle annotation, verify the signature, and return a
+// bundle.Envelope with the verification pre-set.
+func verifyWithRekorKey(layer *ggcr.Descriptor, imageInfo *ImageInfo, payload, signatureBytes, payloadDigest []byte) (attestation.Envelope, error) {
+	pub, err := extractKeyFromRekorBundle(layer)
+	if err != nil {
+		return nil, err
+	}
+
+	verifier := key.NewVerifier()
+	verified, verErr := verifier.VerifyMessage(pub, payload, signatureBytes)
+	if verErr != nil {
+		return nil, fmt.Errorf("rekor key verification failed: %w", verErr)
+	}
+	if !verified {
+		return nil, fmt.Errorf("rekor key did not verify signature")
+	}
+
+	verification := &sapi.Verification{
+		Signature: &sapi.SignatureVerification{
+			Date:     timestamppb.Now(),
+			Verified: true,
+			Identities: []*sapi.Identity{
+				{
+					Key: &sapi.IdentityKey{
+						Id:   pub.ID(),
+						Type: string(pub.Scheme),
+						Data: pub.Data,
+					},
+				},
+			},
+		},
+	}
+
+	tlogEntries, tlogErr := getVerificationMaterialTlogEntries(layer)
+	if tlogErr != nil {
+		logrus.Debugf("coci: failed to get tlog entries from rekor bundle: %v", tlogErr)
+	}
+	timestampEntries, tsErr := getVerificationMaterialTimestampEntries(layer)
+	if tsErr != nil {
+		logrus.Debugf("coci: failed to get timestamp entries from rekor bundle: %v", tsErr)
+	}
+
+	rekorMaterial := &protobundle.VerificationMaterial{
+		Content: &protobundle.VerificationMaterial_PublicKey{
+			PublicKey: &protocommon.PublicKeyIdentifier{
+				Hint: pub.ID(),
+			},
+		},
+		TlogEntries:               tlogEntries,
+		TimestampVerificationData: timestampEntries,
+	}
+
+	return buildSignatureBundleEnvelope(imageInfo, rekorMaterial, signatureBytes, payloadDigest, payload, verification)
+}
+
+// extractKeyFromRekorBundle extracts a public key from the hashedrekord entry
+// stored in the dev.sigstore.cosign/bundle annotation. This handles images
+// signed with `cosign sign --key` where the public key is embedded in the
+// Rekor transparency log entry rather than in a Fulcio certificate.
+func extractKeyFromRekorBundle(layer *ggcr.Descriptor) (*key.Public, error) {
+	bundleJSON, ok := layer.Annotations["dev.sigstore.cosign/bundle"]
+	if !ok {
+		return nil, fmt.Errorf("no bundle annotation in layer")
+	}
+
+	var bundleData struct {
+		Payload struct {
+			Body string `json:"body"`
+		} `json:"Payload"`
+	}
+	if err := json.Unmarshal([]byte(bundleJSON), &bundleData); err != nil {
+		return nil, fmt.Errorf("parsing bundle JSON: %w", err)
+	}
+
+	if bundleData.Payload.Body == "" {
+		return nil, fmt.Errorf("empty body in bundle payload")
+	}
+
+	bodyBytes, err := base64.StdEncoding.DecodeString(bundleData.Payload.Body)
+	if err != nil {
+		return nil, fmt.Errorf("decoding bundle body: %w", err)
+	}
+
+	var body struct {
+		Spec struct {
+			Signature struct {
+				PublicKey struct {
+					Content string `json:"content"`
+				} `json:"publicKey"`
+			} `json:"signature"`
+		} `json:"spec"`
+	}
+	if err := json.Unmarshal(bodyBytes, &body); err != nil {
+		return nil, fmt.Errorf("parsing hashedrekord body: %w", err)
+	}
+
+	pemB64 := body.Spec.Signature.PublicKey.Content
+	if pemB64 == "" {
+		return nil, fmt.Errorf("no public key in hashedrekord")
+	}
+
+	pemBytes, err := base64.StdEncoding.DecodeString(pemB64)
+	if err != nil {
+		return nil, fmt.Errorf("decoding public key base64: %w", err)
+	}
+
+	pub, err := key.NewParser().ParsePublicKey(pemBytes)
+	if err != nil {
+		return nil, fmt.Errorf("parsing public key PEM: %w", err)
+	}
+
+	return pub, nil
 }
 
 // verifyWithKeys attempts to verify the signature against the payload using
