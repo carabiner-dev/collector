@@ -122,7 +122,7 @@ func (c *Collector) getSignatureEnvelope(ctx context.Context, opts *attestation.
 	// is deferred to the downstream Verify() call on the envelope.
 	material, err := verificationMaterialFromOCILayer(layer)
 	if err == nil {
-		return buildSignatureBundleEnvelope(imageInfo, material, signatureBytes, payloadDigest[:])
+		return buildSignatureBundleEnvelope(imageInfo, material, signatureBytes, payloadDigest[:], payload)
 	}
 
 	// Fall back to key-based verification when no sigstore material
@@ -131,7 +131,7 @@ func (c *Collector) getSignatureEnvelope(ctx context.Context, opts *attestation.
 		if verErr != nil {
 			return nil, fmt.Errorf("key-based verification failed: %w", verErr)
 		}
-		return buildSignatureVirtualAttestation(imageInfo, verification)
+		return buildSignatureVirtualAttestation(imageInfo, payload, verification)
 	}
 
 	return nil, fmt.Errorf("no verification method available for signature layer")
@@ -143,7 +143,7 @@ func (c *Collector) getSignatureEnvelope(ctx context.Context, opts *attestation.
 // downstream Verify() works uniformly. The payloadDigest must be the
 // SHA-256 hash of the simple signing payload (the artifact that was
 // signed and recorded in rekor).
-func buildSignatureBundleEnvelope(imageInfo *ImageInfo, material *protobundle.VerificationMaterial, signatureBytes, payloadDigest []byte) (attestation.Envelope, error) {
+func buildSignatureBundleEnvelope(imageInfo *ImageInfo, material *protobundle.VerificationMaterial, signatureBytes, payloadDigest, payload []byte) (attestation.Envelope, error) {
 	mt, err := sbundle.MediaTypeString("v0.3")
 	if err != nil {
 		return nil, err
@@ -164,7 +164,7 @@ func buildSignatureBundleEnvelope(imageInfo *ImageInfo, material *protobundle.Ve
 
 	pred := &generic.Predicate{
 		Type: CosignSignaturePredicateType,
-		Data: []byte("{}"),
+		Data: payload,
 	}
 
 	stmt := intoto.NewStatement(
@@ -239,7 +239,7 @@ func (c *Collector) verifyWithKeys(payload, sigData []byte) (*sapi.Verification,
 
 // buildSignatureVirtualAttestation creates a virtual attestation for a verified
 // cosign signature layer.
-func buildSignatureVirtualAttestation(imageInfo *ImageInfo, verification *sapi.Verification) (attestation.Envelope, error) {
+func buildSignatureVirtualAttestation(imageInfo *ImageInfo, payload []byte, verification *sapi.Verification) (attestation.Envelope, error) {
 	hexDigest, ok := strings.CutPrefix(imageInfo.Digest, "sha256:")
 	if !ok {
 		return nil, fmt.Errorf("unsupported digest format: %s", imageInfo.Digest)
@@ -254,7 +254,7 @@ func buildSignatureVirtualAttestation(imageInfo *ImageInfo, verification *sapi.V
 
 	pred := &generic.Predicate{
 		Type:         CosignSignaturePredicateType,
-		Data:         []byte("{}"),
+		Data:         payload,
 		Verification: verification,
 	}
 
