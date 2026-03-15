@@ -17,6 +17,7 @@ import (
 
 	"github.com/carabiner-dev/attestation"
 	"github.com/carabiner-dev/hasher"
+	"github.com/carabiner-dev/signer/key"
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -129,6 +130,12 @@ var defaultOptions = Options{}
 
 type Collector struct {
 	Options Options
+	Keys    []key.PublicKeyProvider
+}
+
+// SetKeys sets the verification keys used by the collector.
+func (c *Collector) SetKeys(keys []key.PublicKeyProvider) {
+	c.Keys = keys
 }
 
 // Fetch queries the repository and retrieves any attestations matching the query
@@ -181,6 +188,15 @@ func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([
 			break
 		}
 	}
+
+	// Fetch signatures from the .sig image (non-fatal)
+	sigAtts, err := c.fetchSignatures(ctx, opts, imageInfo)
+	if err != nil {
+		logrus.Debugf("coci: fetching .sig image: %v", err)
+	} else {
+		atts = append(atts, sigAtts...)
+	}
+
 	return atts, nil
 }
 
