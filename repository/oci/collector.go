@@ -10,7 +10,6 @@ import (
 
 	"github.com/carabiner-dev/attestation"
 	"github.com/regclient/regclient"
-	"github.com/regclient/regclient/scheme"
 	"github.com/regclient/regclient/types/descriptor"
 	"github.com/regclient/regclient/types/manifest"
 	"github.com/regclient/regclient/types/ref"
@@ -80,9 +79,10 @@ func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([
 		r = r.SetDigest(m.GetDescriptor().Digest.String())
 	}
 
-	rl, err := rc.ReferrerList(ctx, r, scheme.WithReferrerMatchOpt(descriptor.MatchOpt{
-		ArtifactType: sigstoreBundleArtifactType,
-	}))
+	// Fetch all referrers without filtering by artifact type. Some registries
+	// (notably GHCR) do not propagate the manifest-level artifactType into the
+	// referrer descriptor, so an API-level filter would miss valid entries.
+	rl, err := rc.ReferrerList(ctx, r)
 	if err != nil {
 		return nil, fmt.Errorf("listing referrers: %w", err)
 	}
@@ -124,6 +124,13 @@ func (c *Collector) fetchReferrer(
 		return nil, fmt.Errorf("fetching referrer manifest: %w", err)
 	}
 
+	// Check if this referrer is a sigstore bundle. Some registries don't
+	// propagate the manifest artifactType into the referrer descriptor, so
+	// we check both the descriptor and the manifest itself.
+	if !isSigstoreBundle(desc, m) {
+		return nil, nil
+	}
+
 	mi, ok := m.(manifest.Imager)
 	if !ok {
 		return nil, fmt.Errorf("referrer manifest is not an image manifest")
@@ -161,4 +168,30 @@ func (c *Collector) fetchReferrer(
 	}
 
 	return atts, nil
+}
+
+// isSigstoreBundle returns true when the referrer looks like a sigstore bundle.
+// It checks the descriptor-level artifactType first (which works on compliant
+// registries) and falls back to inspecting the manifest's own artifactType and
+// layer media types (needed for registries like GHCR that populate the
+// descriptor artifactType from the config mediaType instead).
+func isSigstoreBundle(desc *descriptor.Descriptor, m manifest.Manifest) bool {
+	if desc.ArtifactType == sigstoreBundleArtifactType {
+		return true
+	}
+
+	// Check layer media types as a fallback. When a registry does not
+	// propagate artifactType correctly the layers still carry the bundle
+	// media type.
+	if mi, ok := m.(manifest.Imager); ok {
+		if layers, err := mi.GetLayers(); err == nil {
+			for i := range layers {
+				if layers[i].MediaType == sigstoreBundleArtifactType {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
 }
