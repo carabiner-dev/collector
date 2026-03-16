@@ -70,6 +70,25 @@ tag manifest for a given image digest, iterates the DSSE envelope layers,
 and synthesizes Sigstore bundles from the layer data and annotations
 (certificates, transparency log entries, RFC 3161 timestamps).
 
+## oci (OCI Referrers)
+
+Fetches Sigstore bundle attestations attached as OCI referrers. Cosign v3
+attaches signatures and attestations as OCI artifacts that reference the
+subject image via the OCI Referrers API, rather than using the `.att`/`.sig`
+tag convention used by the **coci** collector.
+
+The collector queries the Referrers API for artifacts with artifact type
+`application/vnd.dev.sigstore.bundle.v0.3+json`, pulls their blob layers,
+and parses each as a Sigstore bundle using the standard `bundle.Parser`.
+
+Init string format: `oci:<image-ref>` (e.g. `oci:ghcr.io/foo/bar:v1` or
+`oci:ghcr.io/foo/bar@sha256:abc...`). Tag references are automatically
+resolved to digests before querying referrers.
+
+Authentication uses the Docker credential chain (`~/.docker/config.json`
+and configured credential helpers) and Docker CA certificates
+(`/etc/docker/certs.d`).
+
 ## release
 
 Reads attestations from GitHub release assets. Constructs a virtual
