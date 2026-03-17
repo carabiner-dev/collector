@@ -188,48 +188,64 @@ func (agent *Agent) FetchAttestationsBySubject(ctx context.Context, subjects []a
 	if len(ret) == 0 {
 		fetchMutex.Lock()
 		defer fetchMutex.Unlock()
-		m := []map[string]string{}
-		for _, s := range subjects {
-			m = append(m, s.GetDigest())
-		}
 
-		q := attestation.NewQuery().WithFilter(&filters.SubjectHashMatcher{
-			HashSets: m,
-		})
-
-		t := throttler.New((agent.Options.ParallelFetches), len(repos))
-
-		for _, r := range repos {
-			go func(r attestation.Fetcher) {
-				var err error
-				var atts []attestation.Envelope
-				if fr, ok := r.(attestation.FetcherBySubject); ok {
-					atts, err = fr.FetchBySubject(ctx, opts, subjects)
-				} else {
-					atts, err = r.Fetch(ctx, opts)
-					if err == nil {
-						atts = q.Run(atts)
-					}
-				}
-				if err != nil {
-					t.Done(err)
-					return
-				}
-
-				mutex.Lock()
-				ret = append(ret, atts...)
-				mutex.Unlock()
-				t.Done(nil)
-			}(r)
-			t.Throttle()
-		}
-		if err := t.Err(); err != nil {
-			return nil, fmt.Errorf("fetch throttler error: %w", err)
-		}
+		// Re-check cache after acquiring the lock — another goroutine may
+		// have populated it while we were waiting.
 		if agent.Options.UseCache && agent.Cache != nil {
-			err := agent.Cache.StoreAttestationsBySubject(ctx, subjects, &ret)
+			cachedAtts, err := agent.Cache.GetAttestationsBySubject(ctx, subjects)
 			if err != nil {
-				return nil, fmt.Errorf("storing data in cache: %w", err)
+				return nil, fmt.Errorf("querying attestations cache: %w", err)
+			}
+			if cachedAtts != nil {
+				ret = *cachedAtts
+			}
+		}
+
+		// Only fetch from repositories if cache re-check still empty.
+		if len(ret) == 0 {
+			m := []map[string]string{}
+			for _, s := range subjects {
+				m = append(m, s.GetDigest())
+			}
+
+			q := attestation.NewQuery().WithFilter(&filters.SubjectHashMatcher{
+				HashSets: m,
+			})
+
+			t := throttler.New((agent.Options.ParallelFetches), len(repos))
+
+			for _, r := range repos {
+				go func(r attestation.Fetcher) {
+					var err error
+					var atts []attestation.Envelope
+					if fr, ok := r.(attestation.FetcherBySubject); ok {
+						atts, err = fr.FetchBySubject(ctx, opts, subjects)
+					} else {
+						atts, err = r.Fetch(ctx, opts)
+						if err == nil {
+							atts = q.Run(atts)
+						}
+					}
+					if err != nil {
+						t.Done(err)
+						return
+					}
+
+					mutex.Lock()
+					ret = append(ret, atts...)
+					mutex.Unlock()
+					t.Done(nil)
+				}(r)
+				t.Throttle()
+			}
+			if err := t.Err(); err != nil {
+				return nil, fmt.Errorf("fetch throttler error: %w", err)
+			}
+			if agent.Options.UseCache && agent.Cache != nil {
+				err := agent.Cache.StoreAttestationsBySubject(ctx, subjects, &ret)
+				if err != nil {
+					return nil, fmt.Errorf("storing data in cache: %w", err)
+				}
 			}
 		}
 	}
