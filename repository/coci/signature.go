@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 
 	"github.com/carabiner-dev/attestation"
 	sapi "github.com/carabiner-dev/signer/api/v1"
@@ -57,20 +58,48 @@ func (c *Collector) fetchSignatures(ctx context.Context, opts attestation.FetchO
 		return nil, fmt.Errorf("parsing .sig manifest: %w", err)
 	}
 
-	var atts []attestation.Envelope
+	// Identify signature layers.
+	type indexedLayer struct {
+		index int
+		layer *ggcr.Descriptor
+	}
+	var sigLayers []indexedLayer
 	for i := range manifest.Layers {
-		if string(manifest.Layers[i].MediaType) != cosignSimpleSigningMediaType {
+		if string(manifest.Layers[i].MediaType) == cosignSimpleSigningMediaType {
+			sigLayers = append(sigLayers, indexedLayer{i, &manifest.Layers[i]})
+		}
+	}
+
+	// Pull signature layers in parallel (up to 10 concurrent).
+	type layerResult struct {
+		envelope attestation.Envelope
+		err      error
+		index    int
+	}
+	results := make([]layerResult, len(sigLayers))
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, 10)
+
+	for j, sl := range sigLayers {
+		wg.Add(1)
+		go func(j int, sl indexedLayer) {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+			env, err := c.getSignatureEnvelope(ctx, &opts, imageInfo, sl.layer)
+			results[j] = layerResult{env, err, sl.index}
+		}(j, sl)
+	}
+	wg.Wait()
+
+	// Collect results preserving layer order. Errors are non-fatal per layer.
+	var atts []attestation.Envelope
+	for _, r := range results {
+		if r.err != nil {
+			logrus.Debugf("coci: skipping .sig layer %d: %v", r.index, r.err)
 			continue
 		}
-
-		env, err := c.getSignatureEnvelope(ctx, &opts, imageInfo, &manifest.Layers[i])
-		if err != nil {
-			logrus.Debugf("coci: skipping .sig layer %d: %v", i, err)
-			continue
-		}
-
-		atts = append(atts, env)
-
+		atts = append(atts, r.envelope)
 		if opts.Limit > 0 && len(atts) >= opts.Limit {
 			break
 		}

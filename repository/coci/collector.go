@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 
 	"github.com/carabiner-dev/attestation"
 	"github.com/carabiner-dev/hasher"
@@ -145,56 +146,106 @@ func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([
 		return nil, err
 	}
 
-	// Fetch the manifest of the attached attestations:
+	// Fetch .att attestation layers and .sig signature layers concurrently.
+	var (
+		attAtts, sigAtts []attestation.Envelope
+		attErr, sigErr   error
+		wg               sync.WaitGroup
+	)
+
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		attAtts, attErr = c.fetchAttestationLayers(ctx, opts, imageInfo)
+	}()
+	go func() {
+		defer wg.Done()
+		sigAtts, sigErr = c.fetchSignatures(ctx, opts, imageInfo)
+	}()
+	wg.Wait()
+
+	if attErr != nil {
+		return nil, attErr
+	}
+
+	atts := attAtts
+	if sigErr != nil {
+		logrus.Debugf("coci: fetching .sig image: %v", sigErr)
+	} else {
+		atts = append(atts, sigAtts...)
+	}
+
+	return atts, nil
+}
+
+// fetchAttestationLayers fetches the .att manifest and pulls all DSSE layers
+// in parallel.
+func (c *Collector) fetchAttestationLayers(ctx context.Context, opts attestation.FetchOptions, imageInfo *ImageInfo) ([]attestation.Envelope, error) {
 	manifestData, err := crane.Manifest(
 		fmt.Sprintf(
 			"%s/%s:%s.att",
 			imageInfo.Registry, imageInfo.Repository,
 			strings.Replace(imageInfo.Digest, "sha256:", "sha256-", 1),
 		),
+		crane.WithContext(ctx),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("fetting attestations manifest: %w", err)
+		return nil, fmt.Errorf("fetching attestations manifest: %w", err)
 	}
 
 	manifest, err := ggcr.ParseManifest(bytes.NewReader(manifestData))
 	if err != nil {
 		return nil, fmt.Errorf("parsing attestations manifest: %w", err)
 	}
-	atts := []attestation.Envelope{}
 
-	// TODO(puerco): Paralellize these fetches
-	// Cycle each layer and build a sigstore envelope from the blob data and annotations
+	// Identify DSSE layers to fetch.
+	type indexedLayer struct {
+		index int
+		layer *ggcr.Descriptor
+	}
+	var dsseLayers []indexedLayer
 	for i := range manifest.Layers {
-		// We can only parse DSSE for now
-		if manifest.Layers[i].MediaType != "application/vnd.dsse.envelope.v1+json" {
-			continue
-		}
-
-		envelope, err := getAttestationEnvelope(ctx, &opts, imageInfo, &manifest.Layers[i])
-		if err != nil {
-			return nil, fmt.Errorf("generating envelope from layer %d: %w", i, err)
-		}
-
-		// Skip layers whose payload could not be parsed into a statement.
-		if envelope.GetStatement() == nil {
-			logrus.Debugf("coci: skipping layer %d: payload could not be parsed into a statement", i)
-			continue
-		}
-
-		atts = append(atts, envelope)
-
-		if opts.Limit > 0 && len(atts) >= opts.Limit {
-			break
+		if manifest.Layers[i].MediaType == "application/vnd.dsse.envelope.v1+json" {
+			dsseLayers = append(dsseLayers, indexedLayer{i, &manifest.Layers[i]})
 		}
 	}
 
-	// Fetch signatures from the .sig image (non-fatal)
-	sigAtts, err := c.fetchSignatures(ctx, opts, imageInfo)
-	if err != nil {
-		logrus.Debugf("coci: fetching .sig image: %v", err)
-	} else {
-		atts = append(atts, sigAtts...)
+	// Pull layers in parallel (up to 10 concurrent pulls).
+	type layerResult struct {
+		envelope attestation.Envelope
+		err      error
+		index    int
+	}
+	results := make([]layerResult, len(dsseLayers))
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, 10)
+
+	for j, dl := range dsseLayers {
+		wg.Add(1)
+		go func(j int, dl indexedLayer) {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+			envelope, err := getAttestationEnvelope(ctx, &opts, imageInfo, dl.layer)
+			results[j] = layerResult{envelope, err, dl.index}
+		}(j, dl)
+	}
+	wg.Wait()
+
+	// Collect results preserving layer order.
+	var atts []attestation.Envelope
+	for _, r := range results {
+		if r.err != nil {
+			return nil, fmt.Errorf("generating envelope from layer %d: %w", r.index, r.err)
+		}
+		if r.envelope.GetStatement() == nil {
+			logrus.Debugf("coci: skipping layer %d: payload could not be parsed into a statement", r.index)
+			continue
+		}
+		atts = append(atts, r.envelope)
+		if opts.Limit > 0 && len(atts) >= opts.Limit {
+			break
+		}
 	}
 
 	return atts, nil
