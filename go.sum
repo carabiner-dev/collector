@@ -90,8 +90,8 @@ github.com/carabiner-dev/attestation v0.2.1 h1:VhjV5YlO9TsW50Sr/Zd54bdbZhhDAqgxC
 github.com/carabiner-dev/attestation v0.2.1/go.mod h1:O84vF84RZG3pJO/6BYrPs718bZviHF5DKajP1HsrDpw=
 github.com/carabiner-dev/ghrfs v0.3.4 h1:XJoDXkuw+8KQPTC4oI0da8vLpnx7cfQBGgyjzo+Eqrc=
 github.com/carabiner-dev/ghrfs v0.3.4/go.mod h1:u9We7molIUX6sCe4ox70juKOnbNAUpDv+B5Cerbqhio=
-github.com/carabiner-dev/github v0.2.2 h1:Ykrlcct71fRQm4j37LhAz9FyzG4n1nlm2e+V62MIoJM=
-github.com/carabiner-dev/github v0.2.2/go.mod h1:J7VqMAUewwRQH6r6HMDmVNf39f/z7H5iyTzOfC8am9A=
+github.com/carabiner-dev/github v0.2.3 h1:sky7HXTrgbk9G9gEWBmIeCExprHdnZvKOsFW1bUZXqc=
+github.com/carabiner-dev/github v0.2.3/go.mod h1:8shcF+ie+DvTTQFP0GUR+Nm67w8AxI/kceqT/vWV39Y=
 github.com/carabiner-dev/hasher v0.2.3 h1:678/FKyUJexzDznoIomnW/Z71hoL6Ehz99W2ZP2ACxE=
 github.com/carabiner-dev/hasher v0.2.3/go.mod h1:TRannDvJs5eL61xA/K/whtYbZLQPb/CGFXtDnx4h37M=
 github.com/carabiner-dev/jsonl v0.2.1 h1:2cBv4mGoqWfVkeQO1krIGds9WUm9Jet89QdqWLodlfo=
@@ -104,8 +104,8 @@ github.com/carabiner-dev/policy v0.4.2 h1:5yMIqui603UgpUft6wwub7+sErgsCqUJuElZF/
 github.com/carabiner-dev/policy v0.4.2/go.mod h1:T7ruDEM6F7xWm6OzYRY9s+QiSMsh/VPDufZakCrlYOg=
 github.com/carabiner-dev/predicates v0.1.0 h1:t6tQF9gFdr6TIccWtuNk3kFasx8eu88INFVGkCUnjL4=
 github.com/carabiner-dev/predicates v0.1.0/go.mod h1:jL6EAD+LiI6GW/rOdRYAJF4HaA88/V2Q4n7yUGNQ7XM=
-github.com/carabiner-dev/signer v0.4.1 h1:kJVC9wXAsuU10CXB+md+7Ne6KXscs0f3GCq6bUO7L8A=
-github.com/carabiner-dev/signer v0.4.1/go.mod h1:kqmUAFHKgQXFsIsIFjbk4UlOMXNte7J1IVxIgKAnY/M=
+github.com/carabiner-dev/signer v0.4.2 h1:VcrffuY8iHkKVcA91lyhOAg39u0V0fAdtQjSBYBrmcg=
+github.com/carabiner-dev/signer v0.4.2/go.mod h1:BTWxBXeVfqx23jLIQ72DIYAg105FjSwK11aAco5+ixo=
 github.com/carabiner-dev/vcslocator v0.4.0 h1:HxU8F7FWJatnIhR6NowsPpfki8xw2uNDRLuikcBHFao=
 github.com/carabiner-dev/vcslocator v0.4.0/go.mod h1:B3JFnwypdrRVQPJKNK3BOlRw6DbgmsiHGmoT3ZELpp8=
 github.com/cenkalti/backoff/v4 v4.3.0 h1:MyRJ/UdXutAwSAT+s3wNd7MfTIcy71VQueUuFK343L8=
@@ -173,8 +173,8 @@ github.com/go-git/go-billy/v5 v5.8.0 h1:I8hjc3LbBlXTtVuFNJuwYuMiHvQJDq1AT6u4DwDz
 github.com/go-git/go-billy/v5 v5.8.0/go.mod h1:RpvI/rw4Vr5QA+Z60c6d6LXH0rYJo0uD5SqfmrrheCY=
 github.com/go-git/go-git-fixtures/v4 v4.3.2-0.20231010084843-55a94097c399 h1:eMje31YglSBqCdIqdhKBW8lokaMrL3uTkpGYlE2OOT4=
 github.com/go-git/go-git-fixtures/v4 v4.3.2-0.20231010084843-55a94097c399/go.mod h1:1OCfN199q1Jm3HZlxleg+Dw/mwps2Wbk9frAWm+4FII=
-github.com/go-git/go-git/v5 v5.17.0 h1:AbyI4xf+7DsjINHMu35quAh4wJygKBKBuXVjV/pxesM=
-github.com/go-git/go-git/v5 v5.17.0/go.mod h1:f82C4YiLx+Lhi8eHxltLeGC5uBTXSFa6PC5WW9o4SjI=
+github.com/go-git/go-git/v5 v5.17.1 h1:WnljyxIzSj9BRRUlnmAU35ohDsjRK0EKmL0evDqi5Jk=
+github.com/go-git/go-git/v5 v5.17.1/go.mod h1:pW/VmeqkanRFqR6AljLcs7EA7FbZaN5MQqO7oZADXpo=
 github.com/go-jose/go-jose/v4 v4.1.3 h1:CVLmWDhDVRa6Mi/IgCgaopNosCaHz7zrMeF9MlZRkrs=
 github.com/go-jose/go-jose/v4 v4.1.3/go.mod h1:x4oUasVrzR7071A4TnHLGSPpNOm2a21K9Kf04k1rs08=
 github.com/go-logr/logr v1.2.2/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
@@ -252,8 +252,8 @@ github.com/google/certificate-transparency-go v1.3.3 h1:hq/rSxztSkXN2tx/3jQqF6Xc
 github.com/google/certificate-transparency-go v1.3.3/go.mod h1:iR17ZgSaXRzSa5qvjFl8TnVD5h8ky2JMVio+dzoKMgA=
 github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=
 github.com/google/go-cmp v0.7.0/go.mod h1:pXiqmnSA92OHEEa9HXL2W4E7lf9JzCmGVUdgjX3N/iU=
-github.com/google/go-containerregistry v0.21.2 h1:vYaMU4nU55JJGFC9JR/s8NZcTjbE9DBBbvusTW9NeS0=
-github.com/google/go-containerregistry v0.21.2/go.mod h1:ctO5aCaewH4AK1AumSF5DPW+0+R+d2FmylMJdp5G7p0=
+github.com/google/go-containerregistry v0.21.3 h1:Xr+yt3VvwOOn/5nJzd7UoOhwPGiPkYW0zWDLLUXqAi4=
+github.com/google/go-containerregistry v0.21.3/go.mod h1:D5ZrJF1e6dMzvInpBPuMCX0FxURz7GLq2rV3Us9aPkc=
 github.com/google/gofuzz v1.2.0 h1:xRy4A+RhZaiKjJ1bPfwQ8sedCA+YS2YcCHW6ec7JMi0=
 github.com/google/gofuzz v1.2.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/M65Eg=
 github.com/google/s2a-go v0.1.9 h1:LGD7gtMgezd8a/Xak7mEWL0PjoTQFvpRudN895yqKW0=
