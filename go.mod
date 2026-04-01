@@ -18,7 +18,7 @@ require (
 	github.com/go-git/go-git/v5 v5.17.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/google/go-containerregistry v0.21.2
-	github.com/in-toto/attestation v1.1.2
+	github.com/in-toto/attestation v1.2.0
 	github.com/nozzle/throttler v0.0.0-20180817012639-2ea982251481
 	github.com/olareg/olareg v0.1.2
 	github.com/opencontainers/go-digest v1.0.0
