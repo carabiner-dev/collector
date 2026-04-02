@@ -345,10 +345,10 @@ func TestFetchWithLightweightTagInLocator(t *testing.T) {
 	c, err := New(WithInitString("file://" + repoPath + "@v1.0.0"))
 	require.NoError(t, err)
 
-	// Lightweight tags should produce an error.
-	_, err = c.Fetch(context.Background(), attestation.FetchOptions{})
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "not an annotated tag")
+	// Lightweight tags return an empty list (no attestable data).
+	envs, err := c.Fetch(context.Background(), attestation.FetchOptions{})
+	require.NoError(t, err)
+	require.Empty(t, envs)
 }
 
 func TestFetchWithAnnotatedTagInLocator(t *testing.T) {
@@ -385,7 +385,7 @@ func TestFetchWithNonexistentTag(t *testing.T) {
 	c, err := New(WithInitString("file://" + repoPath + "@v999.0.0"))
 	require.NoError(t, err)
 
-	_, err = c.Fetch(context.Background(), attestation.FetchOptions{})
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "tag not found")
+	envs, err := c.Fetch(context.Background(), attestation.FetchOptions{})
+	require.NoError(t, err)
+	require.Empty(t, envs)
 }

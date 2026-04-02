@@ -144,7 +144,8 @@ func (c *Collector) Fetch(_ context.Context, opts attestation.FetchOptions) ([]a
 	if components.Tag != "" {
 		env, err = c.buildVirtualTagAttestation(repo, components.Tag)
 		if err != nil {
-			return nil, fmt.Errorf("building tag attestation for %s: %w", components.Tag, err)
+			logrus.Debugf("gitsign: skipping tag %s: %v", components.Tag, err)
+			return []attestation.Envelope{}, nil
 		}
 	} else {
 		env, err = c.buildVirtualAttestation(repo, components.Commit)
