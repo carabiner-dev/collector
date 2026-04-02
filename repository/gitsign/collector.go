@@ -35,6 +35,7 @@ import (
 
 	"github.com/carabiner-dev/collector/filters"
 	"github.com/carabiner-dev/collector/predicate/generic"
+	"github.com/carabiner-dev/collector/repository/gitsign/internal/tagattest"
 	intotostatement "github.com/carabiner-dev/collector/statement/intoto"
 )
 
@@ -121,14 +122,16 @@ func (c *Collector) SetKeys(keys []key.PublicKeyProvider) {
 	c.Keys = keys
 }
 
-// Fetch parses the locator and, if it contains a commit reference, builds a
-// virtual attestation for that commit. Otherwise it returns an empty list.
+// Fetch parses the locator and, if it contains a commit or tag reference, builds a
+// virtual attestation. Tag locators produce a tag predicate; commit locators
+// produce a commit predicate.
 func (c *Collector) Fetch(_ context.Context, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
 	components, err := vcslocator.Locator(c.Options.Locator).Parse()
 	if err != nil {
 		return []attestation.Envelope{}, nil //nolint:nilerr // unparseable locator means no commit to fetch
 	}
-	if components.Commit == "" {
+
+	if components.Commit == "" && components.Tag == "" {
 		return []attestation.Envelope{}, nil
 	}
 
@@ -137,9 +140,17 @@ func (c *Collector) Fetch(_ context.Context, opts attestation.FetchOptions) ([]a
 		return nil, err
 	}
 
-	env, err := c.buildVirtualAttestation(repo, components.Commit)
-	if err != nil {
-		return nil, fmt.Errorf("building attestation for commit %s: %w", components.Commit, err)
+	var env attestation.Envelope
+	if components.Tag != "" {
+		env, err = c.buildVirtualTagAttestation(repo, components.Tag)
+		if err != nil {
+			return nil, fmt.Errorf("building tag attestation for %s: %w", components.Tag, err)
+		}
+	} else {
+		env, err = c.buildVirtualAttestation(repo, components.Commit)
+		if err != nil {
+			return nil, fmt.Errorf("building attestation for commit %s: %w", components.Commit, err)
+		}
 	}
 
 	ret := []attestation.Envelope{env}
@@ -290,6 +301,70 @@ func (c *Collector) buildVirtualAttestation(repo *gogit.Repository, commitHash s
 	)
 
 	return &virtualEnvelope{statement: stmtObj}, nil
+}
+
+// buildVirtualTagAttestation generates a tag predicate for an annotated tag
+// and wraps it in a virtual envelope with verification data.
+func (c *Collector) buildVirtualTagAttestation(repo *gogit.Repository, tagName string) (attestation.Envelope, error) {
+	// Use the internal tagattest package (mirrors gitsign's attest.TagStatement).
+	// TODO: replace with attest.TagStatement once gitsign releases the change.
+	stmt, err := tagattest.TagStatement(repo, c.Options.Remote, tagName)
+	if err != nil {
+		return nil, fmt.Errorf("generating tag statement: %w", err)
+	}
+
+	predData, err := protojson.Marshal(stmt.GetPredicate())
+	if err != nil {
+		return nil, fmt.Errorf("marshaling predicate: %w", err)
+	}
+
+	pred := &generic.Predicate{
+		Type: attestation.PredicateType(tagattest.TagTypeV01),
+		Data: predData,
+	}
+
+	// Extract verification from the tag's signature.
+	ref, err := repo.Tag(tagName)
+	if err != nil {
+		return nil, err
+	}
+	tagObj, err := repo.TagObject(ref.Hash())
+	if err == nil && tagObj.PGPSignature != "" {
+		verification := c.extractTagVerification(tagObj)
+		if verification != nil {
+			pred.SetVerification(verification)
+		}
+	}
+
+	stmtObj := intotostatement.NewStatement(
+		intotostatement.WithPredicate(pred),
+		intotostatement.WithSubject(stmt.GetSubject()...),
+	)
+
+	return &virtualEnvelope{statement: stmtObj}, nil
+}
+
+// extractTagVerification inspects the tag signature and returns a Verification
+// result. It reuses the same CMS/sigstore and PGP verification paths as commit
+// signatures since the signature format is identical.
+func (c *Collector) extractTagVerification(tagObj *object.Tag) *sapi.Verification {
+	if tagObj.PGPSignature == "" {
+		return nil
+	}
+
+	// Try CMS/sigstore signature first (PEM-encoded "SIGNED MESSAGE").
+	if block, _ := pem.Decode([]byte(tagObj.PGPSignature)); block != nil {
+		v, err := verifySigstoreSignature(block.Bytes)
+		if err != nil {
+			logrus.Debugf("gitsign: tag sigstore verification failed: %v", err)
+			return nil
+		}
+		return v
+	}
+
+	// PGP verification for tags would require encoding the tag without
+	// signature, which go-git supports. For now, only sigstore is handled.
+	return nil
 }
 
 // extractVerification inspects the commit signature and returns a Verification
