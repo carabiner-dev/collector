@@ -47,8 +47,9 @@ var Build = func(istr string) (attestation.Repository, error) {
 }
 
 var (
-	_ attestation.Fetcher          = (*Collector)(nil)
-	_ attestation.FetcherBySubject = (*Collector)(nil)
+	_ attestation.Fetcher                = (*Collector)(nil)
+	_ attestation.FetcherBySubject       = (*Collector)(nil)
+	_ attestation.FetcherByPredicateType = (*Collector)(nil)
 )
 
 // oidcIssuerOID is the Fulcio OIDC issuer extension OID (1.3.6.1.4.1.57264.1.1).
@@ -158,6 +159,44 @@ func (c *Collector) Fetch(_ context.Context, opts attestation.FetchOptions) ([]a
 
 	if opts.Limit > 0 && len(ret) > opts.Limit {
 		ret = ret[:opts.Limit]
+	}
+
+	return ret, nil
+}
+
+// FetchByPredicateType returns attestations only if the requested predicate
+// types include a gitsign type. This avoids unnecessary work when the caller
+// is looking for unrelated predicate types.
+func (c *Collector) FetchByPredicateType(ctx context.Context, opts attestation.FetchOptions, types []attestation.PredicateType) ([]attestation.Envelope, error) {
+	match := false
+	for _, t := range types {
+		if t == attestation.PredicateType(gspredicate.TypeV01) || t == attestation.PredicateType(tagattest.TagTypeV01) {
+			match = true
+			break
+		}
+	}
+	if !match {
+		return nil, nil
+	}
+
+	envs, err := c.Fetch(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	// Filter to only the requested predicate types.
+	typeSet := make(map[attestation.PredicateType]struct{}, len(types))
+	for _, t := range types {
+		typeSet[t] = struct{}{}
+	}
+
+	ret := make([]attestation.Envelope, 0, len(envs))
+	for _, env := range envs {
+		if p := env.GetPredicate(); p != nil {
+			if _, ok := typeSet[p.GetType()]; ok {
+				ret = append(ret, env)
+			}
+		}
 	}
 
 	return ret, nil
