@@ -12,6 +12,7 @@ import (
 
 	"github.com/carabiner-dev/attestation"
 	gogit "github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	intoto "github.com/in-toto/attestation/go/v1"
 	gspredicate "github.com/sigstore/gitsign/pkg/predicate"
@@ -288,4 +289,111 @@ func TestSetKeys(t *testing.T) {
 
 	c.SetKeys(nil)
 	require.Nil(t, c.Keys)
+}
+
+func TestFetchWithTagInLocator(t *testing.T) {
+	// Use the real repository's v0.3.2 annotated tag.
+	repoRoot := findRepoRoot(t)
+
+	// Test both short tag name and full refs/tags/ format.
+	for _, locator := range []string{
+		"file://" + repoRoot + "@v0.3.2",
+		"file://" + repoRoot + "@refs/tags/v0.3.2",
+	} {
+		t.Run(locator, func(t *testing.T) {
+			c, err := New(WithInitString(locator))
+			require.NoError(t, err)
+
+			envs, err := c.Fetch(context.Background(), attestation.FetchOptions{})
+			require.NoError(t, err)
+			require.Len(t, envs, 1)
+
+			env := envs[0]
+			require.NotNil(t, env.GetStatement())
+			require.NotNil(t, env.GetPredicate())
+
+			// Tag locators produce a tag predicate, not a commit predicate.
+			require.Equal(t, attestation.PredicateType("https://gitsign.sigstore.dev/predicate/tag/v0.1"), env.GetPredicate().GetType())
+
+			// Subject should be the tag object hash, not the commit hash.
+			subjects := env.GetStatement().GetSubjects()
+			require.Len(t, subjects, 1)
+			require.NotEmpty(t, subjects[0].GetDigest()["sha1"])
+			require.Equal(t, subjects[0].GetDigest()["sha1"], subjects[0].GetDigest()["gitTag"])
+		})
+	}
+}
+
+func TestFetchWithLightweightTagInLocator(t *testing.T) {
+	repoPath, commitHash := initTestRepo(t)
+
+	// Create a lightweight tag pointing at the commit.
+	repo, err := gogit.PlainOpen(repoPath)
+	require.NoError(t, err)
+
+	_, err = repo.CreateTag("v1.0.0", plumbing.NewHash(commitHash), nil)
+	require.NoError(t, err)
+
+	c, err := New(WithInitString("file://" + repoPath + "@v1.0.0"))
+	require.NoError(t, err)
+
+	// Lightweight tags should produce an error.
+	_, err = c.Fetch(context.Background(), attestation.FetchOptions{})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "not an annotated tag")
+}
+
+func TestFetchWithAnnotatedTagInLocator(t *testing.T) {
+	repoPath, commitHash := initTestRepo(t)
+
+	repo, err := gogit.PlainOpen(repoPath)
+	require.NoError(t, err)
+
+	tagRef, err := repo.CreateTag("v2.0.0", plumbing.NewHash(commitHash), &gogit.CreateTagOptions{
+		Tagger: &object.Signature{
+			Name:  "Test",
+			Email: "test@example.com",
+		},
+		Message: "Release v2.0.0",
+	})
+	require.NoError(t, err)
+
+	c, err := New(WithInitString("file://" + repoPath + "@v2.0.0"))
+	require.NoError(t, err)
+
+	envs, err := c.Fetch(context.Background(), attestation.FetchOptions{})
+	require.NoError(t, err)
+	require.Len(t, envs, 1)
+
+	// Subject is the tag object hash, not the commit.
+	subjects := envs[0].GetStatement().GetSubjects()
+	require.Len(t, subjects, 1)
+	require.Equal(t, tagRef.Hash().String(), subjects[0].GetDigest()["sha1"])
+}
+
+func TestFetchWithNonexistentTag(t *testing.T) {
+	repoPath, _ := initTestRepo(t)
+
+	c, err := New(WithInitString("file://" + repoPath + "@v999.0.0"))
+	require.NoError(t, err)
+
+	_, err = c.Fetch(context.Background(), attestation.FetchOptions{})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "tag not found")
+}
+
+// findRepoRoot walks up from the current working directory to find the
+// repository root (where .git lives).
+func findRepoRoot(t *testing.T) string {
+	t.Helper()
+	dir, err := os.Getwd()
+	require.NoError(t, err)
+	for {
+		if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
+			return dir
+		}
+		parent := filepath.Dir(dir)
+		require.NotEqual(t, dir, parent, "could not find repo root")
+		dir = parent
+	}
 }
