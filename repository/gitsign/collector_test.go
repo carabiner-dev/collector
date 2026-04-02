@@ -292,16 +292,24 @@ func TestSetKeys(t *testing.T) {
 }
 
 func TestFetchWithTagInLocator(t *testing.T) {
-	// Use the real repository's v0.3.2 annotated tag.
-	repoRoot := findRepoRoot(t)
+	repoPath, commitHash := initTestRepo(t)
+
+	repo, err := gogit.PlainOpen(repoPath)
+	require.NoError(t, err)
+
+	tagRef, err := repo.CreateTag("v1.0.0", plumbing.NewHash(commitHash), &gogit.CreateTagOptions{
+		Tagger: &object.Signature{
+			Name:  "Test",
+			Email: "test@example.com",
+		},
+		Message: "Release v1.0.0",
+	})
+	require.NoError(t, err)
 
 	// Test both short tag name and full refs/tags/ format.
-	for _, locator := range []string{
-		"file://" + repoRoot + "@v0.3.2",
-		"file://" + repoRoot + "@refs/tags/v0.3.2",
-	} {
-		t.Run(locator, func(t *testing.T) {
-			c, err := New(WithInitString(locator))
+	for _, suffix := range []string{"v1.0.0", "refs/tags/v1.0.0"} {
+		t.Run(suffix, func(t *testing.T) {
+			c, err := New(WithInitString("file://" + repoPath + "@" + suffix))
 			require.NoError(t, err)
 
 			envs, err := c.Fetch(context.Background(), attestation.FetchOptions{})
@@ -318,7 +326,7 @@ func TestFetchWithTagInLocator(t *testing.T) {
 			// Subject should be the tag object hash, not the commit hash.
 			subjects := env.GetStatement().GetSubjects()
 			require.Len(t, subjects, 1)
-			require.NotEmpty(t, subjects[0].GetDigest()["sha1"])
+			require.Equal(t, tagRef.Hash().String(), subjects[0].GetDigest()["sha1"])
 			require.Equal(t, subjects[0].GetDigest()["sha1"], subjects[0].GetDigest()["gitTag"])
 		})
 	}
@@ -380,20 +388,4 @@ func TestFetchWithNonexistentTag(t *testing.T) {
 	_, err = c.Fetch(context.Background(), attestation.FetchOptions{})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "tag not found")
-}
-
-// findRepoRoot walks up from the current working directory to find the
-// repository root (where .git lives).
-func findRepoRoot(t *testing.T) string {
-	t.Helper()
-	dir, err := os.Getwd()
-	require.NoError(t, err)
-	for {
-		if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
-			return dir
-		}
-		parent := filepath.Dir(dir)
-		require.NotEqual(t, dir, parent, "could not find repo root")
-		dir = parent
-	}
 }
