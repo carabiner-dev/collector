@@ -5,25 +5,25 @@ go 1.25.8
 require (
 	github.com/carabiner-dev/attestation v0.2.1
 	github.com/carabiner-dev/ghrfs v0.3.4
-	github.com/carabiner-dev/github v0.2.2
+	github.com/carabiner-dev/github v0.2.3
 	github.com/carabiner-dev/hasher v0.2.3
 	github.com/carabiner-dev/jsonl v0.2.1
 	github.com/carabiner-dev/openeox v0.0.0-20260302211234-88fe8a305401
 	github.com/carabiner-dev/osv v0.0.0-20250124012120-b8ce4531cd92
 	github.com/carabiner-dev/predicates v0.1.0
-	github.com/carabiner-dev/signer v0.4.1
+	github.com/carabiner-dev/signer v0.4.2
 	github.com/carabiner-dev/vcslocator v0.4.0
 	github.com/github/smimesign v0.2.0
 	github.com/go-git/go-billy/v5 v5.8.0
-	github.com/go-git/go-git/v5 v5.17.0
+	github.com/go-git/go-git/v5 v5.17.2
 	github.com/gogo/protobuf v1.3.2
-	github.com/google/go-containerregistry v0.21.2
+	github.com/google/go-containerregistry v0.21.3
 	github.com/in-toto/attestation v1.2.0
 	github.com/nozzle/throttler v0.0.0-20180817012639-2ea982251481
 	github.com/olareg/olareg v0.1.2
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.1
-	github.com/openvex/go-vex v0.2.7
+	github.com/openvex/go-vex v0.2.8
 	github.com/package-url/packageurl-go v0.1.5
 	github.com/protobom/protobom v0.5.4
 	github.com/regclient/regclient v0.11.2
@@ -33,7 +33,7 @@ require (
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
 	google.golang.org/protobuf v1.36.11
-	sigs.k8s.io/release-utils v0.12.3
+	sigs.k8s.io/release-utils v0.12.4
 )
 
 require (
