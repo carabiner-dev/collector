@@ -11,8 +11,8 @@ require (
 	github.com/carabiner-dev/openeox v0.0.0-20260302211234-88fe8a305401
 	github.com/carabiner-dev/osv v0.0.0-20250124012120-b8ce4531cd92
 	github.com/carabiner-dev/predicates v0.1.0
-    github.com/carabiner-dev/signer v0.4.2
-    github.com/carabiner-dev/sbomfs v0.1.0
+	github.com/carabiner-dev/sbomfs v0.1.0
+	github.com/carabiner-dev/signer v0.4.2
 	github.com/carabiner-dev/vcslocator v0.4.0
 	github.com/github/smimesign v0.2.0
 	github.com/go-git/go-billy/v5 v5.8.0
@@ -30,6 +30,7 @@ require (
 	github.com/regclient/regclient v0.11.2
 	github.com/sigstore/gitsign v0.14.0
 	github.com/sigstore/protobuf-specs v0.5.0
+	github.com/sigstore/sigstore v1.10.4
 	github.com/sigstore/sigstore-go v1.1.4
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
@@ -130,7 +131,6 @@ require (
 	github.com/shibumi/go-pathspec v1.3.0 // indirect
 	github.com/sigstore/rekor v1.5.1 // indirect
 	github.com/sigstore/rekor-tiles/v2 v2.2.1 // indirect
-	github.com/sigstore/sigstore v1.10.4 // indirect
 	github.com/sigstore/timestamp-authority/v2 v2.0.5 // indirect
 	github.com/skeema/knownhosts v1.3.2 // indirect
 	github.com/spdx/tools-golang v0.5.7 // indirect
