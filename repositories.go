@@ -21,6 +21,7 @@ import (
 	"github.com/carabiner-dev/collector/repository/oci"
 	"github.com/carabiner-dev/collector/repository/ossrebuild"
 	"github.com/carabiner-dev/collector/repository/release"
+	"github.com/carabiner-dev/collector/repository/sbomfs"
 )
 
 var (
@@ -75,6 +76,7 @@ func LoadDefaultRepositoryTypes() error {
 		note.TypeMonikerDynamic: note.BuildDynamic,
 		ossrebuild.TypeMoniker:  ossrebuild.Build,
 		release.TypeMoniker:     release.Build,
+		sbomfs.TypeMoniker:      sbomfs.Build,
 	} {
 		if err := RegisterCollectorType(t, factory); err != nil {
 			if !errors.Is(err, ErrTypeAlreadyRegistered) {
