@@ -17,6 +17,7 @@ import (
 	"github.com/carabiner-dev/collector/repository/gitsign"
 	"github.com/carabiner-dev/collector/repository/http"
 	"github.com/carabiner-dev/collector/repository/jsonl"
+	"github.com/carabiner-dev/collector/repository/maven"
 	"github.com/carabiner-dev/collector/repository/note"
 	"github.com/carabiner-dev/collector/repository/oci"
 	"github.com/carabiner-dev/collector/repository/ossrebuild"
@@ -72,6 +73,7 @@ func LoadDefaultRepositoryTypes() error {
 		http.TypeMoniker:        http.BuildHTTP,
 		http.TypeMonikerHTTPS:   http.BuildHTTPs,
 		jsonl.TypeMoniker:       jsonl.Build,
+		maven.TypeMoniker:       maven.Build,
 		note.TypeMoniker:        note.Build,
 		note.TypeMonikerDynamic: note.BuildDynamic,
 		ossrebuild.TypeMoniker:  ossrebuild.Build,
