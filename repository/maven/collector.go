@@ -9,10 +9,9 @@ package maven
 import (
 	"bytes"
 	"context"
+	"encoding/xml"
 	"fmt"
 	"io"
-	"slices"
-	"strings"
 
 	"github.com/carabiner-dev/attestation"
 	"github.com/carabiner-dev/hasher"
@@ -71,40 +70,37 @@ func (c *Collector) SetKeys(keys []key.PublicKeyProvider) {
 }
 
 // Fetch retrieves attestations from the Maven repository directory.
+// It fetches maven-metadata.xml to resolve artifact filenames, then
+// looks for signatures, JSONL attestation bundles, and unsigned SBOMs.
 func (c *Collector) Fetch(_ context.Context, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
 	dirURL := c.Options.directoryURL()
-
-	// Fetch the directory listing HTML.
+	artifactID := c.Options.PackageURL.Name
 	agent := http.NewAgent().WithFailOnHTTPError(true)
-	listingData, err := agent.Get(dirURL)
+
+	// Fetch and parse maven-metadata.xml to resolve artifact filenames.
+	md, err := c.fetchMetadata(agent, dirURL)
 	if err != nil {
-		return nil, fmt.Errorf("fetching directory listing from %s: %w", dirURL, err)
+		return nil, err
 	}
 
-	files := parseDirectoryListing(string(listingData))
-	if len(files) == 0 {
-		return nil, nil
-	}
-
-	baseName := c.Options.artifactBaseName()
 	var ret []attestation.Envelope
 
 	// 1. Look for the main jar's .asc signature.
-	ascEnvs, err := c.fetchSignature(agent, dirURL, baseName, files, opts)
+	ascEnvs, err := c.fetchSignature(agent, dirURL, artifactID, md, opts)
 	if err != nil {
 		return nil, err
 	}
 	ret = append(ret, ascEnvs...)
 
-	// 2. Look for a .jsonl attestation bundle matching the main jar.
-	jsonlEnvs, err := c.fetchJSONLAttestations(agent, dirURL, baseName, files, opts)
+	// 2. Look for JSONL attestation bundles (intoto.jsonl extension).
+	jsonlEnvs, err := c.fetchJSONLAttestations(agent, dirURL, artifactID, md, opts)
 	if err != nil {
 		return nil, err
 	}
 	ret = append(ret, jsonlEnvs...)
 
-	// 3. Look for unsigned SBOMs (.spdx.json, .cdx.json).
-	sbomEnvs, err := c.fetchSBOMs(agent, dirURL, baseName, files, opts)
+	// 3. Look for unsigned SBOMs (spdx.json, cdx.json, cyclonedx json/xml).
+	sbomEnvs, err := c.fetchSBOMs(agent, dirURL, artifactID, md, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -155,17 +151,75 @@ func (c *Collector) FetchByPredicateType(ctx context.Context, opts attestation.F
 	}).Run(all), nil
 }
 
-// fetchSignature looks for the main jar's .asc file in the listing,
-// fetches both the jar and its signature, and verifies using loaded keys.
-// Returns nil without error if the artifacts are not listed or no keys are configured.
-func (c *Collector) fetchSignature(agent *http.Agent, dirURL, baseName string, files []string, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
-	jarFile := baseName + ".jar"
-	ascFile := jarFile + ".asc"
+// mavenMetadata represents the relevant parts of maven-metadata.xml.
+type mavenMetadata struct {
+	XMLName    xml.Name        `xml:"metadata"`
+	Versioning mavenVersioning `xml:"versioning"`
+}
 
-	if !slices.Contains(files, ascFile) || !slices.Contains(files, jarFile) || len(c.Keys) == 0 {
+type mavenVersioning struct {
+	SnapshotVersions []snapshotVersion `xml:"snapshotVersions>snapshotVersion"`
+}
+
+type snapshotVersion struct {
+	Classifier string `xml:"classifier"`
+	Extension  string `xml:"extension"`
+	Value      string `xml:"value"`
+}
+
+// fetchMetadata fetches and parses the maven-metadata.xml from the directory.
+func (c *Collector) fetchMetadata(agent *http.Agent, dirURL string) (*mavenMetadata, error) {
+	data, err := agent.Get(dirURL + "maven-metadata.xml")
+	if err != nil {
+		return nil, fmt.Errorf("fetching maven-metadata.xml from %s: %w", dirURL, err)
+	}
+
+	var md mavenMetadata
+	if err := xml.Unmarshal(data, &md); err != nil {
+		return nil, fmt.Errorf("parsing maven-metadata.xml: %w", err)
+	}
+
+	return &md, nil
+}
+
+// resolveFilename builds the artifact filename from metadata.
+// For a snapshotVersion with classifier="cyclonedx", extension="json",
+// value="3.21.0.slsa-20260403.173453-4", artifactID="commons-lang3":
+// → commons-lang3-3.21.0.slsa-20260403.173453-4-cyclonedx.json
+func resolveFilename(artifactID string, sv snapshotVersion) string {
+	name := artifactID + "-" + sv.Value
+	if sv.Classifier != "" {
+		name += "-" + sv.Classifier
+	}
+	return name + "." + sv.Extension
+}
+
+// findSnapshotVersion looks up a snapshotVersion entry by extension and classifier.
+func findSnapshotVersion(md *mavenMetadata, extension, classifier string) (snapshotVersion, bool) {
+	for _, sv := range md.Versioning.SnapshotVersions {
+		if sv.Extension == extension && sv.Classifier == classifier {
+			return sv, true
+		}
+	}
+	return snapshotVersion{}, false
+}
+
+// fetchSignature looks for the main jar's .asc in the metadata,
+// fetches both the jar and its signature, and verifies using loaded keys.
+// Returns nil without error if the artifacts are not in the metadata or no keys are configured.
+func (c *Collector) fetchSignature(agent *http.Agent, dirURL, artifactID string, md *mavenMetadata, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
+	if len(c.Keys) == 0 {
 		return nil, nil
 	}
 
+	jarSV, jarOK := findSnapshotVersion(md, "jar", "")
+	ascSV, ascOK := findSnapshotVersion(md, "jar.asc", "")
+	if !jarOK || !ascOK {
+		return nil, nil
+	}
+
+	jarFile := resolveFilename(artifactID, jarSV)
+	ascFile := resolveFilename(artifactID, ascSV)
 	maxSize := readlimit.Resolve(opts.MaxReadSize)
 
 	// Fetch the jar and its signature in parallel.
@@ -199,51 +253,65 @@ func (c *Collector) fetchSignature(agent *http.Agent, dirURL, baseName string, f
 	return []attestation.Envelope{env}, nil
 }
 
-// fetchJSONLAttestations looks for a .jsonl file matching the main jar
-// and parses it for attestation envelopes. Returns nil without error if not listed.
-func (c *Collector) fetchJSONLAttestations(agent *http.Agent, dirURL, baseName string, files []string, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
-	jsonlFile := baseName + ".jsonl"
-	if !slices.Contains(files, jsonlFile) {
+// fetchJSONLAttestations looks for intoto.jsonl in the metadata and parses
+// it for attestation envelopes. Returns nil without error if not present.
+func (c *Collector) fetchJSONLAttestations(agent *http.Agent, dirURL, artifactID string, md *mavenMetadata, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
+	sv, ok := findSnapshotVersion(md, "intoto.jsonl", "")
+	if !ok {
 		return nil, nil
 	}
 
+	filename := resolveFilename(artifactID, sv)
 	maxSize := readlimit.Resolve(opts.MaxReadSize)
-	data, err := agent.Get(dirURL + jsonlFile)
+
+	data, err := agent.Get(dirURL + filename)
 	if err != nil {
-		return nil, fmt.Errorf("fetching %s: %w", jsonlFile, err)
+		return nil, fmt.Errorf("fetching %s: %w", filename, err)
 	}
 
 	if int64(len(data)) > maxSize {
-		return nil, fmt.Errorf("JSONL file %s exceeds max read size (%d bytes)", jsonlFile, maxSize)
+		return nil, fmt.Errorf("JSONL file %s exceeds max read size (%d bytes)", filename, maxSize)
 	}
 
 	return envelope.NewJSONL().Parse(data)
 }
 
-// fetchSBOMs looks for unsigned SBOM files with .spdx.json or .cdx.json extensions.
-// Returns nil without error if none are listed.
-func (c *Collector) fetchSBOMs(agent *http.Agent, dirURL, baseName string, files []string, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
+// sbomExtensions lists the metadata extensions we recognize as SBOMs,
+// along with the classifier (empty string means no classifier).
+var sbomExtensions = []struct {
+	extension  string
+	classifier string
+}{
+	{"spdx.json", ""},
+	{"cdx.json", ""},
+	{"json", "cyclonedx"},
+}
+
+// fetchSBOMs looks for unsigned SBOM files in the metadata.
+// Returns nil without error if none are present.
+func (c *Collector) fetchSBOMs(agent *http.Agent, dirURL, artifactID string, md *mavenMetadata, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
 	maxSize := readlimit.Resolve(opts.MaxReadSize)
 	var ret []attestation.Envelope
 
-	for _, suffix := range []string{".spdx.json", ".cdx.json"} {
-		sbomFile := baseName + suffix
-		if !slices.Contains(files, sbomFile) {
+	for _, ext := range sbomExtensions {
+		sv, ok := findSnapshotVersion(md, ext.extension, ext.classifier)
+		if !ok {
 			continue
 		}
 
-		data, err := agent.Get(dirURL + sbomFile)
+		filename := resolveFilename(artifactID, sv)
+		data, err := agent.Get(dirURL + filename)
 		if err != nil {
-			return nil, fmt.Errorf("fetching SBOM %s: %w", sbomFile, err)
+			return nil, fmt.Errorf("fetching SBOM %s: %w", filename, err)
 		}
 
 		if int64(len(data)) > maxSize {
-			return nil, fmt.Errorf("SBOM %s exceeds max read size (%d bytes)", sbomFile, maxSize)
+			return nil, fmt.Errorf("SBOM %s exceeds max read size (%d bytes)", filename, maxSize)
 		}
 
 		envs, err := envelope.Parsers.Parse(bytes.NewReader(data))
 		if err != nil {
-			return nil, fmt.Errorf("parsing SBOM %s: %w", sbomFile, err)
+			return nil, fmt.Errorf("parsing SBOM %s: %w", filename, err)
 		}
 
 		ret = append(ret, envs...)
@@ -322,41 +390,6 @@ func buildVirtualAttestation(artifactName string, artifactData []byte, verificat
 	)
 
 	return &virtualEnvelope{statement: stmt}, nil
-}
-
-// parseDirectoryListing extracts filenames from an HTML directory listing
-// as served by Maven Central and Apache Nexus repositories.
-// It looks for href attributes in anchor tags.
-func parseDirectoryListing(html string) []string {
-	var files []string
-	rest := html
-	for {
-		idx := strings.Index(rest, "href=\"")
-		if idx == -1 {
-			break
-		}
-		rest = rest[idx+len("href=\""):]
-		end := strings.Index(rest, "\"")
-		if end == -1 {
-			break
-		}
-		href := rest[:end]
-		rest = rest[end:]
-
-		// Skip parent directory links and absolute URLs.
-		if href == ".." || href == "../" || strings.HasPrefix(href, "/") || strings.Contains(href, "://") {
-			continue
-		}
-
-		// Strip trailing slash (directories).
-		href = strings.TrimRight(href, "/")
-		if href == "" {
-			continue
-		}
-
-		files = append(files, href)
-	}
-	return files
 }
 
 // virtualEnvelope implements attestation.Envelope for virtual signature
