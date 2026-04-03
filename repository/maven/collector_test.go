@@ -9,38 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestParseDirectoryListing(t *testing.T) {
-	html := `<html><head><title>Central Repository</title></head><body>
-<a href="../">../</a>
-<a href="alibabacloud-ga20191120-3.0.1.jar">alibabacloud-ga20191120-3.0.1.jar</a>
-<a href="alibabacloud-ga20191120-3.0.1.jar.asc">alibabacloud-ga20191120-3.0.1.jar.asc</a>
-<a href="alibabacloud-ga20191120-3.0.1.jar.sha1">alibabacloud-ga20191120-3.0.1.jar.sha1</a>
-<a href="alibabacloud-ga20191120-3.0.1.pom">alibabacloud-ga20191120-3.0.1.pom</a>
-<a href="alibabacloud-ga20191120-3.0.1.jsonl">alibabacloud-ga20191120-3.0.1.jsonl</a>
-<a href="alibabacloud-ga20191120-3.0.1.spdx.json">alibabacloud-ga20191120-3.0.1.spdx.json</a>
-<a href="alibabacloud-ga20191120-3.0.1.cdx.json">alibabacloud-ga20191120-3.0.1.cdx.json</a>
-</body></html>`
-
-	files := parseDirectoryListing(html)
-	require.Len(t, files, 7)
-	require.Contains(t, files, "alibabacloud-ga20191120-3.0.1.jar")
-	require.Contains(t, files, "alibabacloud-ga20191120-3.0.1.jar.asc")
-	require.Contains(t, files, "alibabacloud-ga20191120-3.0.1.jsonl")
-	require.Contains(t, files, "alibabacloud-ga20191120-3.0.1.spdx.json")
-	require.Contains(t, files, "alibabacloud-ga20191120-3.0.1.cdx.json")
-}
-
-func TestParseDirectoryListingSkipsAbsoluteAndParent(t *testing.T) {
-	html := `<a href="../">Parent</a>
-<a href="/absolute/path">Absolute</a>
-<a href="https://example.com">External</a>
-<a href="file.jar">file.jar</a>`
-
-	files := parseDirectoryListing(html)
-	require.Len(t, files, 1)
-	require.Equal(t, "file.jar", files[0])
-}
-
 func TestOptionsDirectoryURL(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
@@ -65,6 +33,12 @@ func TestOptionsDirectoryURL(t *testing.T) {
 			purl:     "pkg:maven/io.github.user.project/artifact@1.0.0",
 			baseURL:  defaultBaseURL,
 			expected: "https://repo.maven.apache.org/maven2/io/github/user/project/artifact/1.0.0/",
+		},
+		{
+			name:     "namespace with slashes",
+			purl:     "pkg:maven/org/apache/commons/commons-lang3@3.12.0",
+			baseURL:  defaultBaseURL,
+			expected: "https://repo.maven.apache.org/maven2/org/apache/commons/commons-lang3/3.12.0/",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -139,4 +113,93 @@ func TestBuildFactory(t *testing.T) {
 	require.Equal(t, "com.example", c.Options.PackageURL.Namespace)
 	require.Equal(t, "foo", c.Options.PackageURL.Name)
 	require.Equal(t, "1.0.0", c.Options.PackageURL.Version)
+}
+
+func TestResolveFilename(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		artifactID string
+		sv         snapshotVersion
+		expected   string
+	}{
+		{
+			name:       "jar without classifier",
+			artifactID: "commons-lang3",
+			sv:         snapshotVersion{Extension: "jar", Value: "3.21.0-20260403.173453-4"},
+			expected:   "commons-lang3-3.21.0-20260403.173453-4.jar",
+		},
+		{
+			name:       "jar with classifier",
+			artifactID: "commons-lang3",
+			sv:         snapshotVersion{Classifier: "sources", Extension: "jar", Value: "3.21.0-20260403.173453-4"},
+			expected:   "commons-lang3-3.21.0-20260403.173453-4-sources.jar",
+		},
+		{
+			name:       "cyclonedx json with classifier",
+			artifactID: "commons-lang3",
+			sv:         snapshotVersion{Classifier: "cyclonedx", Extension: "json", Value: "3.21.0.slsa-20260403.173453-4"},
+			expected:   "commons-lang3-3.21.0.slsa-20260403.173453-4-cyclonedx.json",
+		},
+		{
+			name:       "spdx.json multi-dot extension",
+			artifactID: "commons-lang3",
+			sv:         snapshotVersion{Extension: "spdx.json", Value: "3.21.0.slsa-20260403.173453-4"},
+			expected:   "commons-lang3-3.21.0.slsa-20260403.173453-4.spdx.json",
+		},
+		{
+			name:       "jar.asc signature",
+			artifactID: "commons-lang3",
+			sv:         snapshotVersion{Extension: "jar.asc", Value: "3.21.0.slsa-20260402.132124-3"},
+			expected:   "commons-lang3-3.21.0.slsa-20260402.132124-3.jar.asc",
+		},
+		{
+			name:       "intoto.jsonl",
+			artifactID: "commons-lang3",
+			sv:         snapshotVersion{Extension: "intoto.jsonl", Value: "3.21.0.slsa-20260403.173453-4"},
+			expected:   "commons-lang3-3.21.0.slsa-20260403.173453-4.intoto.jsonl",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.expected, resolveFilename(tc.artifactID, tc.sv))
+		})
+	}
+}
+
+func TestFindSnapshotVersion(t *testing.T) {
+	md := &mavenMetadata{
+		Versioning: mavenVersioning{
+			SnapshotVersions: []snapshotVersion{
+				{Extension: "jar", Value: "3.21.0-20260403.173453-4"},
+				{Extension: "jar.asc", Value: "3.21.0-20260402.132124-3"},
+				{Extension: "intoto.jsonl", Value: "3.21.0-20260403.173453-4"},
+				{Extension: "spdx.json", Value: "3.21.0-20260403.173453-4"},
+				{Classifier: "cyclonedx", Extension: "json", Value: "3.21.0-20260403.173453-4"},
+				{Classifier: "sources", Extension: "jar", Value: "3.21.0-20260403.173453-4"},
+			},
+		},
+	}
+
+	// Found cases
+	sv, ok := findSnapshotVersion(md, "jar", "")
+	require.True(t, ok)
+	require.Equal(t, "3.21.0-20260403.173453-4", sv.Value)
+
+	sv, ok = findSnapshotVersion(md, "jar.asc", "")
+	require.True(t, ok)
+	require.Equal(t, "3.21.0-20260402.132124-3", sv.Value)
+
+	sv, ok = findSnapshotVersion(md, "json", "cyclonedx")
+	require.True(t, ok)
+	require.Equal(t, "cyclonedx", sv.Classifier)
+
+	sv, ok = findSnapshotVersion(md, "jar", "sources")
+	require.True(t, ok)
+	require.Equal(t, "sources", sv.Classifier)
+
+	// Not found
+	_, ok = findSnapshotVersion(md, "cdx.json", "")
+	require.False(t, ok)
+
+	_, ok = findSnapshotVersion(md, "jar", "nonexistent")
+	require.False(t, ok)
 }
