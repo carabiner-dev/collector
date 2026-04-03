@@ -42,6 +42,12 @@ func WithPackageURL(purlStr string) optFn {
 			return fmt.Errorf("maven purl must include namespace, name, and version")
 		}
 		c.Options.PackageURL = purl
+
+		// Check for a mavenbase qualifier to override the base URL.
+		if baseURL, ok := purl.Qualifiers.Map()["mavenbase"]; ok && baseURL != "" {
+			c.Options.BaseURL = strings.TrimRight(baseURL, "/")
+		}
+
 		return nil
 	}
 }

@@ -110,6 +110,25 @@ func TestWithBaseURL(t *testing.T) {
 	require.Equal(t, "https://nexus.example.com/repo", c.Options.BaseURL)
 }
 
+func TestBaseURLFromQualifier(t *testing.T) {
+	c, err := New(WithPackageURL("pkg:maven/com.example/foo@1.0.0?mavenbase=https://nexus.example.com/repo"))
+	require.NoError(t, err)
+	require.Equal(t, "https://nexus.example.com/repo", c.Options.BaseURL)
+	require.Equal(t,
+		"https://nexus.example.com/repo/com/example/foo/1.0.0/",
+		c.Options.directoryURL(),
+	)
+}
+
+func TestBaseURLQualifierOverriddenByWithBaseURL(t *testing.T) {
+	c, err := New(
+		WithPackageURL("pkg:maven/com.example/foo@1.0.0?mavenbase=https://from-qualifier.com"),
+		WithBaseURL("https://explicit-override.com"),
+	)
+	require.NoError(t, err)
+	require.Equal(t, "https://explicit-override.com", c.Options.BaseURL)
+}
+
 func TestBuildFactory(t *testing.T) {
 	repo, err := Build("pkg:maven/com.example/foo@1.0.0")
 	require.NoError(t, err)
