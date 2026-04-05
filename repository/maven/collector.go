@@ -218,6 +218,12 @@ func (c *Collector) fetchSignature(agent *http.Agent, dirURL, artifactID string,
 		return nil, nil
 	}
 
+	// The jar and its signature must resolve to the same version to prevent
+	// replay attacks where an old valid signature is paired with a newer jar.
+	if jarSV.Value != ascSV.Value {
+		return nil, nil
+	}
+
 	jarFile := resolveFilename(artifactID, jarSV)
 	ascFile := resolveFilename(artifactID, ascSV)
 	maxSize := readlimit.Resolve(opts.MaxReadSize)

@@ -23,28 +23,30 @@ func (sm *SubjectHashMatcher) Matches(att attestation.Envelope) bool {
 		}
 
 		for _, hs := range sm.HashSets {
-			match := false
-			for subalgo, subdig := range sb.GetDigest() {
-				// If the filter does not have the algorithm
-				// in the attestation, continue to the next.
-				if _, ok := hs[subalgo]; !ok {
+			matched := 0
+			mismatch := false
+			// Iterate over the filter's algorithms to ensure the attestation
+			// cannot dodge stronger hash checks by omitting algorithms.
+			for algo, expected := range hs {
+				actual, ok := sb.GetDigest()[algo]
+				if !ok {
+					// The attestation doesn't have this algorithm.
+					// Skip it — we don't require every algorithm, but
+					// every algorithm present must agree.
 					continue
 				}
 
-				if hs[subalgo] == subdig {
-					logrus.Debugf("%s:%s = %s", subalgo, hs[subalgo], subdig)
-					// We have a match, but we cannot return it now as
-					// we need to check all algos.
-					match = true
+				if actual == expected {
+					logrus.Debugf("%s:%s = %s", algo, expected, actual)
+					matched++
 				} else {
-					logrus.Debugf("%s != %s ", hs[subalgo], subdig)
-					// If the hashset has the algo but does not match we can
-					// bail now.
-					match = false
+					logrus.Debugf("%s != %s ", expected, actual)
+					mismatch = true
 					break
 				}
 			}
-			if match {
+			// Require at least one algorithm to have matched and no mismatches.
+			if matched > 0 && !mismatch {
 				return true
 			}
 		}

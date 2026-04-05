@@ -67,18 +67,26 @@ func (memcache *MemoryCache) GetAttestationsByPredicateType(ctx context.Context,
 	return nil, nil
 }
 
+// subjectToKey builds a cache key from a subject. Fields are length-prefixed
+// to prevent collisions where concatenated values from different fields produce
+// the same string. Digests are sorted for deterministic key generation.
 func subjectToKey(s attestation.Subject) string {
-	ret := ""
-	if s.GetName() != "" {
-		ret += s.GetName() + "-"
+	var b strings.Builder
+	name := s.GetName()
+	uri := s.GetUri()
+	fmt.Fprintf(&b, "%d:%s\n%d:%s\n", len(name), name, len(uri), uri)
+
+	digests := s.GetDigest()
+	dkeys := make([]string, 0, len(digests))
+	for algo := range digests {
+		dkeys = append(dkeys, algo)
 	}
-	if s.GetUri() != "" {
-		ret += s.GetUri() + "-"
+	slices.Sort(dkeys)
+	for _, algo := range dkeys {
+		val := digests[algo]
+		fmt.Fprintf(&b, "%d:%s=%d:%s\n", len(algo), algo, len(val), val)
 	}
-	for algo, val := range s.GetDigest() {
-		ret += fmt.Sprintf("%s:%s", algo, val) + "-"
-	}
-	return ret
+	return b.String()
 }
 
 func (memcache *MemoryCache) StoreAttestationsBySubject(ctx context.Context, subjects []attestation.Subject, atts *[]attestation.Envelope) error {
