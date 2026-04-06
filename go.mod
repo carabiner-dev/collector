@@ -13,7 +13,7 @@ require (
 	github.com/carabiner-dev/predicates v0.1.0
 	github.com/carabiner-dev/sbomfs v0.1.0
 	github.com/carabiner-dev/signer v0.4.2
-	github.com/carabiner-dev/vcslocator v0.4.0
+	github.com/carabiner-dev/vcslocator v0.4.1
 	github.com/github/smimesign v0.2.0
 	github.com/go-git/go-billy/v5 v5.8.0
 	github.com/go-git/go-git/v5 v5.17.2
@@ -30,7 +30,7 @@ require (
 	github.com/regclient/regclient v0.11.2
 	github.com/sigstore/gitsign v0.14.0
 	github.com/sigstore/protobuf-specs v0.5.0
-	github.com/sigstore/sigstore v1.10.4
+	github.com/sigstore/sigstore v1.10.5
 	github.com/sigstore/sigstore-go v1.1.4
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
