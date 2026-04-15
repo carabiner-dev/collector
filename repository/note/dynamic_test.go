@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/carabiner-dev/collector/envelope/dsse"
+	"github.com/carabiner-dev/collector/internal/testutil"
 )
 
 // createTestAttestationForCommit creates a DSSE envelope with a gitCommit subject
@@ -85,7 +86,7 @@ func TestDynamicStoreAndFetch(t *testing.T) {
 	commitHash := commits[0]
 
 	// Create a dynamic collector pointing at the local repo
-	dc, err := NewDynamic(DynamicRepoURL("file://"+repoPath), WithPush(false))
+	dc, err := NewDynamic(DynamicRepoURL(testutil.FileLocator(repoPath)), WithPush(false))
 	require.NoError(t, err)
 
 	env := createTestAttestationForCommit(t, commitHash)
@@ -104,7 +105,7 @@ func TestDynamicStoreAndFetch(t *testing.T) {
 func TestDynamicStoreMultipleCommits(t *testing.T) {
 	repoPath, commits := initTestRepo(t, 3)
 
-	dc, err := NewDynamic(DynamicRepoURL("file://"+repoPath), WithPush(false))
+	dc, err := NewDynamic(DynamicRepoURL(testutil.FileLocator(repoPath)), WithPush(false))
 	require.NoError(t, err)
 
 	// Create one attestation per commit and store them all in a single call
@@ -129,7 +130,7 @@ func TestDynamicStoreMultipleCommits(t *testing.T) {
 func TestDynamicStoreRejectsNonCommitSubject(t *testing.T) {
 	repoPath, _ := initTestRepo(t, 1)
 
-	dc, err := NewDynamic(DynamicRepoURL("file://"+repoPath), WithPush(false))
+	dc, err := NewDynamic(DynamicRepoURL(testutil.FileLocator(repoPath)), WithPush(false))
 	require.NoError(t, err)
 
 	// Use the standard test attestation which has only sha256 subjects

@@ -21,6 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/carabiner-dev/collector/envelope/dsse"
+	"github.com/carabiner-dev/collector/internal/testutil"
 )
 
 func TestStoreWithLocalRepo(t *testing.T) {
@@ -57,7 +58,7 @@ func TestStoreWithLocalRepo(t *testing.T) {
 	testAttestation := createTestAttestation(t)
 
 	// Create a collector with the test repository
-	locator := "file://" + repoPath + "@" + commitHash.String()
+	locator := testutil.FileLocator(repoPath) + "@" + commitHash.String()
 	collector, err := New(WithLocator(locator), WithPush(false))
 	require.NoError(t, err)
 
@@ -111,7 +112,7 @@ func TestStoreAppendToExisting(t *testing.T) {
 	testAttestation2 := createTestAttestation(t)
 
 	// Create a collector with the test repository
-	locator := "file://" + repoPath + "@" + commitHash.String()
+	locator := testutil.FileLocator(repoPath) + "@" + commitHash.String()
 	collector, err := New(WithLocator(locator), WithPush(false))
 	require.NoError(t, err)
 
@@ -163,7 +164,7 @@ func TestStoreAndReadWithGitCommand(t *testing.T) {
 	testAttestation := createTestAttestation(t)
 
 	// Create a collector with the test repository
-	locator := "file://" + repoPath + "@" + commitHash.String()
+	locator := testutil.FileLocator(repoPath) + "@" + commitHash.String()
 	collector, err := New(WithLocator(locator), WithPush(false))
 	require.NoError(t, err)
 
@@ -238,7 +239,7 @@ func TestStoreMultipleCommitsUnsorted(t *testing.T) {
 	// Store notes for commits in reverse order to ensure tree entries
 	// would be unsorted if we don't sort them explicitly
 	for i := len(commits) - 1; i >= 0; i-- {
-		locator := "file://" + repoPath + "@" + commits[i].String()
+		locator := testutil.FileLocator(repoPath) + "@" + commits[i].String()
 		collector, err := New(WithLocator(locator), WithPush(false))
 		require.NoError(t, err)
 
@@ -249,7 +250,7 @@ func TestStoreMultipleCommitsUnsorted(t *testing.T) {
 
 	// Verify we can read back all notes
 	for i, commitHash := range commits {
-		locator := "file://" + repoPath + "@" + commitHash.String()
+		locator := testutil.FileLocator(repoPath) + "@" + commitHash.String()
 		collector, err := New(WithLocator(locator), WithPush(false))
 		require.NoError(t, err)
 
