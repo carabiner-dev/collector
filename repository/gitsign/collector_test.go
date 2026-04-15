@@ -11,14 +11,13 @@ import (
 	"testing"
 
 	"github.com/carabiner-dev/attestation"
+	"github.com/carabiner-dev/vcslocator"
 	gogit "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	intoto "github.com/in-toto/attestation/go/v1"
 	gspredicate "github.com/sigstore/gitsign/pkg/predicate"
 	"github.com/stretchr/testify/require"
-
-	"github.com/carabiner-dev/collector/internal/testutil"
 )
 
 // initTestRepo creates a local git repo with a signed commit and returns
@@ -201,7 +200,7 @@ func TestFetchWithCommitInLocator(t *testing.T) {
 
 	// Use a file:// locator with the commit hash. This makes vcslocator
 	// populate Components.Commit and Fetch will build a virtual attestation.
-	c, err = New(WithInitString(testutil.FileLocator(repoPath) + "@" + commitHash))
+	c, err = New(WithInitString(string(vcslocator.NewFromPath(repoPath)) + "@" + commitHash))
 	require.NoError(t, err)
 
 	envs, err = c.Fetch(context.Background(), attestation.FetchOptions{})
@@ -235,7 +234,7 @@ func TestOpenRepoLocal(t *testing.T) {
 func TestOpenRepoFileLocator(t *testing.T) {
 	repoPath, _ := initTestRepo(t)
 
-	c, err := New(WithInitString(testutil.FileLocator(repoPath)))
+	c, err := New(WithInitString(string(vcslocator.NewFromPath(repoPath))))
 	require.NoError(t, err)
 
 	repo, err := c.openRepo()
@@ -311,7 +310,7 @@ func TestFetchWithTagInLocator(t *testing.T) {
 	// Test both short tag name and full refs/tags/ format.
 	for _, suffix := range []string{"v1.0.0", "refs/tags/v1.0.0"} {
 		t.Run(suffix, func(t *testing.T) {
-			c, err := New(WithInitString(testutil.FileLocator(repoPath) + "@" + suffix))
+			c, err := New(WithInitString(string(vcslocator.NewFromPath(repoPath)) + "@" + suffix))
 			require.NoError(t, err)
 
 			envs, err := c.Fetch(context.Background(), attestation.FetchOptions{})
@@ -344,7 +343,7 @@ func TestFetchWithLightweightTagInLocator(t *testing.T) {
 	_, err = repo.CreateTag("v1.0.0", plumbing.NewHash(commitHash), nil)
 	require.NoError(t, err)
 
-	c, err := New(WithInitString(testutil.FileLocator(repoPath) + "@v1.0.0"))
+	c, err := New(WithInitString(string(vcslocator.NewFromPath(repoPath)) + "@v1.0.0"))
 	require.NoError(t, err)
 
 	// Lightweight tags return an empty list (no attestable data).
@@ -368,7 +367,7 @@ func TestFetchWithAnnotatedTagInLocator(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	c, err := New(WithInitString(testutil.FileLocator(repoPath) + "@v2.0.0"))
+	c, err := New(WithInitString(string(vcslocator.NewFromPath(repoPath)) + "@v2.0.0"))
 	require.NoError(t, err)
 
 	envs, err := c.Fetch(context.Background(), attestation.FetchOptions{})
@@ -384,7 +383,7 @@ func TestFetchWithAnnotatedTagInLocator(t *testing.T) {
 func TestFetchWithNonexistentTag(t *testing.T) {
 	repoPath, _ := initTestRepo(t)
 
-	c, err := New(WithInitString(testutil.FileLocator(repoPath) + "@v999.0.0"))
+	c, err := New(WithInitString(string(vcslocator.NewFromPath(repoPath)) + "@v999.0.0"))
 	require.NoError(t, err)
 
 	envs, err := c.Fetch(context.Background(), attestation.FetchOptions{})

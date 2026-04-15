@@ -34,7 +34,6 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/carabiner-dev/collector/filters"
-	"github.com/carabiner-dev/collector/internal/vcsutil"
 	"github.com/carabiner-dev/collector/predicate/generic"
 	"github.com/carabiner-dev/collector/repository/gitsign/internal/tagattest"
 	intotostatement "github.com/carabiner-dev/collector/statement/intoto"
@@ -276,7 +275,10 @@ func (c *Collector) openRepo() (*gogit.Repository, error) {
 	// Local path (either file:// vcslocator or plain path).
 	path := c.Options.Locator
 	if err == nil && components.Transport == vcslocator.TransportFile {
-		path = vcsutil.FileRepoPathToLocal(components.RepoPath)
+		path, err = vcslocator.Locator(c.Options.Locator).LocalPath()
+		if err != nil {
+			return nil, fmt.Errorf("resolving local path: %w", err)
+		}
 	}
 
 	repo, err := gogit.PlainOpenWithOptions(path, &gogit.PlainOpenOptions{

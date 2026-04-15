@@ -21,8 +21,6 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/filemode"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/storage/memory"
-
-	"github.com/carabiner-dev/collector/internal/vcsutil"
 )
 
 var _ attestation.Storer = (*Collector)(nil)
@@ -113,7 +111,11 @@ func (c *Collector) Store(ctx context.Context, opts attestation.StoreOptions, en
 func (c *Collector) openOrCloneRepoForNotes(components *vcslocator.Components) (*git.Repository, error) {
 	if components.Transport == vcslocator.TransportFile {
 		// Open existing local repository
-		repo, err := git.PlainOpen(vcsutil.FileRepoPathToLocal(components.RepoPath))
+		localPath, err := vcslocator.Locator(c.Options.Locator).LocalPath()
+		if err != nil {
+			return nil, fmt.Errorf("resolving local path: %w", err)
+		}
+		repo, err := git.PlainOpen(localPath)
 		if err != nil {
 			return nil, fmt.Errorf("opening local repository: %w", err)
 		}

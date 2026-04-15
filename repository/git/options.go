@@ -9,8 +9,9 @@ package git
 import (
 	"fmt"
 	"net/url"
-	"path/filepath"
 	"strings"
+
+	"github.com/carabiner-dev/vcslocator"
 )
 
 type optFn = func(*Options) error
@@ -35,7 +36,11 @@ func WithLocator(init string) optFn {
 		// Without this, url.Parse treats the Windows drive letter as a scheme
 		// and mangles the path.
 		if isLocalPath(init) {
-			init = localPathToFileURL(init)
+			head, tail := init, ""
+			if i := strings.IndexAny(init, "@#"); i >= 0 {
+				head, tail = init[:i], init[i:]
+			}
+			init = string(vcslocator.NewFromPath(head)) + tail
 		}
 
 		u, err := url.Parse(init)
@@ -65,21 +70,6 @@ func isLocalPath(s string) bool {
 		}
 	}
 	return true
-}
-
-// localPathToFileURL converts a filesystem path (possibly carrying @ref and
-// #subpath suffixes) into a file:// URL with forward slashes and, on Windows,
-// a leading slash before the drive letter.
-func localPathToFileURL(s string) string {
-	head, tail := s, ""
-	if i := strings.IndexAny(s, "@#"); i >= 0 {
-		head, tail = s[:i], s[i:]
-	}
-	head = filepath.ToSlash(head)
-	if head != "" && head[0] != '/' {
-		head = "/" + head
-	}
-	return "file://" + head + tail
 }
 
 func WithPath(path string) optFn {
