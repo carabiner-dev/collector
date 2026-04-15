@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: Copyright 2025 Carabiner Systems, Inc
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build e2e
+
 // Package e2e contains end-to-end tests for the collector's virtual signature
 // attestation generation. These tests hit real GitHub releases and external
 // key servers, so they require network access.
