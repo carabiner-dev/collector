@@ -13,7 +13,7 @@ require (
 	github.com/carabiner-dev/predicates v0.1.0
 	github.com/carabiner-dev/sbomfs v0.1.0
 	github.com/carabiner-dev/signer v0.4.2
-	github.com/carabiner-dev/vcslocator v0.4.2
+	github.com/carabiner-dev/vcslocator v0.4.3-0.20260415221723-1e7d86696551
 	github.com/github/smimesign v0.2.0
 	github.com/go-git/go-billy/v5 v5.8.1-0.20260407233109-416e0a5b21a8
 	github.com/go-git/go-git/v5 v5.17.2
