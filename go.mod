@@ -1,6 +1,6 @@
 module github.com/carabiner-dev/collector
 
-go 1.25.8
+go 1.25.9
 
 require (
 	github.com/carabiner-dev/attestation v0.2.1
@@ -12,13 +12,13 @@ require (
 	github.com/carabiner-dev/osv v0.0.0-20250124012120-b8ce4531cd92
 	github.com/carabiner-dev/predicates v0.1.0
 	github.com/carabiner-dev/sbomfs v0.1.0
-	github.com/carabiner-dev/signer v0.4.2
+	github.com/carabiner-dev/signer v0.4.4
 	github.com/carabiner-dev/vcslocator v0.4.3-0.20260415221723-1e7d86696551
 	github.com/github/smimesign v0.2.0
 	github.com/go-git/go-billy/v5 v5.8.1-0.20260407233109-416e0a5b21a8
 	github.com/go-git/go-git/v5 v5.17.2
 	github.com/gogo/protobuf v1.3.2
-	github.com/google/go-containerregistry v0.21.3
+	github.com/google/go-containerregistry v0.21.5
 	github.com/in-toto/attestation v1.2.0
 	github.com/nozzle/throttler v0.0.0-20180817012639-2ea982251481
 	github.com/olareg/olareg v0.1.2
@@ -27,9 +27,9 @@ require (
 	github.com/openvex/go-vex v0.2.8
 	github.com/package-url/packageurl-go v0.1.5
 	github.com/protobom/protobom v0.5.4
-	github.com/regclient/regclient v0.11.2
+	github.com/regclient/regclient v0.11.3
 	github.com/sigstore/gitsign v0.14.0
-	github.com/sigstore/protobuf-specs v0.5.0
+	github.com/sigstore/protobuf-specs v0.5.1
 	github.com/sigstore/sigstore v1.10.5
 	github.com/sigstore/sigstore-go v1.1.4
 	github.com/sirupsen/logrus v1.9.4
@@ -43,7 +43,7 @@ require (
 	dario.cat/mergo v1.0.2 // indirect
 	github.com/CycloneDX/cyclonedx-go v0.10.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
-	github.com/ProtonMail/go-crypto v1.4.0 // indirect
+	github.com/ProtonMail/go-crypto v1.4.1 // indirect
 	github.com/anchore/go-struct-converter v0.1.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/avast/retry-go/v4 v4.7.0 // indirect
@@ -63,8 +63,7 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/digitorus/pkcs7 v0.0.0-20250730155240-ffadbf3f398c // indirect
 	github.com/digitorus/timestamp v0.0.0-20250524132541-c45532741eea // indirect
-	github.com/docker/cli v29.3.0+incompatible // indirect
-	github.com/docker/distribution v2.8.3+incompatible // indirect
+	github.com/docker/cli v29.4.0+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.9.5 // indirect
 	github.com/docker/libtrust v0.0.0-20160708172513-aabc10ec26b7 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
@@ -109,7 +108,7 @@ require (
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/jedisct1/go-minisign v0.0.0-20241212093149-d2f9f49435c7 // indirect
 	github.com/kevinburke/ssh_config v1.6.0 // indirect
-	github.com/klauspost/compress v1.18.4 // indirect
+	github.com/klauspost/compress v1.18.5 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
@@ -151,12 +150,12 @@ require (
 	go.opentelemetry.io/otel/trace v1.42.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/crypto v0.49.0 // indirect
-	golang.org/x/mod v0.34.0 // indirect
+	golang.org/x/mod v0.35.0 // indirect
 	golang.org/x/net v0.52.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/sys v0.42.0 // indirect
-	golang.org/x/term v0.41.0 // indirect
+	golang.org/x/sys v0.43.0 // indirect
+	golang.org/x/term v0.42.0 // indirect
 	golang.org/x/text v0.35.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260311181403-84a4fc48630c // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260311181403-84a4fc48630c // indirect
