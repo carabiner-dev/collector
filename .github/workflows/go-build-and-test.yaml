@@ -15,8 +15,11 @@ permissions: {}
 jobs:
   go-versions:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
-      matrix: ${{ steps.versions.outputs.matrix }}
+      stable: ${{ steps.versions.outputs.GO_MINOR_VERSION_STABLE }}
+      previous: ${{ steps.versions.outputs.GO_MINOR_VERSION_PREVIOUS }}
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
@@ -24,23 +27,25 @@ jobs:
 
     - name: Determine Go versions
       id: versions
-      run: |
-        # Read the Go version from go.mod (e.g. "1.25" or "1.25.7")
-        MOD_VERSION=$(grep '^go ' go.mod | awk '{print $2}')
-        # Extract major.minor
-        MINOR=$(echo "$MOD_VERSION" | cut -d. -f2)
-        NEXT_MINOR=$((MINOR + 1))
-        echo "matrix=[\"1.${MINOR}\",\"1.${NEXT_MINOR}\"]" >> "$GITHUB_OUTPUT"
+      uses: carabiner-dev/actions/go/versions@360ffa1eb909b0105d4eccb6d6ef337911c34952 # main
 
   test:
     needs: go-versions
+    name: Go Tests (go ${{ matrix.go-version }}, ${{ matrix.os }})
     permissions:
       contents: read
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        go-version: ${{ fromJSON(needs.go-versions.outputs.matrix) }}
+        go-version:
+          - ${{ needs.go-versions.outputs.previous }}
+          - ${{ needs.go-versions.outputs.stable }}
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+      fail-fast: false
 
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -61,13 +66,21 @@ jobs:
 
   e2e:
     needs: go-versions
+    name: E2E Tests (go ${{ matrix.go-version }}, ${{ matrix.os }})
     permissions:
       contents: read
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        go-version: ${{ fromJSON(needs.go-versions.outputs.matrix) }}
+        go-version:
+          - ${{ needs.go-versions.outputs.previous }}
+          - ${{ needs.go-versions.outputs.stable }}
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+      fail-fast: false
 
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -82,6 +95,8 @@ jobs:
         cache: true
 
     - name: E2E Tests
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
       run: |
         go get -d ./...
-        go test -v -timeout 300s ./e2e/...
+        go test -v -tags=e2e -timeout 300s ./e2e/...
