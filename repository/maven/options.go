@@ -43,8 +43,8 @@ func WithPackageURL(purlStr string) optFn {
 		}
 		c.Options.PackageURL = purl
 
-		// Check for a mavenbase qualifier to override the base URL.
-		if baseURL, ok := purl.Qualifiers.Map()["mavenbase"]; ok && baseURL != "" {
+		// Check for a repository_url qualifier to override the base URL.
+		if baseURL, ok := purl.Qualifiers.Map()["repository_url"]; ok && baseURL != "" {
 			c.Options.BaseURL = strings.TrimRight(baseURL, "/")
 		}
 
