@@ -47,8 +47,6 @@ var sigstoreHashAlgNames = map[protocommon.HashAlgorithm]string{
 	protocommon.HashAlgorithm_SHA2_256: "sha256",
 	protocommon.HashAlgorithm_SHA2_384: "sha384",
 	protocommon.HashAlgorithm_SHA2_512: "sha512",
-	protocommon.HashAlgorithm_SHA3_256: "sha3_256",
-	protocommon.HashAlgorithm_SHA3_384: "sha3_384",
 }
 
 // sigstoreHashToIntoto converts a sigstore HashAlgorithm to the in-toto
