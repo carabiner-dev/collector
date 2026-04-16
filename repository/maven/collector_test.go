@@ -55,6 +55,53 @@ func TestOptionsArtifactBaseName(t *testing.T) {
 	require.Equal(t, "alibabacloud-ga20191120-3.0.1", c.Options.artifactBaseName())
 }
 
+func TestArtifactTypeAndClassifier(t *testing.T) {
+	for _, tc := range []struct {
+		name           string
+		purl           string
+		wantType       string
+		wantClassifier string
+	}{
+		{
+			name:           "defaults",
+			purl:           "pkg:maven/com.example/foo@1.0.0",
+			wantType:       "jar",
+			wantClassifier: "",
+		},
+		{
+			name:           "type war",
+			purl:           "pkg:maven/com.example/foo@1.0.0?type=war",
+			wantType:       "war",
+			wantClassifier: "",
+		},
+		{
+			name:           "classifier sources",
+			purl:           "pkg:maven/com.example/foo@1.0.0?classifier=sources",
+			wantType:       "jar",
+			wantClassifier: "sources",
+		},
+		{
+			name:           "type and classifier",
+			purl:           "pkg:maven/com.example/foo@1.0.0?type=jar&classifier=javadoc",
+			wantType:       "jar",
+			wantClassifier: "javadoc",
+		},
+		{
+			name:           "empty type falls back to jar",
+			purl:           "pkg:maven/com.example/foo@1.0.0?type=",
+			wantType:       "jar",
+			wantClassifier: "",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c, err := New(WithPackageURL(tc.purl))
+			require.NoError(t, err)
+			require.Equal(t, tc.wantType, c.Options.artifactType())
+			require.Equal(t, tc.wantClassifier, c.Options.artifactClassifier())
+		})
+	}
+}
+
 func TestNewValidation(t *testing.T) {
 	// Missing purl
 	_, err := New()
@@ -85,7 +132,7 @@ func TestWithBaseURL(t *testing.T) {
 }
 
 func TestBaseURLFromQualifier(t *testing.T) {
-	c, err := New(WithPackageURL("pkg:maven/com.example/foo@1.0.0?mavenbase=https://nexus.example.com/repo"))
+	c, err := New(WithPackageURL("pkg:maven/com.example/foo@1.0.0?repository_url=https://nexus.example.com/repo"))
 	require.NoError(t, err)
 	require.Equal(t, "https://nexus.example.com/repo", c.Options.BaseURL)
 	require.Equal(t,
@@ -96,7 +143,7 @@ func TestBaseURLFromQualifier(t *testing.T) {
 
 func TestBaseURLQualifierOverriddenByWithBaseURL(t *testing.T) {
 	c, err := New(
-		WithPackageURL("pkg:maven/com.example/foo@1.0.0?mavenbase=https://from-qualifier.com"),
+		WithPackageURL("pkg:maven/com.example/foo@1.0.0?repository_url=https://from-qualifier.com"),
 		WithBaseURL("https://explicit-override.com"),
 	)
 	require.NoError(t, err)

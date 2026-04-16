@@ -204,32 +204,39 @@ func findSnapshotVersion(md *mavenMetadata, extension, classifier string) (snaps
 	return snapshotVersion{}, false
 }
 
-// fetchSignature looks for the main jar's .asc in the metadata,
-// fetches both the jar and its signature, and verifies using loaded keys.
-// Returns nil without error if the artifacts are not in the metadata or no keys are configured.
+// fetchSignature looks for the purl-identified artifact's .asc in the
+// metadata, fetches both the artifact and its signature, and verifies using
+// loaded keys. The artifact extension and classifier are taken from the
+// purl "type" and "classifier" qualifiers so the hashed subject matches
+// the artifact the purl refers to. Returns nil without error if the
+// artifacts are not in the metadata or no keys are configured.
 func (c *Collector) fetchSignature(agent *http.Agent, dirURL, artifactID string, md *mavenMetadata, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
 	if len(c.Keys) == 0 {
 		return nil, nil
 	}
 
-	jarSV, jarOK := findSnapshotVersion(md, "jar", "")
-	ascSV, ascOK := findSnapshotVersion(md, "jar.asc", "")
-	if !jarOK || !ascOK {
+	artType := c.Options.artifactType()
+	classifier := c.Options.artifactClassifier()
+
+	artSV, artOK := findSnapshotVersion(md, artType, classifier)
+	ascSV, ascOK := findSnapshotVersion(md, artType+".asc", classifier)
+	if !artOK || !ascOK {
 		return nil, nil
 	}
 
-	// The jar and its signature must resolve to the same version to prevent
-	// replay attacks where an old valid signature is paired with a newer jar.
-	if jarSV.Value != ascSV.Value {
+	// The artifact and its signature must resolve to the same version to
+	// prevent replay attacks where an old valid signature is paired with
+	// a newer artifact.
+	if artSV.Value != ascSV.Value {
 		return nil, nil
 	}
 
-	jarFile := resolveFilename(artifactID, jarSV)
+	artFile := resolveFilename(artifactID, artSV)
 	ascFile := resolveFilename(artifactID, ascSV)
 	maxSize := readlimit.Resolve(opts.MaxReadSize)
 
-	// Fetch the jar and its signature in parallel.
-	urls := []string{dirURL + jarFile, dirURL + ascFile}
+	// Fetch the artifact and its signature in parallel.
+	urls := []string{dirURL + artFile, dirURL + ascFile}
 	datas, errs := agent.GetGroup(urls)
 
 	for i, e := range errs {
@@ -238,22 +245,22 @@ func (c *Collector) fetchSignature(agent *http.Agent, dirURL, artifactID string,
 		}
 	}
 
-	jarData, sigData := datas[0], datas[1]
+	artData, sigData := datas[0], datas[1]
 
-	if int64(len(jarData)) > maxSize {
-		return nil, fmt.Errorf("jar %s exceeds max read size (%d bytes)", jarFile, maxSize)
+	if int64(len(artData)) > maxSize {
+		return nil, fmt.Errorf("artifact %s exceeds max read size (%d bytes)", artFile, maxSize)
 	}
 
 	// Verify signature using loaded keys. Verification failure is not
 	// a fetch error — the signature simply didn't match any loaded key.
-	verification, verifyErr := verifyWithKeys(c.Keys, jarData, sigData)
+	verification, verifyErr := verifyWithKeys(c.Keys, artData, sigData)
 	if verifyErr != nil {
 		return nil, nil //nolint:nilerr // verification failure is not a fetch error
 	}
 
-	env, err := buildVirtualAttestation(jarFile, jarData, verification)
+	env, err := buildVirtualAttestation(artFile, artData, verification)
 	if err != nil {
-		return nil, fmt.Errorf("building signature attestation for %s: %w", jarFile, err)
+		return nil, fmt.Errorf("building signature attestation for %s: %w", artFile, err)
 	}
 
 	return []attestation.Envelope{env}, nil

@@ -43,8 +43,8 @@ func WithPackageURL(purlStr string) optFn {
 		}
 		c.Options.PackageURL = purl
 
-		// Check for a mavenbase qualifier to override the base URL.
-		if baseURL, ok := purl.Qualifiers.Map()["mavenbase"]; ok && baseURL != "" {
+		// Check for a repository_url qualifier to override the base URL.
+		if baseURL, ok := purl.Qualifiers.Map()["repository_url"]; ok && baseURL != "" {
 			c.Options.BaseURL = strings.TrimRight(baseURL, "/")
 		}
 
@@ -86,4 +86,19 @@ func (o *Options) directoryURL() string {
 // For example: alibabacloud-ga20191120-3.0.1
 func (o *Options) artifactBaseName() string {
 	return fmt.Sprintf("%s-%s", o.PackageURL.Name, o.PackageURL.Version)
+}
+
+// artifactType returns the Maven packaging type from the purl "type"
+// qualifier. Per the purl-spec, it defaults to "jar" when absent.
+func (o *Options) artifactType() string {
+	if t, ok := o.PackageURL.Qualifiers.Map()["type"]; ok && t != "" {
+		return t
+	}
+	return "jar"
+}
+
+// artifactClassifier returns the Maven classifier from the purl
+// "classifier" qualifier, or the empty string when absent.
+func (o *Options) artifactClassifier() string {
+	return o.PackageURL.Qualifiers.Map()["classifier"]
 }
