@@ -35,7 +35,6 @@ import (
 
 	"github.com/carabiner-dev/collector/filters"
 	"github.com/carabiner-dev/collector/predicate/generic"
-	"github.com/carabiner-dev/collector/repository/gitsign/internal/tagattest"
 	intotostatement "github.com/carabiner-dev/collector/statement/intoto"
 )
 
@@ -170,7 +169,7 @@ func (c *Collector) Fetch(_ context.Context, opts attestation.FetchOptions) ([]a
 func (c *Collector) FetchByPredicateType(ctx context.Context, opts attestation.FetchOptions, types []attestation.PredicateType) ([]attestation.Envelope, error) {
 	match := false
 	for _, t := range types {
-		if t == attestation.PredicateType(gspredicate.TypeV01) || t == attestation.PredicateType(tagattest.TagTypeV01) {
+		if t == attestation.PredicateType(gspredicate.TypeV01) || t == attestation.PredicateType(gspredicate.TagTypeV01) {
 			match = true
 			break
 		}
@@ -349,9 +348,7 @@ func (c *Collector) buildVirtualAttestation(repo *gogit.Repository, commitHash s
 // buildVirtualTagAttestation generates a tag predicate for an annotated tag
 // and wraps it in a virtual envelope with verification data.
 func (c *Collector) buildVirtualTagAttestation(repo *gogit.Repository, tagName string) (attestation.Envelope, error) {
-	// Use the internal tagattest package (mirrors gitsign's attest.TagStatement).
-	// TODO: replace with attest.TagStatement once gitsign releases the change.
-	stmt, err := tagattest.TagStatement(repo, c.Options.Remote, tagName)
+	stmt, err := attest.TagStatement(repo, c.Options.Remote, tagName)
 	if err != nil {
 		return nil, fmt.Errorf("generating tag statement: %w", err)
 	}
@@ -362,7 +359,7 @@ func (c *Collector) buildVirtualTagAttestation(repo *gogit.Repository, tagName s
 	}
 
 	pred := &generic.Predicate{
-		Type: attestation.PredicateType(tagattest.TagTypeV01),
+		Type: attestation.PredicateType(gspredicate.TagTypeV01),
 		Data: predData,
 	}
 
