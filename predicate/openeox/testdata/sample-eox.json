@@ -3,27 +3,33 @@
   "statements": [
     {
       "core": {
-        "$schema": "https://docs.oasis-open.org/openeox/tbd/schema/core.json",
+        "$schema": "https://docs.oasis-open.org/openeox/v1.0/schema/core.json",
         "end_of_life": "2027-12-31T23:59:59Z",
         "end_of_security_support": "2027-06-30T23:59:59Z",
         "end_of_sales": "2026-12-31T23:59:59Z",
         "last_updated": "2025-04-30T10:00:00Z"
       },
-      "productName": "Enterprise Server",
-      "productVersion": "5.2",
-      "vendorName": "Example Technologies"
+      "product": {
+        "$schema": "https://docs.oasis-open.org/openeox/tbd/schema/product_software.json",
+        "product_name": "Enterprise Server",
+        "product_version": "5.2",
+        "vendor_name": "Example Technologies"
+      }
     },
     {
       "core": {
-        "$schema": "https://docs.oasis-open.org/openeox/tbd/schema/core.json",
+        "$schema": "https://docs.oasis-open.org/openeox/v1.0/schema/core.json",
         "end_of_life": "2026-09-30T23:59:59Z",
         "end_of_security_support": "2026-03-31T23:59:59Z",
         "end_of_sales": "2025-09-30T23:59:59Z",
         "last_updated": "2025-04-30T10:00:00Z"
       },
-      "productName": "Secure Gateway",
-      "productVersion": "3.7",
-      "vendorName": "Example Technologies"
+      "product": {
+        "$schema": "https://docs.oasis-open.org/openeox/tbd/schema/product_software.json",
+        "product_name": "Secure Gateway",
+        "product_version": "3.7",
+        "vendor_name": "Example Technologies"
+      }
     }
   ]
 }
