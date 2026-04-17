@@ -4,6 +4,7 @@
 package openeox
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -40,7 +41,7 @@ func (p *Parser) Parse(data []byte) (attestation.Predicate, error) {
 	isShell := true
 	shell, err := parser.ParseShell(data)
 	if err != nil {
-		if strings.Contains(err.Error(), "proto:") && strings.Contains(err.Error(), "unknown field") {
+		if isFormatError(err) {
 			isShell = false
 		} else {
 			return nil, fmt.Errorf("parsing data: %w", err)
@@ -58,7 +59,7 @@ func (p *Parser) Parse(data []byte) (attestation.Predicate, error) {
 	// If its not a shell, it should be a direct core
 	core, err := parser.ParseCore(data)
 	if err != nil {
-		if strings.Contains(err.Error(), "proto:") && strings.Contains(err.Error(), "unknown field") {
+		if isFormatError(err) {
 			return nil, attestation.ErrNotCorrectFormat
 		}
 		return nil, fmt.Errorf("parsing data: %w", err)
@@ -69,4 +70,15 @@ func (p *Parser) Parse(data []byte) (attestation.Predicate, error) {
 		Parsed: core,
 		Data:   data,
 	}, nil
+}
+
+// isFormatError returns true when err indicates the data does not match the
+// parser's expected format. The openeox library may signal this via
+// attestation.ErrNotCorrectFormat or via a protobuf "unknown field" error.
+func isFormatError(err error) bool {
+	if errors.Is(err, attestation.ErrNotCorrectFormat) {
+		return true
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "proto:") && strings.Contains(msg, "unknown field")
 }
