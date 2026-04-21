@@ -6,7 +6,7 @@ require (
 	github.com/carabiner-dev/attestation v0.2.1
 	github.com/carabiner-dev/ghrfs v0.3.4
 	github.com/carabiner-dev/github v0.2.3
-	github.com/carabiner-dev/hasher v0.2.3
+	github.com/carabiner-dev/hasher v0.2.4
 	github.com/carabiner-dev/jsonl v0.2.1
 	github.com/carabiner-dev/openeox v1.0.0-pre.1
 	github.com/carabiner-dev/osv v0.0.0-20250124012120-b8ce4531cd92
@@ -21,12 +21,12 @@ require (
 	github.com/google/go-containerregistry v0.21.5
 	github.com/in-toto/attestation v1.2.0
 	github.com/nozzle/throttler v0.0.0-20180817012639-2ea982251481
-	github.com/olareg/olareg v0.2.0
+	github.com/olareg/olareg v0.2.1
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/openvex/go-vex v0.2.8
 	github.com/package-url/packageurl-go v0.1.5
-	github.com/protobom/protobom v0.5.4
+	github.com/protobom/protobom v0.5.5
 	github.com/regclient/regclient v0.11.3
 	github.com/sigstore/gitsign v0.14.1-0.20260414150136-4638d83b00e1
 	github.com/sigstore/protobuf-specs v0.5.1
@@ -93,6 +93,7 @@ require (
 	github.com/go-openapi/validate v0.25.2 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/goccy/go-json v0.10.6 // indirect
+	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/google/certificate-transparency-go v1.3.3 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
