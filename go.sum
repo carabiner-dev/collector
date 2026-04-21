@@ -1,3 +1,5 @@
+buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260415201107-50325440f8f2.1 h1:s6hzCXtND/ICdGPTMGk7C+/BFlr2Jg5GyH0NKf4XGXg=
+buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260415201107-50325440f8f2.1/go.mod h1:tvtbpgaVXZX4g6Pn+AnzFycuRK3MOz5HJfEGeEllXYM=
 cloud.google.com/go v0.123.0 h1:2NAUJwPR47q+E35uaJeYoNhuNEM9kM8SjgRgdeOJUSE=
 cloud.google.com/go v0.123.0/go.mod h1:xBoMV08QcqUGuPW65Qfm1o9Y4zKZBpGS+7bImXLTAZU=
 cloud.google.com/go/auth v0.18.2 h1:+Nbt5Ev0xEqxlNjd6c+yYUeosQ5TtEUaNcN/3FozlaM=
@@ -100,10 +102,10 @@ github.com/carabiner-dev/openeox v1.0.0-pre.1 h1:47Oe0vcH9m8nBFFQCPLNVR2HwiumXst
 github.com/carabiner-dev/openeox v1.0.0-pre.1/go.mod h1:+6i8M7PhtWk2jRtUC1anZnhmOr5cXKMLGYjwFcqPDa0=
 github.com/carabiner-dev/osv v0.0.0-20250124012120-b8ce4531cd92 h1:BJ9+OCNezZGkU8SrGC3oB7Tj+J0JsonwfZztcgUav6c=
 github.com/carabiner-dev/osv v0.0.0-20250124012120-b8ce4531cd92/go.mod h1:o7jXwi/fFZ9mQlvVlog0kcvyEkwQT3eWmVQmrorBGpE=
-github.com/carabiner-dev/policy v0.4.5 h1:N4H9HHCJuWxS3YYhqZC8uXeMZrKaMD0M+DPem7lBZiE=
-github.com/carabiner-dev/policy v0.4.5/go.mod h1:BTWt59Ec0T3LoQwlWvFC+lhRQheHhSeWmlr7T9G6vX8=
-github.com/carabiner-dev/predicates v0.1.0 h1:t6tQF9gFdr6TIccWtuNk3kFasx8eu88INFVGkCUnjL4=
-github.com/carabiner-dev/predicates v0.1.0/go.mod h1:jL6EAD+LiI6GW/rOdRYAJF4HaA88/V2Q4n7yUGNQ7XM=
+github.com/carabiner-dev/policy v0.5.0 h1:BBCLtB6PwFB40nTEbI3ooL/54RZCCGFwUCWXS4yJ4DQ=
+github.com/carabiner-dev/policy v0.5.0/go.mod h1:A+fnVBXpzx7f/MiLoH1FGTBAOe23ZZwXtGJsT9MCpBM=
+github.com/carabiner-dev/predicates v0.5.0 h1:CG2xO5xTXWXakjJkAFuS2xSA2olP9Ew25k6CAyL8waI=
+github.com/carabiner-dev/predicates v0.5.0/go.mod h1:EUm2p0CwKoUuc+OLbGkoxLdRqBrg/r957b8iN/ACWSA=
 github.com/carabiner-dev/sbomfs v0.1.0 h1:gEsmn85hod7JTLs2dDr5C1x4Af7FUEhI0lbTurNaEZs=
 github.com/carabiner-dev/sbomfs v0.1.0/go.mod h1:UyPyTSNx9JOLZVgTmM9WXdmgVqDWXCYwr1LK1Ts+7H0=
 github.com/carabiner-dev/signer v0.4.5 h1:H3XHHqorZw7wvLysbGCc+FM90nSdzFlODj+mIGMsYJc=
