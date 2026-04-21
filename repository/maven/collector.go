@@ -79,13 +79,18 @@ func (c *Collector) Fetch(_ context.Context, opts attestation.FetchOptions) ([]a
 	if !c.Options.HasPackageURL() {
 		return nil, nil
 	}
-	return c.fetchForPurl(opts, &c.Options.PackageURL)
+	// In configured mode the collector's BaseURL is authoritative — it
+	// already reflects any "repository_url" qualifier captured at
+	// construction time and preserves explicit WithBaseURL overrides.
+	return c.fetchForPurl(opts, &c.Options.PackageURL, c.Options.BaseURL)
 }
 
-// fetchForPurl runs the full attestation lookup for a single Maven purl:
-// maven-metadata.xml, signature, JSONL bundle, and any unsigned SBOMs.
-func (c *Collector) fetchForPurl(opts attestation.FetchOptions, purl *gopurl.PackageURL) ([]attestation.Envelope, error) {
-	baseURL := baseURLForPurl(purl, c.Options.BaseURL)
+// fetchForPurl runs the full attestation lookup for a single Maven purl
+// against the supplied base URL. Callers own the base-URL policy:
+// configured mode passes the collector's BaseURL as-is; global mode
+// resolves per-subject via baseURLForPurl so a "repository_url"
+// qualifier on a subject purl can target its own repository.
+func (c *Collector) fetchForPurl(opts attestation.FetchOptions, purl *gopurl.PackageURL, baseURL string) ([]attestation.Envelope, error) {
 	dirURL := directoryURL(purl, baseURL)
 	artifactID := purl.Name
 	agent := http.NewAgent().WithFailOnHTTPError(true)
@@ -142,8 +147,12 @@ func (c *Collector) FetchBySubject(ctx context.Context, opts attestation.FetchOp
 		all = envs
 	} else {
 		purls := extractMavenPurls(subj)
-		for _, p := range purls {
-			envs, err := c.fetchForPurl(opts, p)
+		for i := range purls {
+			p := &purls[i]
+			// Global mode: a per-subject purl can carry its own
+			// "repository_url" qualifier; fall back to the collector's
+			// BaseURL when it doesn't.
+			envs, err := c.fetchForPurl(opts, p, baseURLForPurl(p, c.Options.BaseURL))
 			if err != nil {
 				// A missing or unreachable package for one subject shouldn't
 				// fail the whole query — log and continue.
@@ -188,10 +197,11 @@ func (c *Collector) FetchByPredicateType(ctx context.Context, opts attestation.F
 
 // extractMavenPurls reads Maven package URLs from the Uri and Name fields
 // of the provided subjects. Non-Maven or unparseable purls are ignored,
-// and duplicates are deduplicated.
-func extractMavenPurls(subjects []attestation.Subject) []*gopurl.PackageURL {
+// and duplicates are deduplicated. The slice owns its elements — callers
+// that need a pointer should address into the slice (&purls[i]).
+func extractMavenPurls(subjects []attestation.Subject) []gopurl.PackageURL {
 	seen := map[string]struct{}{}
-	var ret []*gopurl.PackageURL
+	var ret []gopurl.PackageURL
 	for _, s := range subjects {
 		for _, candidate := range []string{s.GetUri(), s.GetName()} {
 			if !strings.HasPrefix(candidate, "pkg:") {
@@ -209,7 +219,7 @@ func extractMavenPurls(subjects []attestation.Subject) []*gopurl.PackageURL {
 				continue
 			}
 			seen[id] = struct{}{}
-			ret = append(ret, &p)
+			ret = append(ret, p)
 		}
 	}
 	return ret

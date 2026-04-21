@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/carabiner-dev/attestation"
+	gopurl "github.com/package-url/packageurl-go"
 	"github.com/stretchr/testify/require"
 )
 
@@ -156,6 +157,29 @@ func TestBaseURLQualifierOverriddenByWithBaseURL(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.Equal(t, "https://explicit-override.com", c.Options.BaseURL)
+
+	// Verify the explicit BaseURL also wins at fetch time (configured mode
+	// treats c.Options.BaseURL as authoritative and does not re-read the
+	// purl's repository_url qualifier).
+	require.Equal(t,
+		"https://explicit-override.com/com/example/foo/1.0.0/",
+		directoryURL(&c.Options.PackageURL, c.Options.BaseURL),
+	)
+}
+
+func TestGlobalModeHonorsSubjectRepositoryURLQualifier(t *testing.T) {
+	c, err := New() // global mode: no package URL configured
+	require.NoError(t, err)
+
+	// A per-subject purl with repository_url should target its own repo.
+	p, err := gopurl.FromString("pkg:maven/com.example/foo@1.0.0?repository_url=https://from-subject.com")
+	require.NoError(t, err)
+	require.Equal(t, "https://from-subject.com", baseURLForPurl(&p, c.Options.BaseURL))
+
+	// Without the qualifier, the collector's BaseURL is used as fallback.
+	plain, err := gopurl.FromString("pkg:maven/com.example/bar@2.0.0")
+	require.NoError(t, err)
+	require.Equal(t, defaultBaseURL, baseURLForPurl(&plain, c.Options.BaseURL))
 }
 
 func TestBuildFactory(t *testing.T) {
