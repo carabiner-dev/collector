@@ -40,7 +40,7 @@ func WithPackageURL(purlStr string) optFn {
 		if err != nil {
 			return fmt.Errorf("parsing package URL: %w", err)
 		}
-		if err := validateMavenPurl(purl); err != nil {
+		if err := validateMavenPurl(&purl); err != nil {
 			return err
 		}
 		c.Options.PackageURL = purl
@@ -79,7 +79,7 @@ func (o *Options) HasPackageURL() bool {
 }
 
 // validateMavenPurl ensures a parsed purl is a well-formed Maven purl.
-func validateMavenPurl(purl gopurl.PackageURL) error {
+func validateMavenPurl(purl *gopurl.PackageURL) error {
 	if purl.Type != "maven" {
 		return fmt.Errorf("unsupported package type %q, expected maven", purl.Type)
 	}
@@ -92,7 +92,7 @@ func validateMavenPurl(purl gopurl.PackageURL) error {
 // baseURLForPurl picks the base Maven repository URL for a purl. A
 // "repository_url" qualifier on the purl wins; otherwise the provided
 // fallback is returned.
-func baseURLForPurl(purl gopurl.PackageURL, fallback string) string {
+func baseURLForPurl(purl *gopurl.PackageURL, fallback string) string {
 	if v, ok := purl.Qualifiers.Map()["repository_url"]; ok && v != "" {
 		return strings.TrimRight(v, "/")
 	}
@@ -102,7 +102,7 @@ func baseURLForPurl(purl gopurl.PackageURL, fallback string) string {
 // directoryURL returns the Maven repository directory URL for a purl.
 // For example, pkg:maven/com.aliyun/alibabacloud-ga20191120@3.0.1 becomes:
 // https://repo.maven.apache.org/maven2/com/aliyun/alibabacloud-ga20191120/3.0.1/
-func directoryURL(purl gopurl.PackageURL, baseURL string) string {
+func directoryURL(purl *gopurl.PackageURL, baseURL string) string {
 	namespacePath := strings.ReplaceAll(purl.Namespace, ".", "/")
 	return fmt.Sprintf("%s/%s/%s/%s/",
 		strings.TrimRight(baseURL, "/"), namespacePath, purl.Name, purl.Version,
@@ -111,7 +111,7 @@ func directoryURL(purl gopurl.PackageURL, baseURL string) string {
 
 // artifactType returns the Maven packaging type from a purl's "type"
 // qualifier, defaulting to "jar" per the purl-spec.
-func artifactType(purl gopurl.PackageURL) string {
+func artifactType(purl *gopurl.PackageURL) string {
 	if t, ok := purl.Qualifiers.Map()["type"]; ok && t != "" {
 		return t
 	}
@@ -120,16 +120,16 @@ func artifactType(purl gopurl.PackageURL) string {
 
 // artifactClassifier returns the "classifier" qualifier from a purl, or
 // the empty string when absent.
-func artifactClassifier(purl gopurl.PackageURL) string {
+func artifactClassifier(purl *gopurl.PackageURL) string {
 	return purl.Qualifiers.Map()["classifier"]
 }
 
 // Thin Options wrappers kept for backward compatibility with existing tests
 // that use the configured PackageURL.
-func (o *Options) directoryURL() string { return directoryURL(o.PackageURL, o.BaseURL) }
-func (o *Options) artifactType() string { return artifactType(o.PackageURL) }
+func (o *Options) directoryURL() string { return directoryURL(&o.PackageURL, o.BaseURL) }
+func (o *Options) artifactType() string { return artifactType(&o.PackageURL) }
 func (o *Options) artifactClassifier() string {
-	return artifactClassifier(o.PackageURL)
+	return artifactClassifier(&o.PackageURL)
 }
 
 func (o *Options) artifactBaseName() string {

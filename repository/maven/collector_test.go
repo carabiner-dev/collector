@@ -6,6 +6,7 @@ package maven
 import (
 	"testing"
 
+	"github.com/carabiner-dev/attestation"
 	"github.com/stretchr/testify/require"
 )
 
@@ -103,9 +104,15 @@ func TestArtifactTypeAndClassifier(t *testing.T) {
 }
 
 func TestNewValidation(t *testing.T) {
-	// Missing purl
-	_, err := New()
-	require.Error(t, err)
+	// No purl — global mode is valid.
+	c, err := New()
+	require.NoError(t, err)
+	require.False(t, c.Options.HasPackageURL())
+
+	// Explicit empty purl — also global mode.
+	c, err = New(WithPackageURL(""))
+	require.NoError(t, err)
+	require.False(t, c.Options.HasPackageURL())
 
 	// Non-maven purl
 	_, err = New(WithPackageURL("pkg:npm/foo@1.0.0"))
@@ -116,9 +123,10 @@ func TestNewValidation(t *testing.T) {
 	require.Error(t, err)
 
 	// Valid
-	c, err := New(WithPackageURL("pkg:maven/com.example/foo@1.0.0"))
+	c, err = New(WithPackageURL("pkg:maven/com.example/foo@1.0.0"))
 	require.NoError(t, err)
 	require.Equal(t, defaultBaseURL, c.Options.BaseURL)
+	require.True(t, c.Options.HasPackageURL())
 }
 
 func TestWithBaseURL(t *testing.T) {
@@ -160,6 +168,53 @@ func TestBuildFactory(t *testing.T) {
 	require.Equal(t, "com.example", c.Options.PackageURL.Namespace)
 	require.Equal(t, "foo", c.Options.PackageURL.Name)
 	require.Equal(t, "1.0.0", c.Options.PackageURL.Version)
+}
+
+func TestBuildFactoryGlobalMode(t *testing.T) {
+	// An empty init string (e.g. "maven:") yields a global-mode collector
+	// with no configured package URL.
+	repo, err := Build("")
+	require.NoError(t, err)
+	require.NotNil(t, repo)
+
+	c, ok := repo.(*Collector)
+	require.True(t, ok)
+	require.False(t, c.Options.HasPackageURL())
+	require.Equal(t, defaultBaseURL, c.Options.BaseURL)
+}
+
+// fakeSubject satisfies attestation.Subject for unit tests.
+type fakeSubject struct {
+	name, uri string
+	digest    map[string]string
+}
+
+func (fs *fakeSubject) GetName() string              { return fs.name }
+func (fs *fakeSubject) GetUri() string               { return fs.uri }
+func (fs *fakeSubject) GetDigest() map[string]string { return fs.digest }
+
+func TestExtractMavenPurls(t *testing.T) {
+	subjects := []attestation.Subject{
+		// Maven purl in Uri.
+		&fakeSubject{uri: "pkg:maven/com.example/foo@1.0.0"},
+		// Maven purl in Name.
+		&fakeSubject{name: "pkg:maven/com.example/bar@2.0.0"},
+		// Non-maven purl — ignored.
+		&fakeSubject{uri: "pkg:npm/lodash@4.0.0"},
+		// Unparseable — ignored.
+		&fakeSubject{uri: "not-a-purl"},
+		// Duplicate of the first — deduped.
+		&fakeSubject{uri: "pkg:maven/com.example/foo@1.0.0"},
+		// Incomplete maven purl (no version) — ignored.
+		&fakeSubject{uri: "pkg:maven/com.example/baz"},
+	}
+
+	got := extractMavenPurls(subjects)
+	require.Len(t, got, 2)
+
+	names := []string{got[0].Name, got[1].Name}
+	require.Contains(t, names, "foo")
+	require.Contains(t, names, "bar")
 }
 
 func TestResolveFilename(t *testing.T) {

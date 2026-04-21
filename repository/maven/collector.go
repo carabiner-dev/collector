@@ -79,12 +79,12 @@ func (c *Collector) Fetch(_ context.Context, opts attestation.FetchOptions) ([]a
 	if !c.Options.HasPackageURL() {
 		return nil, nil
 	}
-	return c.fetchForPurl(opts, c.Options.PackageURL)
+	return c.fetchForPurl(opts, &c.Options.PackageURL)
 }
 
 // fetchForPurl runs the full attestation lookup for a single Maven purl:
 // maven-metadata.xml, signature, JSONL bundle, and any unsigned SBOMs.
-func (c *Collector) fetchForPurl(opts attestation.FetchOptions, purl gopurl.PackageURL) ([]attestation.Envelope, error) {
+func (c *Collector) fetchForPurl(opts attestation.FetchOptions, purl *gopurl.PackageURL) ([]attestation.Envelope, error) {
 	baseURL := baseURLForPurl(purl, c.Options.BaseURL)
 	dirURL := directoryURL(purl, baseURL)
 	artifactID := purl.Name
@@ -189,9 +189,9 @@ func (c *Collector) FetchByPredicateType(ctx context.Context, opts attestation.F
 // extractMavenPurls reads Maven package URLs from the Uri and Name fields
 // of the provided subjects. Non-Maven or unparseable purls are ignored,
 // and duplicates are deduplicated.
-func extractMavenPurls(subjects []attestation.Subject) []gopurl.PackageURL {
+func extractMavenPurls(subjects []attestation.Subject) []*gopurl.PackageURL {
 	seen := map[string]struct{}{}
-	var ret []gopurl.PackageURL
+	var ret []*gopurl.PackageURL
 	for _, s := range subjects {
 		for _, candidate := range []string{s.GetUri(), s.GetName()} {
 			if !strings.HasPrefix(candidate, "pkg:") {
@@ -201,15 +201,15 @@ func extractMavenPurls(subjects []attestation.Subject) []gopurl.PackageURL {
 			if err != nil {
 				continue
 			}
-			if err := validateMavenPurl(p); err != nil {
+			if err := validateMavenPurl(&p); err != nil {
 				continue
 			}
-			key := p.String()
-			if _, ok := seen[key]; ok {
+			id := p.String()
+			if _, ok := seen[id]; ok {
 				continue
 			}
-			seen[key] = struct{}{}
-			ret = append(ret, p)
+			seen[id] = struct{}{}
+			ret = append(ret, &p)
 		}
 	}
 	return ret
@@ -274,7 +274,7 @@ func findSnapshotVersion(md *mavenMetadata, extension, classifier string) (snaps
 // purl "type" and "classifier" qualifiers so the hashed subject matches
 // the artifact the purl refers to. Returns nil without error if the
 // artifacts are not in the metadata or no keys are configured.
-func (c *Collector) fetchSignature(agent *http.Agent, dirURL string, purl gopurl.PackageURL, md *mavenMetadata, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
+func (c *Collector) fetchSignature(agent *http.Agent, dirURL string, purl *gopurl.PackageURL, md *mavenMetadata, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
 	if len(c.Keys) == 0 {
 		return nil, nil
 	}
