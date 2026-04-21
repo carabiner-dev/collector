@@ -12,11 +12,14 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/carabiner-dev/attestation"
 	"github.com/carabiner-dev/hasher"
 	sapi "github.com/carabiner-dev/signer/api/v1"
 	"github.com/carabiner-dev/signer/key"
+	gopurl "github.com/package-url/packageurl-go"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"sigs.k8s.io/release-utils/http"
 
@@ -69,15 +72,29 @@ func (c *Collector) SetKeys(keys []key.PublicKeyProvider) {
 	c.Keys = keys
 }
 
-// Fetch retrieves attestations from the Maven repository directory.
-// It fetches maven-metadata.xml to resolve artifact filenames, then
-// looks for signatures, JSONL attestation bundles, and unsigned SBOMs.
+// Fetch retrieves attestations for the configured package URL. When the
+// collector is in global mode (no package URL configured) it returns
+// nothing — global mode is subject-driven, use FetchBySubject instead.
 func (c *Collector) Fetch(_ context.Context, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
-	dirURL := c.Options.directoryURL()
-	artifactID := c.Options.PackageURL.Name
+	if !c.Options.HasPackageURL() {
+		return nil, nil
+	}
+	// In configured mode the collector's BaseURL is authoritative — it
+	// already reflects any "repository_url" qualifier captured at
+	// construction time and preserves explicit WithBaseURL overrides.
+	return c.fetchForPurl(opts, &c.Options.PackageURL, c.Options.BaseURL)
+}
+
+// fetchForPurl runs the full attestation lookup for a single Maven purl
+// against the supplied base URL. Callers own the base-URL policy:
+// configured mode passes the collector's BaseURL as-is; global mode
+// resolves per-subject via baseURLForPurl so a "repository_url"
+// qualifier on a subject purl can target its own repository.
+func (c *Collector) fetchForPurl(opts attestation.FetchOptions, purl *gopurl.PackageURL, baseURL string) ([]attestation.Envelope, error) {
+	dirURL := directoryURL(purl, baseURL)
+	artifactID := purl.Name
 	agent := http.NewAgent().WithFailOnHTTPError(true)
 
-	// Fetch and parse maven-metadata.xml to resolve artifact filenames.
 	md, err := c.fetchMetadata(agent, dirURL)
 	if err != nil {
 		return nil, err
@@ -85,21 +102,18 @@ func (c *Collector) Fetch(_ context.Context, opts attestation.FetchOptions) ([]a
 
 	var ret []attestation.Envelope
 
-	// 1. Look for the main jar's .asc signature.
-	ascEnvs, err := c.fetchSignature(agent, dirURL, artifactID, md, opts)
+	ascEnvs, err := c.fetchSignature(agent, dirURL, purl, md, opts)
 	if err != nil {
 		return nil, err
 	}
 	ret = append(ret, ascEnvs...)
 
-	// 2. Look for JSONL attestation bundles (intoto.jsonl extension).
 	jsonlEnvs, err := c.fetchJSONLAttestations(agent, dirURL, artifactID, md, opts)
 	if err != nil {
 		return nil, err
 	}
 	ret = append(ret, jsonlEnvs...)
 
-	// 3. Look for unsigned SBOMs (spdx.json, cdx.json, cyclonedx json/xml).
 	sbomEnvs, err := c.fetchSBOMs(agent, dirURL, artifactID, md, opts)
 	if err != nil {
 		return nil, err
@@ -117,11 +131,36 @@ func (c *Collector) Fetch(_ context.Context, opts attestation.FetchOptions) ([]a
 	return ret, nil
 }
 
-// FetchBySubject handles collecting by subject hash.
+// FetchBySubject collects attestations for each subject. In configured
+// mode it fetches once for the configured purl and filters by subject
+// digest. In global mode it extracts Maven purls from subjects (via the
+// Uri or Name field of the resource descriptor), fetches for each, and
+// filters the union by the requested digests.
 func (c *Collector) FetchBySubject(ctx context.Context, opts attestation.FetchOptions, subj []attestation.Subject) ([]attestation.Envelope, error) {
-	all, err := c.Fetch(ctx, opts)
-	if err != nil {
-		return nil, err
+	var all []attestation.Envelope
+
+	if c.Options.HasPackageURL() {
+		envs, err := c.Fetch(ctx, opts)
+		if err != nil {
+			return nil, err
+		}
+		all = envs
+	} else {
+		purls := extractMavenPurls(subj)
+		for i := range purls {
+			p := &purls[i]
+			// Global mode: a per-subject purl can carry its own
+			// "repository_url" qualifier; fall back to the collector's
+			// BaseURL when it doesn't.
+			envs, err := c.fetchForPurl(opts, p, baseURLForPurl(p, c.Options.BaseURL))
+			if err != nil {
+				// A missing or unreachable package for one subject shouldn't
+				// fail the whole query — log and continue.
+				logrus.Debugf("maven: skipping %s: %v", p.String(), err)
+				continue
+			}
+			all = append(all, envs...)
+		}
 	}
 
 	m := make([]map[string]string, 0, len(subj))
@@ -134,8 +173,13 @@ func (c *Collector) FetchBySubject(ctx context.Context, opts attestation.FetchOp
 	}).Run(all), nil
 }
 
-// FetchByPredicateType handles collecting by predicate type.
+// FetchByPredicateType handles collecting by predicate type. It requires
+// a configured package URL — global mode is subject-driven and has no
+// per-predicate-type entry point.
 func (c *Collector) FetchByPredicateType(ctx context.Context, opts attestation.FetchOptions, pts []attestation.PredicateType) ([]attestation.Envelope, error) {
+	if !c.Options.HasPackageURL() {
+		return nil, nil
+	}
 	all, err := c.Fetch(ctx, opts)
 	if err != nil {
 		return nil, err
@@ -149,6 +193,36 @@ func (c *Collector) FetchByPredicateType(ctx context.Context, opts attestation.F
 	return attestation.NewQuery().WithFilter(&filters.PredicateTypeMatcher{
 		PredicateTypes: m,
 	}).Run(all), nil
+}
+
+// extractMavenPurls reads Maven package URLs from the Uri and Name fields
+// of the provided subjects. Non-Maven or unparseable purls are ignored,
+// and duplicates are deduplicated. The slice owns its elements — callers
+// that need a pointer should address into the slice (&purls[i]).
+func extractMavenPurls(subjects []attestation.Subject) []gopurl.PackageURL {
+	seen := map[string]struct{}{}
+	var ret []gopurl.PackageURL
+	for _, s := range subjects {
+		for _, candidate := range []string{s.GetUri(), s.GetName()} {
+			if !strings.HasPrefix(candidate, "pkg:") {
+				continue
+			}
+			p, err := gopurl.FromString(candidate)
+			if err != nil {
+				continue
+			}
+			if err := validateMavenPurl(&p); err != nil {
+				continue
+			}
+			id := p.String()
+			if _, ok := seen[id]; ok {
+				continue
+			}
+			seen[id] = struct{}{}
+			ret = append(ret, p)
+		}
+	}
+	return ret
 }
 
 // mavenMetadata represents the relevant parts of maven-metadata.xml.
@@ -210,13 +284,14 @@ func findSnapshotVersion(md *mavenMetadata, extension, classifier string) (snaps
 // purl "type" and "classifier" qualifiers so the hashed subject matches
 // the artifact the purl refers to. Returns nil without error if the
 // artifacts are not in the metadata or no keys are configured.
-func (c *Collector) fetchSignature(agent *http.Agent, dirURL, artifactID string, md *mavenMetadata, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
+func (c *Collector) fetchSignature(agent *http.Agent, dirURL string, purl *gopurl.PackageURL, md *mavenMetadata, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
 	if len(c.Keys) == 0 {
 		return nil, nil
 	}
 
-	artType := c.Options.artifactType()
-	classifier := c.Options.artifactClassifier()
+	artifactID := purl.Name
+	artType := artifactType(purl)
+	classifier := artifactClassifier(purl)
 
 	artSV, artOK := findSnapshotVersion(md, artType, classifier)
 	ascSV, ascOK := findSnapshotVersion(md, artType+".asc", classifier)
