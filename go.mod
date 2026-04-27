@@ -25,7 +25,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/openvex/go-vex v0.2.8
-	github.com/package-url/packageurl-go v0.1.5
+	github.com/package-url/packageurl-go v0.1.6
 	github.com/protobom/protobom v0.5.5
 	github.com/regclient/regclient v0.11.3
 	github.com/sigstore/gitsign v0.14.1-0.20260414150136-4638d83b00e1
