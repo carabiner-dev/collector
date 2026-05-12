@@ -12,6 +12,7 @@ import (
 
 	"github.com/carabiner-dev/attestation"
 	"github.com/carabiner-dev/hasher"
+	"github.com/carabiner-dev/signer"
 	"github.com/sirupsen/logrus"
 
 	"github.com/carabiner-dev/collector/envelope/bare"
@@ -92,4 +93,37 @@ func (list *ParserList) Parse(r io.Reader) ([]attestation.Envelope, error) {
 	}
 
 	return nil, attestation.ErrNotCorrectFormat
+}
+
+// FromSignedArtifact returns an attestation.Envelope from a SignedArtifact
+// object as returned from the signer. It serializes the artifact to its
+// canonical JSON form and parses it through the matching collector parser.
+func FromSignedArtifact(artifact signer.SignedArtifact) (attestation.Envelope, error) {
+	if artifact == nil {
+		return nil, errors.New("signed artifact is nil")
+	}
+
+	var parser attestation.EnvelopeParser
+	switch artifact.Kind() {
+	case signer.ArtifactKindBundle:
+		parser = &bundle.Parser{}
+	case signer.ArtifactKindEnvelope:
+		parser = &dsse.Parser{}
+	default:
+		return nil, fmt.Errorf("unsupported signed artifact kind %q", artifact.Kind())
+	}
+
+	var buf bytes.Buffer
+	if _, err := artifact.WriteTo(&buf); err != nil {
+		return nil, fmt.Errorf("serializing signed artifact: %w", err)
+	}
+
+	envs, err := parser.ParseStream(&buf)
+	if err != nil {
+		return nil, fmt.Errorf("parsing signed artifact as %s: %w", artifact.Kind(), err)
+	}
+	if len(envs) == 0 {
+		return nil, fmt.Errorf("parser returned no envelopes for %s artifact", artifact.Kind())
+	}
+	return envs[0], nil
 }
