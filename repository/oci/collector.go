@@ -4,11 +4,15 @@
 package oci
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 
 	"github.com/carabiner-dev/attestation"
+	"github.com/opencontainers/go-digest"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/regclient/regclient"
 	"github.com/regclient/regclient/types/descriptor"
 	"github.com/regclient/regclient/types/manifest"
@@ -31,7 +35,10 @@ var Build = func(istr string) (attestation.Repository, error) {
 	return New(WithReference(istr))
 }
 
-var _ attestation.Fetcher = (*Collector)(nil)
+var (
+	_ attestation.Fetcher = (*Collector)(nil)
+	_ attestation.Storer  = (*Collector)(nil)
+)
 
 // Collector fetches sigstore bundle attestations attached as OCI referrers.
 type Collector struct {
@@ -64,11 +71,7 @@ func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([
 		return nil, fmt.Errorf("parsing reference: %w", err)
 	}
 
-	rcOpts := c.Options.regOpts
-	if len(rcOpts) == 0 {
-		rcOpts = []regclient.Opt{regclient.WithDockerCreds(), regclient.WithDockerCerts()}
-	}
-	rc := regclient.New(rcOpts...)
+	rc := c.newRegClient()
 
 	// Resolve tag to digest so we can query referrers.
 	if r.Digest == "" {
@@ -104,6 +107,118 @@ func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([
 	}
 
 	return atts, nil
+}
+
+// newRegClient builds a regclient using the configured overrides or sensible
+// defaults that read credentials from the Docker config.
+func (c *Collector) newRegClient() *regclient.RegClient {
+	rcOpts := c.Options.regOpts
+	if len(rcOpts) == 0 {
+		rcOpts = []regclient.Opt{regclient.WithDockerCreds(), regclient.WithDockerCerts()}
+	}
+	return regclient.New(rcOpts...)
+}
+
+// Store implements the attestation.Storer interface. Each envelope is uploaded
+// as a sigstore bundle artifact attached to the configured image via the OCI
+// referrers API. Envelopes are expected to marshal as sigstore bundles (e.g.
+// *bundle.Envelope); other envelope types will be uploaded as-is and may not
+// be retrievable by sigstore-aware verifiers.
+func (c *Collector) Store(ctx context.Context, _ attestation.StoreOptions, envelopes []attestation.Envelope) error {
+	if len(envelopes) == 0 {
+		return nil
+	}
+
+	r, err := ref.New(c.Options.Reference)
+	if err != nil {
+		return fmt.Errorf("parsing reference: %w", err)
+	}
+
+	rc := c.newRegClient()
+
+	// Resolve the subject manifest so we can build a referrer pointing at it.
+	subjMan, err := rc.ManifestHead(ctx, r)
+	if err != nil {
+		return fmt.Errorf("resolving subject manifest: %w", err)
+	}
+	subjDesc := subjMan.GetDescriptor()
+	subjRef := r.SetDigest(subjDesc.Digest.String())
+
+	for i, env := range envelopes {
+		if err := c.storeEnvelope(ctx, rc, &subjRef, &subjDesc, env); err != nil {
+			return fmt.Errorf("storing envelope %d: %w", i, err)
+		}
+	}
+	return nil
+}
+
+// storeEnvelope pushes a single envelope as a sigstore bundle referrer
+// attached to subjRef.
+func (c *Collector) storeEnvelope(
+	ctx context.Context,
+	rc *regclient.RegClient,
+	subjRef *ref.Ref,
+	subjDesc *descriptor.Descriptor,
+	env attestation.Envelope,
+) error {
+	data, err := json.Marshal(env)
+	if err != nil {
+		return fmt.Errorf("marshaling envelope: %w", err)
+	}
+
+	bundleDesc := descriptor.Descriptor{
+		MediaType: sigstoreBundleArtifactType,
+		Digest:    digest.FromBytes(data),
+		Size:      int64(len(data)),
+	}
+	if _, err := rc.BlobPut(ctx, *subjRef, bundleDesc, bytes.NewReader(data)); err != nil {
+		return fmt.Errorf("pushing bundle blob: %w", err)
+	}
+
+	emptyData := []byte("{}")
+	emptyDesc := descriptor.Descriptor{
+		MediaType: ocispec.MediaTypeEmptyJSON,
+		Digest:    digest.FromBytes(emptyData),
+		Size:      int64(len(emptyData)),
+	}
+	if _, err := rc.BlobPut(ctx, *subjRef, emptyDesc, bytes.NewReader(emptyData)); err != nil {
+		return fmt.Errorf("pushing empty config blob: %w", err)
+	}
+
+	m := &ocispec.Manifest{
+		MediaType:    ocispec.MediaTypeImageManifest,
+		ArtifactType: sigstoreBundleArtifactType,
+		Config: ocispec.Descriptor{
+			MediaType: emptyDesc.MediaType,
+			Digest:    emptyDesc.Digest,
+			Size:      emptyDesc.Size,
+		},
+		Layers: []ocispec.Descriptor{{
+			MediaType: bundleDesc.MediaType,
+			Digest:    bundleDesc.Digest,
+			Size:      bundleDesc.Size,
+		}},
+		Subject: &ocispec.Descriptor{
+			MediaType: subjDesc.MediaType,
+			Digest:    subjDesc.Digest,
+			Size:      subjDesc.Size,
+		},
+	}
+	m.SchemaVersion = 2
+
+	manData, err := json.Marshal(m)
+	if err != nil {
+		return fmt.Errorf("marshaling referrer manifest: %w", err)
+	}
+	rcMan, err := manifest.New(manifest.WithRaw(manData))
+	if err != nil {
+		return fmt.Errorf("building referrer manifest: %w", err)
+	}
+	manRef := subjRef.SetDigest(digest.FromBytes(manData).String())
+	if err := rc.ManifestPut(ctx, manRef, rcMan); err != nil {
+		return fmt.Errorf("pushing referrer manifest: %w", err)
+	}
+	return nil
 }
 
 // fetchReferrer pulls the manifest for a single referrer descriptor and parses

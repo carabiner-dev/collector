@@ -24,6 +24,8 @@ import (
 	rcmanifest "github.com/regclient/regclient/types/manifest"
 	"github.com/regclient/regclient/types/ref"
 	"github.com/stretchr/testify/require"
+
+	"github.com/carabiner-dev/collector/envelope/bundle"
 )
 
 // startRegistry starts an in-memory OCI registry backed by olareg and returns
@@ -313,6 +315,55 @@ func TestFetchWithLimit(t *testing.T) {
 	atts, err := c.Fetch(ctx, attestation.FetchOptions{Limit: 1})
 	require.NoError(t, err)
 	require.Len(t, atts, 1)
+}
+
+func TestStoreRoundTrip(t *testing.T) {
+	t.Parallel()
+	host, hostOpt := startRegistry(t)
+
+	ctx := t.Context()
+	rc := regclient.New(hostOpt)
+
+	repo := host + "/test/store"
+	r, err := ref.New(repo + ":v1")
+	require.NoError(t, err)
+
+	pushSubjectImage(t, ctx, rc, &r)
+
+	bundleData, err := os.ReadFile("testdata/bundle-provenance.json")
+	require.NoError(t, err)
+
+	env := &bundle.Envelope{}
+	require.NoError(t, env.UnmarshalJSON(bundleData))
+
+	c, err := New(WithReference(repo+":v1"), WithRegClientOpts(hostOpt))
+	require.NoError(t, err)
+
+	require.NoError(t, c.Store(ctx, attestation.StoreOptions{}, []attestation.Envelope{env}))
+
+	atts, err := c.Fetch(ctx, attestation.FetchOptions{})
+	require.NoError(t, err)
+	require.Len(t, atts, 1)
+	require.NotNil(t, atts[0].GetStatement())
+	require.NotNil(t, atts[0].GetPredicate())
+}
+
+func TestStoreUnresolvableSubject(t *testing.T) {
+	t.Parallel()
+	host, hostOpt := startRegistry(t)
+
+	repo := host + "/test/missing"
+
+	c, err := New(WithReference(repo+":v1"), WithRegClientOpts(hostOpt))
+	require.NoError(t, err)
+
+	bundleData, err := os.ReadFile("testdata/bundle-provenance.json")
+	require.NoError(t, err)
+	env := &bundle.Envelope{}
+	require.NoError(t, env.UnmarshalJSON(bundleData))
+
+	err = c.Store(t.Context(), attestation.StoreOptions{}, []attestation.Envelope{env})
+	require.Error(t, err)
 }
 
 func TestFetchSkipsUnparseableLayers(t *testing.T) {

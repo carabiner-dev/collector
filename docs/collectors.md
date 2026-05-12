@@ -72,10 +72,10 @@ and synthesizes Sigstore bundles from the layer data and annotations
 
 ## oci (OCI Referrers)
 
-Fetches Sigstore bundle attestations attached as OCI referrers. Cosign v3
-attaches signatures and attestations as OCI artifacts that reference the
-subject image via the OCI Referrers API, rather than using the `.att`/`.sig`
-tag convention used by the **coci** collector.
+Reads and writes Sigstore bundle attestations attached as OCI referrers.
+Cosign v3 attaches signatures and attestations as OCI artifacts that
+reference the subject image via the OCI Referrers API, rather than using
+the `.att`/`.sig` tag convention used by the **coci** collector.
 
 The collector queries the Referrers API for artifacts with artifact type
 `application/vnd.dev.sigstore.bundle.v0.3+json`, pulls their blob layers,
@@ -85,9 +85,31 @@ Init string format: `oci:<image-ref>` (e.g. `oci:ghcr.io/foo/bar:v1` or
 `oci:ghcr.io/foo/bar@sha256:abc...`). Tag references are automatically
 resolved to digests before querying referrers.
 
-Authentication uses the Docker credential chain (`~/.docker/config.json`
-and configured credential helpers) and Docker CA certificates
-(`/etc/docker/certs.d`).
+Authentication uses the Docker credential chain (`~/.docker/config.json`,
+`$DOCKER_CONFIG`, `$DOCKER_AUTH_CONFIG`, and configured credential helpers)
+and Docker CA certificates (`/etc/docker/certs.d`). Callers can override
+this with `WithRegClientOpts` to inject custom registry hosts or transport
+options.
+
+When `Store` is called, each envelope is JSON-marshaled (the envelope is
+expected to be a Sigstore bundle, e.g. `*bundle.Envelope`) and uploaded as
+a new referrer pointing at the subject image:
+
+1. The subject reference is resolved via `ManifestHead` to capture its
+   digest, size, and media type.
+2. The bundle bytes are pushed as a blob with media type
+   `application/vnd.dev.sigstore.bundle.v0.3+json`.
+3. An empty `{}` config blob with media type
+   `application/vnd.oci.empty.v1+json` is pushed.
+4. An OCI image manifest is built with `artifactType` set to the Sigstore
+   bundle media type, the bundle blob as its single layer, and `subject`
+   pointing at the resolved image digest. The manifest is pushed at its
+   own content-addressable digest so the registry exposes it through the
+   Referrers API.
+
+The implementation is built directly on
+[`regclient`](https://github.com/regclient/regclient); it does not depend
+on `cosign`.
 
 ## release
 
