@@ -90,6 +90,8 @@ github.com/bradleyjkemp/cupaloy/v2 v2.8.0 h1:any4BmKE+jGIaMpnU8YgH/I2LPiLBufr6oM
 github.com/bradleyjkemp/cupaloy/v2 v2.8.0/go.mod h1:bm7JXdkRd4BHJk9HpwqAI8BoAY1lps46Enkdqw6aRX0=
 github.com/carabiner-dev/attestation v0.2.1 h1:VhjV5YlO9TsW50Sr/Zd54bdbZhhDAqgxC3kB9z1I+3Q=
 github.com/carabiner-dev/attestation v0.2.1/go.mod h1:O84vF84RZG3pJO/6BYrPs718bZviHF5DKajP1HsrDpw=
+github.com/carabiner-dev/command v0.3.1 h1:iBkh+AjwziFZmyihv/izypCV74nkmaslZxb5AgP7GP4=
+github.com/carabiner-dev/command v0.3.1/go.mod h1:0mWfS5BU/krtaI1hgD5wjmLpjWVlf38KY8usA8zfF5c=
 github.com/carabiner-dev/ghrfs v0.3.4 h1:XJoDXkuw+8KQPTC4oI0da8vLpnx7cfQBGgyjzo+Eqrc=
 github.com/carabiner-dev/ghrfs v0.3.4/go.mod h1:u9We7molIUX6sCe4ox70juKOnbNAUpDv+B5Cerbqhio=
 github.com/carabiner-dev/github v0.2.3 h1:sky7HXTrgbk9G9gEWBmIeCExprHdnZvKOsFW1bUZXqc=
@@ -110,6 +112,8 @@ github.com/carabiner-dev/sbomfs v0.1.0 h1:gEsmn85hod7JTLs2dDr5C1x4Af7FUEhI0lbTur
 github.com/carabiner-dev/sbomfs v0.1.0/go.mod h1:UyPyTSNx9JOLZVgTmM9WXdmgVqDWXCYwr1LK1Ts+7H0=
 github.com/carabiner-dev/signer v0.4.5 h1:H3XHHqorZw7wvLysbGCc+FM90nSdzFlODj+mIGMsYJc=
 github.com/carabiner-dev/signer v0.4.5/go.mod h1:B/53ToJAIgwM+KuDwj52+HwnlA5p8Rmz2OXQdy9x+xs=
+github.com/carabiner-dev/signer v0.4.6-0.20260428182929-2749e66cbe88 h1:9Iij1K4kXYuKKk+2ZkrNR5pJjt/j1q6Yf7gGt7XPQlY=
+github.com/carabiner-dev/signer v0.4.6-0.20260428182929-2749e66cbe88/go.mod h1:lQXabEgyFNLm49T3K3PKmU//H1+hEIOsF+13ZKgXhCs=
 github.com/carabiner-dev/vcslocator v0.4.3 h1:rXKwVT8N4hS85GEJQGd0ZgOjTcALuCslsqZyg4g6qxA=
 github.com/carabiner-dev/vcslocator v0.4.3/go.mod h1:o0v3BV06HMg20GaJctA8feu0W/aan+XhHq0i+wr6Jq0=
 github.com/cenkalti/backoff/v4 v4.3.0 h1:MyRJ/UdXutAwSAT+s3wNd7MfTIcy71VQueUuFK343L8=
@@ -444,6 +448,8 @@ github.com/spf13/cobra v1.10.2/go.mod h1:7C1pvHqHw5A4vrJfjNwvOdzYu0Gml16OCs2GRiT
 github.com/spf13/pflag v1.0.9/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
 github.com/spf13/pflag v1.0.10 h1:4EBh2KAYBwaONj6b2Ye1GiHfwjqyROoF4RwYO+vPwFk=
 github.com/spf13/pflag v1.0.10/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
+github.com/spiffe/go-spiffe/v2 v2.6.0 h1:l+DolpxNWYgruGQVV0xsfeya3CsC7m8iBzDnMpsbLuo=
+github.com/spiffe/go-spiffe/v2 v2.6.0/go.mod h1:gm2SeUoMZEtpnzPNs2Csc0D/gX33k1xIx7lEzqblHEs=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
