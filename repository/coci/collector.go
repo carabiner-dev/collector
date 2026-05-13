@@ -48,7 +48,7 @@ type ImageInfo struct {
 	IsDigest    bool
 }
 
-func parseImageReference(ctx context.Context, ref string) (*ImageInfo, error) {
+func parseImageReference(ctx context.Context, ref string, opts ...crane.Option) (*ImageInfo, error) {
 	parsedRef, err := name.ParseReference(ref)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse image reference: %w", err)
@@ -67,7 +67,8 @@ func parseImageReference(ctx context.Context, ref string) (*ImageInfo, error) {
 		info.Tag = v.TagStr()
 		info.IsDigest = false
 
-		digest, err := crane.Digest(ref, crane.WithContext(ctx))
+		digestOpts := append([]crane.Option{crane.WithContext(ctx)}, opts...)
+		digest, err := crane.Digest(ref, digestOpts...)
 		if err != nil {
 			return nil, fmt.Errorf("getting reference digest: %w", err)
 		}
@@ -109,6 +110,7 @@ type (
 	optFn   = func(*Options) error
 	Options struct {
 		Reference string
+		craneOpts []crane.Option
 	}
 )
 
@@ -119,6 +121,16 @@ func WithReference(ref string) optFn {
 			return err
 		}
 		o.Reference = ref // perhaps parse?
+		return nil
+	}
+}
+
+// WithCraneOpts sets crane options that are applied to all registry calls
+// made by the collector (e.g. crane.Insecure for an HTTP test registry, or
+// custom auth/transport).
+func WithCraneOpts(opts ...crane.Option) optFn {
+	return func(o *Options) error {
+		o.craneOpts = append(o.craneOpts, opts...)
 		return nil
 	}
 }
@@ -134,6 +146,18 @@ type Collector struct {
 	Keys    []key.PublicKeyProvider
 }
 
+// craneOpts returns the crane options configured on the collector. It exists
+// as a method (rather than direct field access) so Fetch / Store call sites
+// can always start from a fresh slice.
+func (c *Collector) craneOpts() []crane.Option {
+	if len(c.Options.craneOpts) == 0 {
+		return nil
+	}
+	out := make([]crane.Option, len(c.Options.craneOpts))
+	copy(out, c.Options.craneOpts)
+	return out
+}
+
 // SetKeys sets the verification keys used by the collector.
 func (c *Collector) SetKeys(keys []key.PublicKeyProvider) {
 	c.Keys = keys
@@ -141,7 +165,7 @@ func (c *Collector) SetKeys(keys []key.PublicKeyProvider) {
 
 // Fetch queries the repository and retrieves any attestations matching the query
 func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
-	imageInfo, err := parseImageReference(ctx, c.Options.Reference)
+	imageInfo, err := parseImageReference(ctx, c.Options.Reference, c.craneOpts()...)
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +211,7 @@ func (c *Collector) fetchAttestationLayers(ctx context.Context, opts attestation
 			imageInfo.Registry, imageInfo.Repository,
 			strings.Replace(imageInfo.Digest, "sha256:", "sha256-", 1),
 		),
-		crane.WithContext(ctx),
+		append([]crane.Option{crane.WithContext(ctx)}, c.craneOpts()...)...,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("fetching attestations manifest: %w", err)
@@ -226,7 +250,7 @@ func (c *Collector) fetchAttestationLayers(ctx context.Context, opts attestation
 			defer wg.Done()
 			sem <- struct{}{}
 			defer func() { <-sem }()
-			envelope, err := getAttestationEnvelope(ctx, &opts, imageInfo, dl.layer)
+			envelope, err := getAttestationEnvelope(ctx, &opts, imageInfo, dl.layer, c.craneOpts()...)
 			results[j] = layerResult{envelope, err, dl.index}
 		}(j, dl)
 	}
@@ -252,10 +276,10 @@ func (c *Collector) fetchAttestationLayers(ctx context.Context, opts attestation
 }
 
 // dsseEnvelopeFromOCILayer this reads the DSSE envelope containing the attestation
-func dsseEnvelopeFromOCILayer(ctx context.Context, opts *attestation.FetchOptions, imageInfo *ImageInfo, l *ggcr.Descriptor) (*protobundle.Bundle_DsseEnvelope, error) {
+func dsseEnvelopeFromOCILayer(ctx context.Context, opts *attestation.FetchOptions, imageInfo *ImageInfo, l *ggcr.Descriptor, craneOpts ...crane.Option) (*protobundle.Bundle_DsseEnvelope, error) {
 	// Build the attestation blob reference
 	attRef := imageInfo.Registry + "/" + imageInfo.Repository + "@" + l.Digest.String()
-	layer, err := crane.PullLayer(attRef, crane.WithContext(ctx))
+	layer, err := crane.PullLayer(attRef, append([]crane.Option{crane.WithContext(ctx)}, craneOpts...)...)
 	if err != nil {
 		return nil, fmt.Errorf("pulling layer data: %w", err)
 	}
@@ -359,8 +383,8 @@ func getVerificationMaterialTimestampEntries(manifestLayer *ggcr.Descriptor) (*p
 // (certificate, tlog entries, etc.) a full sigstore bundle is returned.
 // Otherwise the payload is returned as a plain DSSE envelope that can be
 // verified with a public key.
-func getAttestationEnvelope(ctx context.Context, opts *attestation.FetchOptions, imageInfo *ImageInfo, layer *ggcr.Descriptor) (attestation.Envelope, error) {
-	dsseEnv, err := dsseEnvelopeFromOCILayer(ctx, opts, imageInfo, layer)
+func getAttestationEnvelope(ctx context.Context, opts *attestation.FetchOptions, imageInfo *ImageInfo, layer *ggcr.Descriptor, craneOpts ...crane.Option) (attestation.Envelope, error) {
+	dsseEnv, err := dsseEnvelopeFromOCILayer(ctx, opts, imageInfo, layer, craneOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("error getting dsse envelope from layer: %w", err)
 	}
