@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"net/http/httptest"
 	"net/url"
-	"strings"
 	"testing"
 
 	"github.com/carabiner-dev/attestation"
@@ -309,7 +308,7 @@ func TestDSSELayerForEnvelopeBundle(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, material)
 	require.NotEmpty(t, data)
-	require.True(t, strings.Contains(string(data), `"payloadType"`))
+	require.Contains(t, string(data), `"payloadType"`)
 }
 
 func TestDSSELayerForEnvelopeBundleWithoutDSSE(t *testing.T) {
@@ -336,5 +335,5 @@ func TestDSSELayerForEnvelopePlainDSSE(t *testing.T) {
 	data, material, err := dsseLayerForEnvelope(env)
 	require.NoError(t, err)
 	require.Nil(t, material)
-	require.True(t, strings.Contains(string(data), `"payloadType"`))
+	require.Contains(t, string(data), `"payloadType"`)
 }

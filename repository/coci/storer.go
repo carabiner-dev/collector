@@ -17,12 +17,12 @@ import (
 
 	"github.com/carabiner-dev/attestation"
 	"github.com/google/go-containerregistry/pkg/crane"
+	ggcr "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/static"
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	ggcr "github.com/google/go-containerregistry/pkg/v1"
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	protorekor "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
@@ -148,7 +148,7 @@ func isNotFound(err error) bool {
 func dsseLayerForEnvelope(env attestation.Envelope) ([]byte, *protobundle.VerificationMaterial, error) {
 	switch e := env.(type) {
 	case *bundle.Envelope:
-		de := e.Bundle.GetDsseEnvelope()
+		de := e.GetDsseEnvelope()
 		if de == nil {
 			return nil, nil, fmt.Errorf("bundle envelope does not contain a DSSE envelope; only DSSE-wrapped attestations can be stored as cosign .att layers")
 		}
@@ -156,7 +156,7 @@ func dsseLayerForEnvelope(env attestation.Envelope) ([]byte, *protobundle.Verifi
 		if err != nil {
 			return nil, nil, fmt.Errorf("marshaling DSSE envelope: %w", err)
 		}
-		return data, e.Bundle.GetVerificationMaterial(), nil
+		return data, e.GetVerificationMaterial(), nil
 	case *dsse.Envelope:
 		if e.Envelope == nil {
 			return nil, nil, fmt.Errorf("dsse envelope is empty")
