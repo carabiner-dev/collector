@@ -38,7 +38,7 @@ The following table lists all repository drivers currently implemented in the pr
 
 | Driver | Type Moniker | Description | Example Initialization String | Fetch | Store |
 | --- | --- | --- | --- | --- | --- |
-| **COCI** | `coci` | Reads Sigstore bundle attestations from container image registries using the `cosign` method. | `coci:docker.io/library/alpine:latest` | ✓ | ✗ |
+| **COCI** | `coci` | Reads and writes Sigstore bundle attestations on container image registries using the `cosign` method (`sha256-<digest>.att` tag). | `coci:docker.io/library/alpine:latest` | ✓ | ✓ |
 | **OCI** | `oci` | Reads and writes Sigstore bundle attestations attached as OCI referrers (cosign v3). | `oci:ghcr.io/foo/bar:v1` | ✓ | ✓ |
 | **Filesystem** | `fs` | Reads attestation files from a filesystem directory | `fs:/path/to/attestations` | ✓ | ✗ |
 | **GitHub** | `github` | Reads and writes attestations using the GitHub Attestations API | `github:owner/repo` | ✓ | ✓ |

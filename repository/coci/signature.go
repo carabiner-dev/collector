@@ -48,7 +48,7 @@ func (c *Collector) fetchSignatures(ctx context.Context, opts attestation.FetchO
 		strings.Replace(imageInfo.Digest, "sha256:", "sha256-", 1),
 	)
 
-	manifestData, err := crane.Manifest(sigRef, crane.WithContext(ctx))
+	manifestData, err := crane.Manifest(sigRef, append([]crane.Option{crane.WithContext(ctx)}, c.craneOpts()...)...)
 	if err != nil {
 		return nil, fmt.Errorf("fetching .sig manifest: %w", err)
 	}
@@ -113,7 +113,7 @@ func (c *Collector) fetchSignatures(ctx context.Context, opts attestation.FetchO
 func (c *Collector) getSignatureEnvelope(ctx context.Context, opts *attestation.FetchOptions, imageInfo *ImageInfo, layer *ggcr.Descriptor) (attestation.Envelope, error) {
 	// Pull the layer blob (simple signing payload)
 	layerRef := imageInfo.Registry + "/" + imageInfo.Repository + "@" + layer.Digest.String()
-	pulled, err := crane.PullLayer(layerRef, crane.WithContext(ctx))
+	pulled, err := crane.PullLayer(layerRef, append([]crane.Option{crane.WithContext(ctx)}, c.craneOpts()...)...)
 	if err != nil {
 		return nil, fmt.Errorf("pulling signature layer: %w", err)
 	}

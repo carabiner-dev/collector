@@ -65,10 +65,36 @@ lacks a SHA-1 or `gitCommit` subject, an error is returned.
 
 ## coci (Container OCI)
 
-Fetches attestations attached to OCI container images. Reads the `.att`
-tag manifest for a given image digest, iterates the DSSE envelope layers,
-and synthesizes Sigstore bundles from the layer data and annotations
-(certificates, transparency log entries, RFC 3161 timestamps).
+Reads and writes attestations attached to OCI container images using the
+legacy cosign tag convention (`<repo>:sha256-<digest>.att`). On read, the
+`.att` manifest is fetched, each DSSE envelope layer is pulled, and a
+Sigstore bundle is synthesized from the layer body plus its cosign
+annotations (certificates, transparency log entries, RFC 3161 timestamps).
+
+When `Store` is called the inverse path runs:
+
+1. The reference is resolved to its image digest so the `.att` tag can be
+   computed.
+2. The existing `.att` manifest (if any) is pulled so its layers are
+   preserved; new attestations are appended (cosign-style append-on-write).
+   A missing tag is treated as "no attestations yet" and a fresh empty
+   image is used as the base.
+3. Each envelope is converted to a DSSE layer with media type
+   `application/vnd.dsse.envelope.v1+json`. `*bundle.Envelope` inputs are
+   unwrapped: the DSSE payload becomes the layer body and any sigstore
+   verification material is hoisted back into cosign layer annotations
+   (`dev.sigstore.cosign/certificate`, `dev.sigstore.cosign/bundle`,
+   `dev.sigstore.cosign/rfc3161timestamp`) so the result round-trips with
+   both this collector's `Fetch` and with cosign itself.
+4. The resulting OCI image manifest is pushed at the `.att` tag.
+
+Authentication uses the standard Docker keychain
+(`~/.docker/config.json`, `$DOCKER_CONFIG`, configured credential helpers).
+Tests and other callers can override registry options via `WithCraneOpts`
+(e.g. `crane.Insecure` for an HTTP test registry). The implementation is
+built directly on
+[`go-containerregistry`](https://github.com/google/go-containerregistry);
+it does not depend on `cosign`.
 
 ## oci (OCI Referrers)
 
