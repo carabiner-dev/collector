@@ -145,23 +145,53 @@ func (e *Envelope) Verify(_ ...any) error {
 	logrus.Debugf("  Cert SAN:     %s", summary.SubjectAlternativeName)
 	logrus.Debugf("  Cert Issuer:  %s", summary.CertificateIssuer)
 
+	// Pick the identity shape that matches what the leaf actually
+	// carries. A SPIFFE SVID puts the workload's spiffe:// URI in the
+	// cert's URI SANs; Fulcio puts the OIDC issuer + identity values
+	// summarized above. Emitting a Sigstore identity for a SPIFFE-
+	// signed bundle would silently fail policy.identities matching
+	// because policies pin on the variant that matches the actual
+	// signer (trust_domain_match vs OIDC issuer).
+	identity := &sapi.Identity{
+		Sigstore: &sapi.IdentitySigstore{
+			Issuer:   summary.Issuer,
+			Identity: summary.SubjectAlternativeName,
+		},
+	}
+	if svid := spiffeURIFromCert(x509cert); svid != "" {
+		identity = &sapi.Identity{
+			Spiffe: &sapi.IdentitySpiffe{
+				Svid: svid,
+			},
+		}
+	}
+
 	// Register the verification data
 	e.GetPredicate().SetVerification(&sapi.Verification{
 		Signature: &sapi.SignatureVerification{
-			Date:     timestamppb.Now(),
-			Verified: true,
-			Identities: []*sapi.Identity{
-				{
-					Sigstore: &sapi.IdentitySigstore{
-						Issuer:   summary.Issuer,
-						Identity: summary.SubjectAlternativeName,
-					},
-				},
-			},
+			Date:       timestamppb.Now(),
+			Verified:   true,
+			Identities: []*sapi.Identity{identity},
 		},
 	})
 
 	return nil
+}
+
+// spiffeURIFromCert returns the first spiffe:// URI SAN found on the
+// leaf certificate, or "" if none is present. Used to choose between
+// the Sigstore / SPIFFE identity shapes when registering verified
+// signers on a parsed bundle envelope.
+func spiffeURIFromCert(cert *x509.Certificate) string {
+	if cert == nil {
+		return ""
+	}
+	for _, u := range cert.URIs {
+		if u != nil && u.Scheme == "spiffe" {
+			return u.String()
+		}
+	}
+	return ""
 }
 
 // MarshalJSON implements the json.Marshaler interface by wrapping the protojson
