@@ -15,8 +15,8 @@ require (
 	github.com/carabiner-dev/signer v0.4.6-0.20260517053451-ae996f971a6d
 	github.com/carabiner-dev/vcslocator v0.4.3-0.20260415221723-1e7d86696551
 	github.com/github/smimesign v0.2.0
-	github.com/go-git/go-billy/v5 v5.8.1-0.20260407233109-416e0a5b21a8
-	github.com/go-git/go-git/v5 v5.18.0
+	github.com/go-git/go-billy/v5 v5.9.0
+	github.com/go-git/go-git/v5 v5.19.1
 	github.com/gogo/protobuf v1.3.2
 	github.com/google/go-containerregistry v0.21.5
 	github.com/in-toto/attestation v1.2.0
@@ -118,7 +118,7 @@ require (
 	github.com/olekukonko/ll v0.1.8 // indirect
 	github.com/olekukonko/tablewriter v1.1.4 // indirect
 	github.com/onsi/gomega v1.39.1 // indirect
-	github.com/pjbgf/sha1cd v0.5.0 // indirect
+	github.com/pjbgf/sha1cd v0.6.0 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
