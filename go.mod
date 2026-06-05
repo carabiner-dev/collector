@@ -6,14 +6,14 @@ require (
 	github.com/carabiner-dev/attestation v0.2.1
 	github.com/carabiner-dev/ghrfs v0.3.4
 	github.com/carabiner-dev/github v0.2.3
-	github.com/carabiner-dev/hasher v0.2.3
+	github.com/carabiner-dev/hasher v0.2.4
 	github.com/carabiner-dev/jsonl v0.2.1
 	github.com/carabiner-dev/openeox v1.0.0-pre.1
 	github.com/carabiner-dev/osv v0.0.0-20250124012120-b8ce4531cd92
-	github.com/carabiner-dev/predicates v0.1.0
+	github.com/carabiner-dev/predicates v0.5.0
 	github.com/carabiner-dev/sbomfs v0.1.0
 	github.com/carabiner-dev/signer v0.4.6-0.20260517053451-ae996f971a6d
-	github.com/carabiner-dev/vcslocator v0.4.3-0.20260415221723-1e7d86696551
+	github.com/carabiner-dev/vcslocator v0.4.3
 	github.com/github/smimesign v0.2.0
 	github.com/go-git/go-billy/v5 v5.8.1-0.20260407233109-416e0a5b21a8
 	github.com/go-git/go-git/v5 v5.18.0
@@ -38,6 +38,7 @@ require (
 )
 
 require (
+	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260415201107-50325440f8f2.1 // indirect
 	dario.cat/mergo v1.0.2 // indirect
 	github.com/CycloneDX/cyclonedx-go v0.10.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
@@ -48,7 +49,7 @@ require (
 	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/carabiner-dev/command v0.3.1 // indirect
-	github.com/carabiner-dev/policy v0.4.5 // indirect
+	github.com/carabiner-dev/policy v0.5.0 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/clipperhouse/displaywidth v0.11.0 // indirect
@@ -117,7 +118,6 @@ require (
 	github.com/olekukonko/errors v1.2.0 // indirect
 	github.com/olekukonko/ll v0.1.8 // indirect
 	github.com/olekukonko/tablewriter v1.1.4 // indirect
-	github.com/onsi/gomega v1.39.1 // indirect
 	github.com/pjbgf/sha1cd v0.5.0 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pkg/errors v0.9.1 // indirect
