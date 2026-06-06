@@ -154,8 +154,9 @@ func (e *Envelope) Verify(_ ...any) error {
 	// signer (trust_domain_match vs OIDC issuer).
 	identity := &sapi.Identity{
 		Sigstore: &sapi.IdentitySigstore{
-			Issuer:   summary.Issuer,
-			Identity: summary.SubjectAlternativeName,
+			Issuer:              summary.Issuer,
+			Identity:            summary.SubjectAlternativeName,
+			SourceRepositoryUri: summary.SourceRepositoryURI,
 		},
 	}
 	if svid := spiffeURIFromCert(x509cert); svid != "" {
