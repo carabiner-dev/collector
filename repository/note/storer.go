@@ -123,8 +123,11 @@ func (c *Collector) openOrCloneRepoForNotes(components *vcslocator.Components) (
 		return repo, nil
 	}
 
-	// Get authentication method for remote repos
-	auth, err := vcslocator.GetAuthMethod(c.Options.Locator)
+	// Get authentication method for remote repos. Pass the configured HTTP
+	// credentials so cloning works for private repositories, matching pushNotes.
+	auth, err := vcslocator.GetAuthMethod(
+		c.Options.Locator, vcslocator.WithHttpAuth(c.Options.HttpUsername, c.Options.HttpPassword),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("getting auth method: %w", err)
 	}
