@@ -19,6 +19,7 @@ import (
 	"github.com/carabiner-dev/signer/key"
 	"github.com/stretchr/testify/require"
 
+	"github.com/carabiner-dev/collector/envelope/bundle"
 	"github.com/carabiner-dev/collector/repository/filesystem"
 	"github.com/carabiner-dev/collector/repository/release"
 )
@@ -207,4 +208,26 @@ func fetchGPGKey(t *testing.T, url string) ([]*key.GPGPublic, error) {
 	}
 
 	return key.ParseGPGPublicKey(data)
+}
+
+// TestBundleSourceRepositoryURICapture verifies a real GitHub Actions keyless
+// bundle and checks that the source repository URI (Fulcio OID
+// 1.3.6.1.4.1.57264.1.12) is captured into the signer identity, so policies can
+// pin it with source_repository_uri_match.
+func TestBundleSourceRepositoryURICapture(t *testing.T) {
+	envs, err := (&bundle.Parser{}).ParseFile("testdata/github-actions-bundle.json")
+	require.NoError(t, err)
+	require.NotEmpty(t, envs)
+
+	require.NoError(t, envs[0].Verify())
+
+	v, ok := envs[0].GetVerification().(*sapi.Verification)
+	require.True(t, ok)
+	ids := v.GetSignature().GetIdentities()
+	require.NotEmpty(t, ids)
+
+	require.Equal(
+		t, "https://github.com/sigstore/sigstore-js",
+		ids[0].GetSigstore().GetSourceRepositoryUri(),
+	)
 }
