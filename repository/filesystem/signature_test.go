@@ -9,8 +9,11 @@ import (
 	"testing/fstest"
 
 	"github.com/carabiner-dev/attestation"
+	sapi "github.com/carabiner-dev/signer/api/v1"
 	"github.com/carabiner-dev/signer/key"
+	sigstore "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 func TestGetSignatureExtension(t *testing.T) {
@@ -38,7 +41,9 @@ func TestGetSignatureExtension(t *testing.T) {
 		t.Parallel()
 		require.Equal(t, ".sigstore.json", getSignatureExtension("artifact.txt.sigstore.json", defaultSigstoreBundleExtensions))
 		require.Equal(t, ".sigstore.json", getSignatureExtension("bundle.sigstore.json", defaultSigstoreBundleExtensions))
+		require.Equal(t, ".bundle", getSignatureExtension("guac_checksums.txt.bundle", defaultSigstoreBundleExtensions))
 		require.Empty(t, getSignatureExtension("file.json", defaultSigstoreBundleExtensions))
+		require.Empty(t, getSignatureExtension("file.bundle.json", defaultSigstoreBundleExtensions))
 		// .sigstore.json should NOT match default signature extensions
 		require.Empty(t, getSignatureExtension("artifact.txt.sigstore.json", defaultSignatureExtensions))
 	})
@@ -64,6 +69,7 @@ func TestHasSignatureExtension(t *testing.T) {
 	require.True(t, c.hasSignatureExtension("artifact.txt.sigstore.json"))
 	require.True(t, c.hasSignatureExtension("artifact.txt.gpg"))
 	require.True(t, c.hasSignatureExtension("artifact.txt.asc"))
+	require.True(t, c.hasSignatureExtension("artifact.txt.bundle"))
 	require.False(t, c.hasSignatureExtension("artifact.txt"))
 	require.False(t, c.hasSignatureExtension("artifact.json"))
 
@@ -172,6 +178,51 @@ func TestBuildVirtualAttestation(t *testing.T) {
 	require.Len(t, subjects, 1)
 	require.Equal(t, "artifact.txt", subjects[0].GetName())
 	require.NotEmpty(t, subjects[0].GetDigest())
+}
+
+func TestBuildSigstoreVirtualAttestation(t *testing.T) {
+	t.Parallel()
+
+	// A sigstore bundle wrapping a messageSignature instead of a DSSE
+	// envelope, as published in GitHub releases (eg guacsec/guac). The
+	// digest is the base64 encoding of sha256("test").
+	var bundle sigstore.Bundle
+	require.NoError(t, protojson.Unmarshal([]byte(
+		`{"mediaType":"application/vnd.dev.sigstore.bundle.v0.3+json",`+
+			`"messageSignature":{"messageDigest":{"algorithm":"SHA2_256",`+
+			`"digest":"n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg="},`+
+			`"signature":"c2ln"}}`,
+	), &bundle))
+
+	verification := &sapi.Verification{
+		Signature: &sapi.SignatureVerification{Verified: true},
+	}
+
+	c := &Collector{}
+	env, err := c.buildSigstoreVirtualAttestation("guac_checksums.txt", &bundle, verification)
+	require.NoError(t, err)
+
+	require.NotNil(t, env.GetPredicate())
+	require.Equal(t, SignaturePredicateType, env.GetPredicate().GetType())
+	require.Equal(t, []byte("{}"), env.GetPredicate().GetData())
+	require.True(t, env.GetVerification().GetVerified())
+
+	// The subject digest must come from the bundle's messageSignature
+	subjects := env.GetStatement().GetSubjects()
+	require.Len(t, subjects, 1)
+	require.Equal(t, "guac_checksums.txt", subjects[0].GetName())
+	require.Equal(
+		t, "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+		subjects[0].GetDigest()["sha256"],
+	)
+
+	// A bundle without a messageSignature cannot build a virtual attestation
+	var dsseBundle sigstore.Bundle
+	require.NoError(t, protojson.Unmarshal(
+		[]byte(`{"mediaType":"application/vnd.dev.sigstore.bundle.v0.3+json"}`), &dsseBundle,
+	))
+	_, err = c.buildSigstoreVirtualAttestation("artifact.txt", &dsseBundle, verification)
+	require.Error(t, err)
 }
 
 func TestFetchWithSignaturePairs(t *testing.T) {

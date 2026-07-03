@@ -39,7 +39,7 @@ const SignaturePredicateType = attestation.PredicateType("https://carabiner.dev/
 var defaultSignatureExtensions = []string{".sig", ".gpg", ".asc"}
 
 // defaultSigstoreBundleExtensions lists recognized sigstore bundle extensions.
-var defaultSigstoreBundleExtensions = []string{".sigstore.json"}
+var defaultSigstoreBundleExtensions = []string{".sigstore.json", ".bundle"}
 
 // sigstoreHashAlgNames maps sigstore hash algorithm enum values to in-toto
 // digest names used by the hasher package.
