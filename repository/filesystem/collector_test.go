@@ -6,6 +6,7 @@ package filesystem
 import (
 	"os"
 	"testing"
+	"testing/fstest"
 
 	"github.com/carabiner-dev/attestation"
 	"github.com/stretchr/testify/require"
@@ -47,6 +48,33 @@ func TestFetch(t *testing.T) {
 			require.Len(t, atts, tc.expect)
 		})
 	}
+}
+
+func TestFetchSkipsUnparseableFiles(t *testing.T) {
+	t.Parallel()
+
+	good, err := os.ReadFile("testdata/results.intoto.json")
+	require.NoError(t, err)
+
+	fsys := fstest.MapFS{
+		"results.intoto.json": &fstest.MapFile{Data: good},
+		// Not JSON at all
+		"broken.json": &fstest.MapFile{Data: []byte("{ not json")},
+		// A sigstore bundle wrapping a messageSignature instead of a DSSE
+		// envelope, as found in GitHub releases (eg guacsec/guac)
+		"checksums.txt.bundle": &fstest.MapFile{Data: []byte(
+			`{"mediaType":"application/vnd.dev.sigstore.bundle.v0.3+json",` +
+				`"messageSignature":{"messageDigest":{"algorithm":"SHA2_256",` +
+				`"digest":"6cg="},"signature":"c2ln"}}`,
+		)},
+	}
+
+	collector, err := New(WithFS(fsys))
+	require.NoError(t, err)
+
+	atts, err := collector.Fetch(t.Context(), attestation.FetchOptions{})
+	require.NoError(t, err)
+	require.Len(t, atts, 1)
 }
 
 func TestFetchFetchByPredicateType(t *testing.T) {
