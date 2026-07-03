@@ -17,6 +17,7 @@ import (
 
 	"github.com/carabiner-dev/attestation"
 	"github.com/carabiner-dev/signer/key"
+	"github.com/sirupsen/logrus"
 
 	"github.com/carabiner-dev/collector/envelope"
 	"github.com/carabiner-dev/collector/filters"
@@ -172,7 +173,10 @@ func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([
 			attestations, err = envelope.Parsers.Parse(bytes.NewReader(bs))
 		}
 		if err != nil {
-			return fmt.Errorf("parsing file %q: %w", path, err)
+			// An unparseable file shouldn't fail the whole collection —
+			// log and continue.
+			logrus.Debugf("skipping %s: parsing attestations: %v", path, err)
+			return nil
 		}
 
 		if opts.Query != nil {
