@@ -73,3 +73,16 @@ func TestParse(t *testing.T) {
 		})
 	}
 }
+
+func TestSupportsType(t *testing.T) {
+	t.Parallel()
+	parser := &Parser{}
+	// Both the current major-version type and the legacy patch-versioned type
+	// must be accepted on read.
+	require.True(t, parser.SupportsType(PredicateType))
+	require.True(t, parser.SupportsType(legacyPredicateType))
+	require.True(t, parser.SupportsType("https://ossf.github.io/osv-schema/results@v1.6.7"))
+	require.True(t, parser.SupportsType("https://example.com/other", PredicateType))
+	require.False(t, parser.SupportsType("https://example.com/other"))
+	require.False(t, parser.SupportsType())
+}
