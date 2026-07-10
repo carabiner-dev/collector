@@ -13,7 +13,18 @@ import (
 	"github.com/carabiner-dev/collector/predicate/generic"
 )
 
-var PredicateType = attestation.PredicateType("https://ossf.github.io/osv-schema/results@v1.6.7")
+var (
+	// PredicateType is the OSV results predicate type this parser emits.
+	PredicateType = attestation.PredicateType("https://ossf.github.io/osv-schema/results@v1")
+
+	// legacyPredicateType is the previous, schema-patch-versioned type. It is
+	// still accepted on read so attestations produced before the switch to the
+	// major-version type keep parsing.
+	legacyPredicateType = attestation.PredicateType("https://ossf.github.io/osv-schema/results@v1.6.7")
+
+	// supportedTypes is the set of predicate types this parser will read.
+	supportedTypes = []attestation.PredicateType{PredicateType, legacyPredicateType}
+)
 
 type Parser struct{}
 
@@ -23,9 +34,16 @@ func New() *Parser {
 	return &Parser{}
 }
 
-// SupportsType returns true if the OSV parser supports a type
+// SupportsType returns true if the OSV parser supports any of the given types.
+// Both the current major-version type and the legacy patch-versioned type are
+// accepted.
 func (*Parser) SupportsType(predTypes ...attestation.PredicateType) bool {
-	return slices.Contains(predTypes, PredicateType)
+	for _, predType := range predTypes {
+		if slices.Contains(supportedTypes, predType) {
+			return true
+		}
+	}
+	return false
 }
 
 // Parse parses a byte slice into a OSV predicate
