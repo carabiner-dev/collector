@@ -24,6 +24,7 @@ func TestParseStream(t *testing.T) {
 			require.Equal(t, attestation.PredicateType("https://slsa.dev/provenance/v0.2"), at[0].GetStatement().GetPredicate().GetType())
 			require.NotNil(t, env.GetStatement())
 			require.Equal(t, attestation.PredicateType("https://slsa.dev/provenance/v0.2"), env.GetStatement().GetPredicateType())
+			require.NotEmpty(t, env.GetSignatures(), "bundle must expose the DSSE envelope signatures")
 		}},
 		{"npm", "testdata/bundle-publish.json", false, func(t *testing.T, at []attestation.Envelope) {
 			t.Helper()
