@@ -19,6 +19,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/carabiner-dev/collector/envelope/dsse"
 	"github.com/carabiner-dev/collector/statement/intoto"
 )
 
@@ -74,8 +75,20 @@ func (e *Envelope) GetCertificate() attestation.Certificate {
 	return nil
 }
 
+// GetSignatures returns the signatures of the DSSE envelope wrapped in the
+// bundle. They are extracted lazily on first call.
 func (e *Envelope) GetSignatures() []attestation.Signature {
-	return nil
+	if e.Signatures == nil {
+		if dsseEnv := e.GetDsseEnvelope(); dsseEnv != nil {
+			for _, s := range dsseEnv.GetSignatures() {
+				e.Signatures = append(e.Signatures, &dsse.Signature{
+					KeyID:     s.GetKeyid(),
+					Signature: s.GetSig(),
+				})
+			}
+		}
+	}
+	return e.Signatures
 }
 
 // GetVerifications returns the signtature verifications stored in the
