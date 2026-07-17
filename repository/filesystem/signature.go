@@ -5,6 +5,7 @@ package filesystem
 
 import (
 	"bytes"
+	"context"
 	"crypto/x509"
 	"fmt"
 	"io"
@@ -41,6 +42,11 @@ var defaultSignatureExtensions = []string{".sig", ".gpg", ".asc"}
 // defaultSigstoreBundleExtensions lists recognized sigstore bundle extensions.
 var defaultSigstoreBundleExtensions = []string{".sigstore.json", ".bundle"}
 
+// defaultCertificateExtensions lists recognized certificate file extensions.
+// A certificate found alongside a raw signature (e.g. `<artifact>.sig` +
+// `<artifact>.pem`) marks a cosign-style keyless detached signature.
+var defaultCertificateExtensions = []string{".pem", ".crt", ".cert"}
+
 // sigstoreHashAlgNames maps sigstore hash algorithm enum values to in-toto
 // digest names used by the hasher package.
 var sigstoreHashAlgNames = map[protocommon.HashAlgorithm]string{
@@ -76,14 +82,15 @@ func getSignatureExtension(path string, extensions []string) string {
 // during the walk.
 func (c *Collector) hasSignatureExtension(path string) bool {
 	return getSignatureExtension(path, c.SignatureExtensions) != "" ||
-		getSignatureExtension(path, c.SigstoreBundleExtensions) != ""
+		getSignatureExtension(path, c.SigstoreBundleExtensions) != "" ||
+		getSignatureExtension(path, c.CertificateExtensions) != ""
 }
 
 // processSignaturePairs identifies signature pairs from the collected file
 // list and processes them. Sigstore bundles are processed first (digest
 // extracted from the bundle, no artifact read needed). Raw signature files
 // require a companion artifact for hashing and key-based verification.
-func (c *Collector) processSignaturePairs(allFiles []string, opts attestation.FetchOptions) []attestation.Envelope {
+func (c *Collector) processSignaturePairs(ctx context.Context, allFiles []string, opts attestation.FetchOptions) []attestation.Envelope {
 	// Build a set for O(1) lookup
 	fileSet := make(map[string]struct{}, len(allFiles))
 	for _, f := range allFiles {
@@ -102,7 +109,7 @@ func (c *Collector) processSignaturePairs(allFiles []string, opts attestation.Fe
 			envs = c.processSigstoreBundle(path, ext, opts)
 		} else if ext := getSignatureExtension(path, c.SignatureExtensions); ext != "" {
 			// Raw signature extensions require a companion artifact.
-			envs = c.processRawSignature(path, ext, fileSet, opts)
+			envs = c.processRawSignature(ctx, path, ext, fileSet, opts)
 		} else {
 			continue
 		}
@@ -164,7 +171,7 @@ func (c *Collector) processSigstoreBundle(path, ext string, opts attestation.Fet
 
 // processRawSignature handles files with raw signature extensions (.sig, .gpg, .asc).
 // These require a companion artifact for key-based verification and hashing.
-func (c *Collector) processRawSignature(path, ext string, fileSet map[string]struct{}, opts attestation.FetchOptions) []attestation.Envelope {
+func (c *Collector) processRawSignature(ctx context.Context, path, ext string, fileSet map[string]struct{}, opts attestation.FetchOptions) []attestation.Envelope {
 	artifactPath := strings.TrimSuffix(path, ext)
 	if _, ok := fileSet[artifactPath]; !ok {
 		return nil
@@ -183,6 +190,14 @@ func (c *Collector) processRawSignature(path, ext string, fileSet map[string]str
 			parsed = opts.Query.Run(parsed)
 		}
 		return parsed
+	}
+
+	// A certificate companion (<artifact>.pem/.crt/.cert) alongside the
+	// signature marks a cosign-style keyless detached signature. Verify it
+	// against the Fulcio certificate and the Rekor transparency log instead
+	// of against locally configured keys.
+	if certPath, ok := c.certificateCompanion(artifactPath, fileSet); ok {
+		return c.processCertSignaturePair(ctx, artifactPath, certPath, sigData, opts)
 	}
 
 	// Verify with configured keys (handles GPG, ECDSA, RSA, Ed25519)

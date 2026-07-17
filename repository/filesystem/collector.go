@@ -36,6 +36,8 @@ func New(opts ...fnOpts) (*Collector, error) {
 		Extensions:               []string{"json", "jsonl", "spdx", "cdx", "bundle"},
 		SignatureExtensions:      append([]string{}, defaultSignatureExtensions...),
 		SigstoreBundleExtensions: append([]string{}, defaultSigstoreBundleExtensions...),
+		CertificateExtensions:    append([]string{}, defaultCertificateExtensions...),
+		RekorURL:                 defaultRekorURL,
 		IgnoreOtherFiles:         true,
 		Path:                     ".",
 	}
@@ -87,6 +89,20 @@ var WithSigstoreBundleExtensions = func(exts []string) fnOpts {
 	}
 }
 
+var WithCertificateExtensions = func(exts []string) fnOpts {
+	return func(c *Collector) error {
+		c.CertificateExtensions = exts
+		return nil
+	}
+}
+
+var WithRekorURL = func(url string) fnOpts {
+	return func(c *Collector) error {
+		c.RekorURL = url
+		return nil
+	}
+}
+
 var WithKey = func(keys ...key.PublicKeyProvider) fnOpts {
 	return func(c *Collector) error {
 		c.Keys = append(c.Keys, keys...)
@@ -101,6 +117,8 @@ type Collector struct {
 	Extensions               []string
 	SignatureExtensions      []string
 	SigstoreBundleExtensions []string
+	CertificateExtensions    []string
+	RekorURL                 string
 	IgnoreOtherFiles         bool
 	Path                     string
 	FS                       fs.FS
@@ -195,7 +213,7 @@ func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([
 	}
 
 	// Process signature pairs after the walk
-	ret = append(ret, c.processSignaturePairs(allFiles, opts)...)
+	ret = append(ret, c.processSignaturePairs(ctx, allFiles, opts)...)
 
 	if opts.Limit > 0 && len(ret) > opts.Limit {
 		ret = ret[:opts.Limit]
