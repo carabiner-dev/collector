@@ -20,6 +20,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	testName  = "Test"
+	testEmail = "test@example.com"
+	algoSHA1  = "sha1"
+)
+
 // initTestRepo creates a local git repo with a signed commit and returns
 // the repo path, the commit hash, and the repo object.
 func initTestRepo(t *testing.T) (repoPath, commitHash string) {
@@ -41,8 +47,8 @@ func initTestRepo(t *testing.T) (repoPath, commitHash string) {
 
 	hash, err := wt.Commit("Test commit", &gogit.CommitOptions{
 		Author: &object.Signature{
-			Name:  "Test",
-			Email: "test@example.com",
+			Name:  testName,
+			Email: testEmail,
 		},
 	})
 	require.NoError(t, err)
@@ -60,7 +66,7 @@ func TestFetchBySubject(t *testing.T) {
 
 	subj := &intoto.ResourceDescriptor{
 		Digest: map[string]string{
-			"sha1": commitHash,
+			algoSHA1: commitHash,
 		},
 	}
 
@@ -76,7 +82,7 @@ func TestFetchBySubject(t *testing.T) {
 	// Subject should contain the commit hash.
 	subjects := env.GetStatement().GetSubjects()
 	require.Len(t, subjects, 1)
-	require.Equal(t, commitHash, subjects[0].GetDigest()["sha1"])
+	require.Equal(t, commitHash, subjects[0].GetDigest()[algoSHA1])
 }
 
 func TestFetchBySubjectGitCommitAlgo(t *testing.T) {
@@ -123,7 +129,7 @@ func TestFetchBySubjectNonexistentCommit(t *testing.T) {
 
 	subj := &intoto.ResourceDescriptor{
 		Digest: map[string]string{
-			"sha1": "0000000000000000000000000000000000000000",
+			algoSHA1: "0000000000000000000000000000000000000000",
 		},
 	}
 
@@ -152,8 +158,8 @@ func TestFetchBySubjectMultipleCommits(t *testing.T) {
 
 		hash, err := wt.Commit(fmt.Sprintf("Commit %d", i), &gogit.CommitOptions{
 			Author: &object.Signature{
-				Name:  "Test",
-				Email: "test@example.com",
+				Name:  testName,
+				Email: testEmail,
 			},
 		})
 		require.NoError(t, err)
@@ -167,7 +173,7 @@ func TestFetchBySubjectMultipleCommits(t *testing.T) {
 	subjs := make([]attestation.Subject, 0, len(commits))
 	for _, h := range commits {
 		subjs = append(subjs, &intoto.ResourceDescriptor{
-			Digest: map[string]string{"sha1": h},
+			Digest: map[string]string{algoSHA1: h},
 		})
 	}
 
@@ -211,7 +217,7 @@ func TestFetchWithCommitInLocator(t *testing.T) {
 	require.NotNil(t, env.GetStatement())
 	subjects := env.GetStatement().GetSubjects()
 	require.Len(t, subjects, 1)
-	require.Equal(t, commitHash, subjects[0].GetDigest()["sha1"])
+	require.Equal(t, commitHash, subjects[0].GetDigest()[algoSHA1])
 }
 
 func TestNewRequiresPath(t *testing.T) {
@@ -261,13 +267,13 @@ func TestWithLimit(t *testing.T) {
 
 		hash, err := wt.Commit(fmt.Sprintf("Commit %d", i), &gogit.CommitOptions{
 			Author: &object.Signature{
-				Name:  "Test",
-				Email: "test@example.com",
+				Name:  testName,
+				Email: testEmail,
 			},
 		})
 		require.NoError(t, err)
 		subjs = append(subjs, &intoto.ResourceDescriptor{
-			Digest: map[string]string{"sha1": hash.String()},
+			Digest: map[string]string{algoSHA1: hash.String()},
 		})
 	}
 
@@ -300,8 +306,8 @@ func TestFetchWithTagInLocator(t *testing.T) {
 
 	tagRef, err := repo.CreateTag("v1.0.0", plumbing.NewHash(commitHash), &gogit.CreateTagOptions{
 		Tagger: &object.Signature{
-			Name:  "Test",
-			Email: "test@example.com",
+			Name:  testName,
+			Email: testEmail,
 		},
 		Message: "Release v1.0.0",
 	})
@@ -327,8 +333,8 @@ func TestFetchWithTagInLocator(t *testing.T) {
 			// Subject should be the tag object hash, not the commit hash.
 			subjects := env.GetStatement().GetSubjects()
 			require.Len(t, subjects, 1)
-			require.Equal(t, tagRef.Hash().String(), subjects[0].GetDigest()["sha1"])
-			require.Equal(t, subjects[0].GetDigest()["sha1"], subjects[0].GetDigest()["gitTag"])
+			require.Equal(t, tagRef.Hash().String(), subjects[0].GetDigest()[algoSHA1])
+			require.Equal(t, subjects[0].GetDigest()[algoSHA1], subjects[0].GetDigest()["gitTag"])
 		})
 	}
 }
@@ -360,8 +366,8 @@ func TestFetchWithAnnotatedTagInLocator(t *testing.T) {
 
 	tagRef, err := repo.CreateTag("v2.0.0", plumbing.NewHash(commitHash), &gogit.CreateTagOptions{
 		Tagger: &object.Signature{
-			Name:  "Test",
-			Email: "test@example.com",
+			Name:  testName,
+			Email: testEmail,
 		},
 		Message: "Release v2.0.0",
 	})
@@ -377,7 +383,7 @@ func TestFetchWithAnnotatedTagInLocator(t *testing.T) {
 	// Subject is the tag object hash, not the commit.
 	subjects := envs[0].GetStatement().GetSubjects()
 	require.Len(t, subjects, 1)
-	require.Equal(t, tagRef.Hash().String(), subjects[0].GetDigest()["sha1"])
+	require.Equal(t, tagRef.Hash().String(), subjects[0].GetDigest()[algoSHA1])
 }
 
 func TestFetchWithNonexistentTag(t *testing.T) {

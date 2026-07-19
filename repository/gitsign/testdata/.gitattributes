@@ -1,0 +1,5 @@
+# Test fixtures are byte-exact and must never be line-ending converted. The raw
+# git commit object (offline.commit) breaks on a Windows CRLF checkout with
+# "malformed commit: bad tree hash", and the Rekor/CMS fixtures are hashed and
+# compared byte-for-byte, so any conversion invalidates them.
+* -text

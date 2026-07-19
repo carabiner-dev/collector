@@ -12,11 +12,13 @@ require (
 	github.com/carabiner-dev/osv v0.1.1
 	github.com/carabiner-dev/predicates v0.5.0
 	github.com/carabiner-dev/sbomfs v0.1.0
-	github.com/carabiner-dev/signer v0.5.2
+	github.com/carabiner-dev/signer v0.5.3-0.20260719001721-28ad0843d8a9
 	github.com/carabiner-dev/vcslocator v0.4.4
 	github.com/github/smimesign v0.2.0
 	github.com/go-git/go-billy/v5 v5.9.0
 	github.com/go-git/go-git/v5 v5.19.1
+	github.com/go-openapi/strfmt v0.26.4
+	github.com/go-openapi/swag/conv v0.27.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/google/go-containerregistry v0.21.7
 	github.com/in-toto/attestation v1.2.0
@@ -30,6 +32,8 @@ require (
 	github.com/regclient/regclient v0.11.5
 	github.com/sigstore/gitsign v0.16.0
 	github.com/sigstore/protobuf-specs v0.5.1
+	github.com/sigstore/rekor v1.5.3
+	github.com/sigstore/sigstore v1.10.8
 	github.com/sigstore/sigstore-go v1.2.2
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
@@ -79,10 +83,8 @@ require (
 	github.com/go-openapi/runtime v0.32.4 // indirect
 	github.com/go-openapi/runtime/server-middleware v0.32.3 // indirect
 	github.com/go-openapi/spec v0.22.6 // indirect
-	github.com/go-openapi/strfmt v0.26.4 // indirect
 	github.com/go-openapi/swag v0.26.1 // indirect
 	github.com/go-openapi/swag/cmdutils v0.26.1 // indirect
-	github.com/go-openapi/swag/conv v0.27.0 // indirect
 	github.com/go-openapi/swag/fileutils v0.26.1 // indirect
 	github.com/go-openapi/swag/jsonname v0.26.1 // indirect
 	github.com/go-openapi/swag/jsonutils v0.26.1 // indirect
@@ -126,15 +128,13 @@ require (
 	github.com/secure-systems-lab/go-securesystemslib v0.11.0 // indirect
 	github.com/sergi/go-diff v1.4.0 // indirect
 	github.com/shibumi/go-pathspec v1.3.0 // indirect
-	github.com/sigstore/rekor v1.5.3 // indirect
 	github.com/sigstore/rekor-tiles/v2 v2.3.0 // indirect
-	github.com/sigstore/sigstore v1.10.8 // indirect
 	github.com/sigstore/timestamp-authority/v2 v2.1.2 // indirect
 	github.com/skeema/knownhosts v1.3.2 // indirect
 	github.com/spdx/tools-golang v0.5.7 // indirect
 	github.com/spf13/cobra v1.10.2 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
-	github.com/spiffe/go-spiffe/v2 v2.7.0 // indirect
+	github.com/spiffe/go-spiffe/v2 v2.8.1 // indirect
 	github.com/sudo-bmitch/oci-digest v0.1.2 // indirect
 	github.com/theupdateframework/go-tuf v0.7.0 // indirect
 	github.com/theupdateframework/go-tuf/v2 v2.4.2 // indirect
@@ -155,8 +155,8 @@ require (
 	golang.org/x/net v0.56.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sync v0.21.0 // indirect
-	golang.org/x/sys v0.46.0 // indirect
-	golang.org/x/term v0.44.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/term v0.45.0 // indirect
 	golang.org/x/text v0.38.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260608224507-4308a22a1bab // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260608224507-4308a22a1bab // indirect

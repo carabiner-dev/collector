@@ -8,29 +8,58 @@
 package gitsign
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/asn1"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/carabiner-dev/attestation"
 	sapi "github.com/carabiner-dev/signer/api/v1"
 	"github.com/carabiner-dev/signer/key"
+	signersigstore "github.com/carabiner-dev/signer/sigstore"
 	"github.com/carabiner-dev/vcslocator"
+	cms "github.com/github/smimesign/ietf-cms"
 	"github.com/github/smimesign/ietf-cms/protocol"
 	gogit "github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/go-git/go-git/v5/plumbing/transport"
+	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/go-git/go-git/v5/storage/memory"
+	"github.com/go-openapi/strfmt"
+	"github.com/go-openapi/swag/conv"
 	intoto "github.com/in-toto/attestation/go/v1"
 	"github.com/sigstore/gitsign/pkg/attest"
 	gspredicate "github.com/sigstore/gitsign/pkg/predicate"
+	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
+	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
+	rekorpb "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
+	rekorclient "github.com/sigstore/rekor/pkg/client"
+	"github.com/sigstore/rekor/pkg/generated/client/entries"
+	"github.com/sigstore/rekor/pkg/generated/client/index"
+	"github.com/sigstore/rekor/pkg/generated/models"
+	rekortypes "github.com/sigstore/rekor/pkg/types"
+	hashedrekord "github.com/sigstore/rekor/pkg/types/hashedrekord"
+	hashedrekord_v001 "github.com/sigstore/rekor/pkg/types/hashedrekord/v0.0.1"
+	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
+	"github.com/sigstore/sigstore-go/pkg/fulcio/certificate"
+	"github.com/sigstore/sigstore-go/pkg/root"
+	sgverify "github.com/sigstore/sigstore-go/pkg/verify"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/carabiner-dev/collector/filters"
@@ -51,13 +80,36 @@ var (
 	_ attestation.FetcherByPredicateType = (*Collector)(nil)
 )
 
-// oidcIssuerOID is the Fulcio OIDC issuer extension OID (1.3.6.1.4.1.57264.1.1).
-var oidcIssuerOID = asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 1, 1}
+// oidRekorTransparencyLogEntry is the OID under which gitsign embeds a serialized
+// Rekor TransparencyLogEntry proto in the CMS unsigned attributes when signing in
+// offline mode (see gitsign internal/rekor/oid). Its presence is what distinguishes
+// an offline-verifiable commit from an online-mode one.
+var oidRekorTransparencyLogEntry = asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 57264, 3, 1}
 
 type Collector struct {
 	Options Options
 	Keys    []key.PublicKeyProvider
+
+	// trustedRoot caches the resolved sigstore trust root so it is loaded once and
+	// reused across every commit/tag verification.
+	trustedRootOnce sync.Once
+	trustedRoot     *root.TrustedRoot
+	trustedRootErr  error
 }
+
+// trusted resolves and caches the sigstore public-good trust root from the
+// signer library (an embedded snapshot with a TUF-refresh fallback), loaded
+// once and reused across every commit/tag verification.
+func (c *Collector) trusted() (*root.TrustedRoot, error) {
+	c.trustedRootOnce.Do(func() {
+		c.trustedRoot, c.trustedRootErr = signersigstore.TrustedRoot()
+	})
+	return c.trustedRoot, c.trustedRootErr
+}
+
+// defaultRekorURL is the sigstore public-good transparency log, queried for the
+// online-mode Rekor lookup when a signature carries no embedded entry.
+const defaultRekorURL = "https://rekor.sigstore.dev"
 
 type Options struct {
 	// Locator is the raw init string. It is parsed as a vcslocator for
@@ -66,10 +118,31 @@ type Options struct {
 
 	// Remote is the git remote name used to populate the subject name.
 	Remote string
+
+	// RekorURL is the transparency log queried when verifying online-mode
+	// signatures (those without an embedded Rekor entry). Defaults to the
+	// sigstore public-good instance.
+	RekorURL string
+
+	// Auth authenticates the remote fetch. When nil, openRepo falls back to
+	// vcslocator.GetAuthMethod (system git credentials). Set it (e.g. via
+	// WithToken) to read private repositories or pull-request refs.
+	Auth transport.AuthMethod
+
+	// Ref is an explicit git ref to fetch (e.g. "refs/pull/42/head"). When set,
+	// openRepo fetches only that ref instead of cloning every branch, which is
+	// how a PR head — including a fork PR under refs/pull/N/head — is reached.
+	// When empty, the ref parsed from the locator (if any) is used.
+	Ref string
+
+	// Depth limits the fetched history. 0 fetches full history; 1 fetches only
+	// the ref tip, which is sufficient when the subject commit is that tip.
+	Depth int
 }
 
 var defaultOptions = Options{
-	Remote: "origin",
+	Remote:   "origin",
+	RekorURL: defaultRekorURL,
 }
 
 type optFn func(*Collector) error
@@ -91,6 +164,49 @@ func WithRepoPath(path string) optFn {
 func WithRemote(remote string) optFn {
 	return func(c *Collector) error {
 		c.Options.Remote = remote
+		return nil
+	}
+}
+
+// WithRekorURL sets the transparency log used for the online-mode Rekor lookup.
+func WithRekorURL(url string) optFn {
+	return func(c *Collector) error {
+		c.Options.RekorURL = url
+		return nil
+	}
+}
+
+// WithAuth sets an explicit transport auth method for the remote fetch.
+func WithAuth(auth transport.AuthMethod) optFn {
+	return func(c *Collector) error {
+		c.Options.Auth = auth
+		return nil
+	}
+}
+
+// WithToken authenticates the remote fetch with a bearer/installation token,
+// using GitHub's "x-access-token" basic-auth convention. This is what lets the
+// collector read private repositories and pull-request refs.
+func WithToken(token string) optFn {
+	return func(c *Collector) error {
+		c.Options.Auth = &githttp.BasicAuth{Username: "x-access-token", Password: token}
+		return nil
+	}
+}
+
+// WithRef sets an explicit git ref to fetch (e.g. "refs/pull/42/head"), so the
+// collector reads exactly that ref instead of cloning every branch.
+func WithRef(ref string) optFn {
+	return func(c *Collector) error {
+		c.Options.Ref = ref
+		return nil
+	}
+}
+
+// WithDepth limits the fetched history (1 = a shallow single-commit fetch).
+func WithDepth(depth int) optFn {
+	return func(c *Collector) error {
+		c.Options.Depth = depth
 		return nil
 	}
 }
@@ -125,7 +241,7 @@ func (c *Collector) SetKeys(keys []key.PublicKeyProvider) {
 // Fetch parses the locator and, if it contains a commit or tag reference, builds a
 // virtual attestation. Tag locators produce a tag predicate; commit locators
 // produce a commit predicate.
-func (c *Collector) Fetch(_ context.Context, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
+func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
 	components, err := vcslocator.Locator(c.Options.Locator).Parse()
 	if err != nil {
 		return []attestation.Envelope{}, nil //nolint:nilerr // unparseable locator means no commit to fetch
@@ -142,13 +258,13 @@ func (c *Collector) Fetch(_ context.Context, opts attestation.FetchOptions) ([]a
 
 	var env attestation.Envelope
 	if components.Tag != "" {
-		env, err = c.buildVirtualTagAttestation(repo, components.Tag)
+		env, err = c.buildVirtualTagAttestation(ctx, repo, components.Tag)
 		if err != nil {
 			logrus.Debugf("gitsign: skipping tag %s: %v", components.Tag, err)
 			return []attestation.Envelope{}, nil
 		}
 	} else {
-		env, err = c.buildVirtualAttestation(repo, components.Commit)
+		env, err = c.buildVirtualAttestation(ctx, repo, components.Commit)
 		if err != nil {
 			return nil, fmt.Errorf("building attestation for commit %s: %w", components.Commit, err)
 		}
@@ -204,7 +320,7 @@ func (c *Collector) FetchByPredicateType(ctx context.Context, opts attestation.F
 // FetchBySubject looks for sha1 or gitCommit digest algorithms in the
 // requested subjects, generates a gitsign virtual attestation for each
 // matching commit, and returns them.
-func (c *Collector) FetchBySubject(_ context.Context, opts attestation.FetchOptions, subj []attestation.Subject) ([]attestation.Envelope, error) {
+func (c *Collector) FetchBySubject(ctx context.Context, opts attestation.FetchOptions, subj []attestation.Subject) ([]attestation.Envelope, error) {
 	commits := map[string]struct{}{}
 	for _, s := range subj {
 		for algo, val := range s.GetDigest() {
@@ -225,7 +341,7 @@ func (c *Collector) FetchBySubject(_ context.Context, opts attestation.FetchOpti
 
 	var ret []attestation.Envelope
 	for hash := range commits {
-		env, err := c.buildVirtualAttestation(repo, hash)
+		env, err := c.buildVirtualAttestation(ctx, repo, hash)
 		if err != nil {
 			logrus.Debugf("gitsign: skipping commit %s: %v", hash, err)
 			continue
@@ -255,15 +371,34 @@ func (c *Collector) FetchBySubject(_ context.Context, opts attestation.FetchOpti
 func (c *Collector) openRepo() (*gogit.Repository, error) {
 	components, err := vcslocator.Locator(c.Options.Locator).Parse()
 	if err == nil && components.Transport != vcslocator.TransportFile {
-		// Remote repository — clone to memory.
-		auth, err := vcslocator.GetAuthMethod(c.Options.Locator)
-		if err != nil {
-			return nil, fmt.Errorf("getting auth method: %w", err)
+		// Remote repository — fetch into memory. An explicit auth option wins,
+		// otherwise fall back to system git credentials.
+		auth := c.Options.Auth
+		if auth == nil {
+			auth, err = vcslocator.GetAuthMethod(c.Options.Locator)
+			if err != nil {
+				return nil, fmt.Errorf("getting auth method: %w", err)
+			}
+		}
+
+		// An explicit ref option wins, otherwise use the ref parsed from the
+		// locator (e.g. an "@refs/pull/42/head" suffix).
+		ref := c.Options.Ref
+		if ref == "" {
+			ref = components.RefString
+		}
+
+		// With a specific ref, fetch only that ref — this reaches PR heads
+		// (including fork PRs under refs/pull/N/head) that a default-branch
+		// clone never sees. Otherwise fall back to a full clone.
+		if ref != "" {
+			return fetchRef(components.RepoURL(), c.Options.Remote, ref, auth, c.Options.Depth)
 		}
 
 		repo, err := gogit.Clone(memory.NewStorage(), nil, &gogit.CloneOptions{
-			URL:  components.RepoURL(),
-			Auth: auth,
+			URL:   components.RepoURL(),
+			Auth:  auth,
+			Depth: c.Options.Depth,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("cloning repository: %w", err)
@@ -289,9 +424,40 @@ func (c *Collector) openRepo() (*gogit.Repository, error) {
 	return repo, nil
 }
 
+// fetchRef fetches a single ref from a remote into an in-memory repository,
+// without cloning any other branch. This reaches refs a default clone does not
+// — notably refs/pull/N/head, where GitHub exposes a pull request's head commit
+// (fork PRs included) on the base repository, readable with the base repo's
+// installation token. depth 0 fetches full history; 1 fetches only the ref tip.
+func fetchRef(url, remote, ref string, auth transport.AuthMethod, depth int) (*gogit.Repository, error) {
+	if remote == "" {
+		remote = "origin"
+	}
+	repo, err := gogit.Init(memory.NewStorage(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("initializing repository: %w", err)
+	}
+	if _, err := repo.CreateRemote(&config.RemoteConfig{
+		Name: remote,
+		URLs: []string{url},
+	}); err != nil {
+		return nil, fmt.Errorf("creating remote: %w", err)
+	}
+	if err := repo.Fetch(&gogit.FetchOptions{
+		RemoteName: remote,
+		Auth:       auth,
+		Depth:      depth,
+		Tags:       gogit.NoTags,
+		RefSpecs:   []config.RefSpec{config.RefSpec(fmt.Sprintf("+%s:%s", ref, ref))},
+	}); err != nil && !errors.Is(err, gogit.NoErrAlreadyUpToDate) {
+		return nil, fmt.Errorf("fetching ref %q: %w", ref, err)
+	}
+	return repo, nil
+}
+
 // buildVirtualAttestation generates the gitsign predicate for a commit and
 // wraps it in a virtual envelope with verification data.
-func (c *Collector) buildVirtualAttestation(repo *gogit.Repository, commitHash string) (attestation.Envelope, error) {
+func (c *Collector) buildVirtualAttestation(ctx context.Context, repo *gogit.Repository, commitHash string) (attestation.Envelope, error) {
 	stmt, err := attest.CommitStatement(repo, c.Options.Remote, commitHash)
 	if err != nil {
 		return nil, fmt.Errorf("generating commit statement: %w", err)
@@ -308,7 +474,7 @@ func (c *Collector) buildVirtualAttestation(repo *gogit.Repository, commitHash s
 		return nil, fmt.Errorf("getting commit object: %w", err)
 	}
 
-	verification := c.extractVerification(commit)
+	verification := c.extractVerification(ctx, commit)
 
 	pred := &generic.Predicate{
 		Type: attestation.PredicateType(gspredicate.TypeV01),
@@ -347,7 +513,7 @@ func (c *Collector) buildVirtualAttestation(repo *gogit.Repository, commitHash s
 
 // buildVirtualTagAttestation generates a tag predicate for an annotated tag
 // and wraps it in a virtual envelope with verification data.
-func (c *Collector) buildVirtualTagAttestation(repo *gogit.Repository, tagName string) (attestation.Envelope, error) {
+func (c *Collector) buildVirtualTagAttestation(ctx context.Context, repo *gogit.Repository, tagName string) (attestation.Envelope, error) {
 	stmt, err := attest.TagStatement(repo, c.Options.Remote, tagName)
 	if err != nil {
 		return nil, fmt.Errorf("generating tag statement: %w", err)
@@ -370,7 +536,7 @@ func (c *Collector) buildVirtualTagAttestation(repo *gogit.Repository, tagName s
 	}
 	tagObj, err := repo.TagObject(ref.Hash())
 	if err == nil && tagObj.PGPSignature != "" {
-		verification := c.extractTagVerification(tagObj)
+		verification := c.extractTagVerification(ctx, tagObj)
 		if verification != nil {
 			pred.SetVerification(verification)
 		}
@@ -387,14 +553,19 @@ func (c *Collector) buildVirtualTagAttestation(repo *gogit.Repository, tagName s
 // extractTagVerification inspects the tag signature and returns a Verification
 // result. It reuses the same CMS/sigstore and PGP verification paths as commit
 // signatures since the signature format is identical.
-func (c *Collector) extractTagVerification(tagObj *object.Tag) *sapi.Verification {
+func (c *Collector) extractTagVerification(ctx context.Context, tagObj *object.Tag) *sapi.Verification {
 	if tagObj.PGPSignature == "" {
 		return nil
 	}
 
 	// Try CMS/sigstore signature first (PEM-encoded "SIGNED MESSAGE").
 	if block, _ := pem.Decode([]byte(tagObj.PGPSignature)); block != nil {
-		v, err := verifySigstoreSignature(block.Bytes)
+		signedData, err := encodeWithoutSignature(tagObj)
+		if err != nil {
+			logrus.Debugf("gitsign: encoding tag without signature: %v", err)
+			return nil
+		}
+		v, err := c.verifySigstoreSignature(ctx, signedData, block.Bytes)
 		if err != nil {
 			logrus.Debugf("gitsign: tag sigstore verification failed: %v", err)
 			return nil
@@ -413,14 +584,19 @@ func (c *Collector) extractTagVerification(tagObj *object.Tag) *sapi.Verificatio
 //   - PGP signatures: verifies against configured keys.
 //
 // Returns nil if no verification could be performed.
-func (c *Collector) extractVerification(commit *object.Commit) *sapi.Verification {
+func (c *Collector) extractVerification(ctx context.Context, commit *object.Commit) *sapi.Verification {
 	if commit.PGPSignature == "" {
 		return nil
 	}
 
 	// Try CMS/sigstore signature first (PEM-encoded "SIGNED MESSAGE").
 	if block, _ := pem.Decode([]byte(commit.PGPSignature)); block != nil {
-		v, err := verifySigstoreSignature(block.Bytes)
+		signedData, err := encodeWithoutSignature(commit)
+		if err != nil {
+			logrus.Debugf("gitsign: encoding commit without signature: %v", err)
+			return nil
+		}
+		v, err := c.verifySigstoreSignature(ctx, signedData, block.Bytes)
 		if err != nil {
 			logrus.Debugf("gitsign: sigstore verification failed: %v", err)
 			return nil
@@ -437,59 +613,144 @@ func (c *Collector) extractVerification(commit *object.Commit) *sapi.Verificatio
 	return v
 }
 
-// verifySigstoreSignature parses a CMS/PKCS7 signed message and extracts
-// the signing identity from its embedded certificate.
-func verifySigstoreSignature(raw []byte) (*sapi.Verification, error) {
-	ci, err := protocol.ParseContentInfo(raw)
+// signedObject is implemented by go-git commits and tags; it yields the exact
+// bytes the CMS signature was computed over.
+type signedObject interface {
+	EncodeWithoutSignature(plumbing.EncodedObject) error
+}
+
+// encodeWithoutSignature returns the canonical bytes the detached CMS signature
+// covers (the commit/tag object serialized without its signature header).
+func encodeWithoutSignature(obj signedObject) ([]byte, error) {
+	enc := &plumbing.MemoryObject{}
+	if err := obj.EncodeWithoutSignature(enc); err != nil {
+		return nil, fmt.Errorf("encoding object without signature: %w", err)
+	}
+	reader, err := enc.Reader()
+	if err != nil {
+		return nil, fmt.Errorf("reading encoded object: %w", err)
+	}
+	return io.ReadAll(reader)
+}
+
+// verifySigstoreSignature performs full, cosign-free cryptographic verification of
+// a gitsign CMS/PKCS7 signature. It handles both gitsign signing modes:
+//   - Offline mode: the signature embeds the Rekor transparency log entry, verified
+//     entirely against the embedded trust root with zero network.
+//   - Online mode: the signature carries no embedded entry, so the entry is looked
+//     up in Rekor and then verified through the exact same offline path. The network
+//     is used only to fetch the entry; its inclusion proof and SET are still checked
+//     against the embedded trust root. A lookup that finds nothing, errors, or yields
+//     no matching entry fails closed (nil, error).
+//
+// When it returns a non-nil Verification with Verified:true, ALL of the following
+// held, using only the embedded trust root for the cryptographic checks:
+//  1. The CMS signature covers signedData and the leaf chains to a Fulcio CA.
+//  2. The Rekor entry is included in the transparency log (inclusion proof + SET),
+//     which also fixes the integrated (signing) time.
+//  3. The leaf certificate was valid at signing time and carries a valid SCT.
+func (c *Collector) verifySigstoreSignature(ctx context.Context, signedData, cmsRaw []byte) (*sapi.Verification, error) {
+	// Parse the CMS with the protocol package to reach the raw SignerInfo (its
+	// signature, signed attributes and the unsigned Rekor-entry attribute).
+	ci, err := protocol.ParseContentInfo(cmsRaw)
 	if err != nil {
 		return nil, fmt.Errorf("parsing CMS content info: %w", err)
 	}
-
-	sd, err := ci.SignedDataContent()
+	psd, err := ci.SignedDataContent()
 	if err != nil {
 		return nil, fmt.Errorf("getting signed data: %w", err)
 	}
+	if len(psd.SignerInfos) == 0 {
+		return nil, errors.New("no signer info in CMS signature")
+	}
+	si := psd.SignerInfos[0]
 
-	certs, err := sd.X509Certificates()
+	certs, err := psd.X509Certificates()
 	if err != nil {
 		return nil, fmt.Errorf("extracting certificates: %w", err)
 	}
-
-	if len(certs) == 0 {
-		return nil, errors.New("no certificates in signature")
+	leaf, err := si.FindCertificate(certs)
+	if err != nil {
+		return nil, fmt.Errorf("finding signer certificate: %w", err)
 	}
 
-	// Look for a leaf cert (non-CA) with identity information.
-	for _, cert := range certs {
-		if !cert.IsCA {
-			v, err := extractSigstoreIdentity(cert)
-			if err == nil {
-				return v, nil
-			}
+	trustedRoot, err := c.trusted()
+	if err != nil {
+		return nil, fmt.Errorf("loading trust root: %w", err)
+	}
+
+	// Step 1: the CMS signature cryptographically covers signedData (via the
+	// messageDigest signed attribute) and the leaf chains to Fulcio.
+	if err := verifyCMSSignature(signedData, cmsRaw, leaf, trustedRoot); err != nil {
+		return nil, fmt.Errorf("verifying CMS signature: %w", err)
+	}
+
+	// The Rekor hashedrekord records the SHA-256 of the DER-encoded CMS signed
+	// attributes (exactly what gitsign hashes), signed by si.Signature. Recompute
+	// that digest so the synthetic bundle matches what was logged.
+	signedAttrs, err := si.SignedAttrs.MarshaledForVerification()
+	if err != nil {
+		return nil, fmt.Errorf("marshaling CMS signed attributes: %w", err)
+	}
+	digest := sha256.Sum256(signedAttrs)
+
+	// Obtain the Rekor TransparencyLogEntry: from the embedded attribute (offline
+	// mode) or, if absent, by looking it up in Rekor (online mode). Either way the
+	// entry is verified below through the same offline path.
+	entryProto, ok, err := extractTlogEntry(&si)
+	if err != nil {
+		return nil, fmt.Errorf("extracting embedded transparency log entry: %w", err)
+	}
+	if !ok {
+		logrus.Debug("gitsign: signature has no embedded Rekor entry; looking it up online")
+		entryProto, err = c.lookupTlogEntry(ctx, leaf, si.Signature, digest[:])
+		if err != nil {
+			return nil, fmt.Errorf("looking up transparency log entry: %w", err)
 		}
 	}
 
-	return nil, errors.New("no sigstore identity found in certificates")
+	return c.verifyEntry(ctx, leaf, si.Signature, digest[:], entryProto, trustedRoot)
 }
 
-// extractSigstoreIdentity reads the SAN and OIDC issuer extension from a
-// Fulcio-issued certificate.
-func extractSigstoreIdentity(cert *x509.Certificate) (*sapi.Verification, error) {
-	var identity string
-	switch {
-	case len(cert.EmailAddresses) > 0:
-		identity = cert.EmailAddresses[0]
-	case len(cert.URIs) > 0:
-		identity = cert.URIs[0].String()
-	case len(cert.DNSNames) > 0:
-		identity = cert.DNSNames[0]
+// verifyEntry runs the shared verification path for a Rekor TransparencyLogEntry,
+// regardless of whether it came from the embedded CMS attribute (offline mode) or a
+// Rekor lookup (online mode). It rebuilds the hashedrekord bundle from the signature
+// pieces, verifies transparency-log inclusion, then the leaf certificate validity and
+// SCT — all against the embedded trust root with no network access — and finally
+// summarizes the authenticated identity.
+func (c *Collector) verifyEntry(ctx context.Context, leaf *x509.Certificate, signature, digest []byte, entryProto *rekorpb.TransparencyLogEntry, trustedRoot *root.TrustedRoot) (*sapi.Verification, error) {
+	entity, err := buildTlogBundle(ctx, leaf, signature, digest, entryProto)
+	if err != nil {
+		return nil, fmt.Errorf("assembling verification bundle: %w", err)
 	}
 
-	if identity == "" {
-		return nil, errors.New("no identity in certificate")
+	// Step 2: transparency-log inclusion (offline). This also cross-checks the entry
+	// against the bundle (signature, key and hashedrekord digest) and yields the
+	// trusted integrated (signing) time from the inclusion promise / SET.
+	timestamps, err := sgverify.VerifyTlogEntry(entity, trustedRoot, 1, true)
+	if err != nil {
+		return nil, fmt.Errorf("verifying transparency log entry: %w", err)
+	}
+	if len(timestamps) == 0 {
+		return nil, errors.New("transparency log entry produced no trusted timestamp")
+	}
+	integratedTime := timestamps[0].Time
+
+	// Step 3: leaf certificate validity at signing time + SCT.
+	chains, err := sgverify.VerifyLeafCertificate(integratedTime, leaf, trustedRoot)
+	if err != nil {
+		return nil, fmt.Errorf("verifying leaf certificate: %w", err)
+	}
+	if err := sgverify.VerifySignedCertificateTimestamp(chains, 1, trustedRoot); err != nil {
+		return nil, fmt.Errorf("verifying signed certificate timestamp: %w", err)
 	}
 
-	issuer := extractOIDCIssuer(cert)
+	// Identity: the collector reports authenticated identity only; allowlist
+	// matching is the caller's (AMPEL's) responsibility.
+	summary, err := certificate.SummarizeCertificate(leaf)
+	if err != nil {
+		return nil, fmt.Errorf("summarizing certificate: %w", err)
+	}
 
 	return &sapi.Verification{
 		Signature: &sapi.SignatureVerification{
@@ -498,8 +759,8 @@ func extractSigstoreIdentity(cert *x509.Certificate) (*sapi.Verification, error)
 			Identities: []*sapi.Identity{
 				{
 					Sigstore: &sapi.IdentitySigstore{
-						Issuer:   issuer,
-						Identity: identity,
+						Issuer:   summary.Issuer,
+						Identity: summary.SubjectAlternativeName,
 					},
 				},
 			},
@@ -507,19 +768,285 @@ func extractSigstoreIdentity(cert *x509.Certificate) (*sapi.Verification, error)
 	}, nil
 }
 
-// extractOIDCIssuer reads the Fulcio OIDC issuer OID (1.3.6.1.4.1.57264.1.1)
-// from the certificate extensions.
-func extractOIDCIssuer(cert *x509.Certificate) string {
-	for _, ext := range cert.Extensions {
-		if ext.Id.Equal(oidcIssuerOID) {
-			// The value is ASN.1 encoded. Try UTF8String (tag 0x0c) first.
-			if len(ext.Value) > 2 && ext.Value[0] == 0x0c {
-				return string(ext.Value[2:])
+// lookupTlogEntry performs the online-mode Rekor lookup: it reconstructs the exact
+// hashedrekord body that gitsign would have logged for this signature, searches the
+// transparency log by the artifact digest to obtain candidate entry UUIDs, fetches
+// each candidate (with its inclusion proof and SET), and returns the one whose
+// canonical body byte-matches ours converted to a TransparencyLogEntry proto. Byte
+// equality is the honest match criterion: it is exactly what the inclusion proof
+// commits to, so a non-matching entry could not pass the subsequent VerifyTlogEntry.
+// It fails closed if the lookup errors or no candidate matches.
+func (c *Collector) lookupTlogEntry(ctx context.Context, leaf *x509.Certificate, signature, digest []byte) (*rekorpb.TransparencyLogEntry, error) {
+	ourBody, err := canonicalHashedRekordBody(ctx, leaf, signature, digest)
+	if err != nil {
+		return nil, fmt.Errorf("reconstructing hashedrekord body: %w", err)
+	}
+
+	rekorURL := c.Options.RekorURL
+	if rekorURL == "" {
+		rekorURL = defaultRekorURL
+	}
+	client, err := rekorclient.GetRekorClient(rekorURL)
+	if err != nil {
+		return nil, fmt.Errorf("creating rekor client: %w", err)
+	}
+
+	// Search the log index by the artifact digest (the hashedrekord data.hash).
+	searchParams := index.NewSearchIndexParams().
+		WithContext(ctx).
+		WithQuery(&models.SearchIndex{Hash: "sha256:" + hex.EncodeToString(digest)})
+	searchResp, err := client.Index.SearchIndex(searchParams)
+	if err != nil {
+		return nil, fmt.Errorf("searching rekor index: %w", err)
+	}
+	uuids := searchResp.GetPayload()
+	if len(uuids) == 0 {
+		return nil, errors.New("no rekor entry found for signature")
+	}
+
+	for _, uuid := range uuids {
+		getParams := entries.NewGetLogEntryByUUIDParams().
+			WithContext(ctx).
+			WithEntryUUID(uuid)
+		entryResp, err := client.Entries.GetLogEntryByUUID(getParams)
+		if err != nil {
+			logrus.Debugf("gitsign: fetching rekor entry %s: %v", uuid, err)
+			continue
+		}
+		for _, anon := range entryResp.GetPayload() {
+			body, ok := decodeEntryBody(anon)
+			if !ok || !bytes.Equal(body, ourBody) {
+				continue
 			}
-			return string(ext.Value)
+			tle, err := logEntryToProto(&anon, body)
+			if err != nil {
+				return nil, fmt.Errorf("converting rekor entry: %w", err)
+			}
+			return tle, nil
 		}
 	}
-	return ""
+	return nil, errors.New("no matching rekor entry for signature")
+}
+
+// decodeEntryBody base64-decodes the canonical body carried by a fetched Rekor entry.
+func decodeEntryBody(anon models.LogEntryAnon) ([]byte, bool) {
+	s, ok := anon.Body.(string)
+	if !ok {
+		return nil, false
+	}
+	b, err := base64.StdEncoding.DecodeString(s)
+	if err != nil {
+		return nil, false
+	}
+	return b, true
+}
+
+// logEntryToProto converts a Rekor models.LogEntryAnon (as returned by
+// GetLogEntryByUUID, with its inclusion proof and SET) into the *rekorpb.
+// TransparencyLogEntry that VerifyTlogEntry consumes offline. It is hand-rolled
+// rather than using sigstore-go's tlog.NewEntry because NewEntry reuses the entry's
+// global log index for the inclusion proof's log index; those differ on a sharded log
+// (as in the gitsign fixture: entry index 22784639 vs proof leaf index 18621208),
+// which would break inclusion verification. Here the two indices are kept distinct.
+func logEntryToProto(anon *models.LogEntryAnon, body []byte) (*rekorpb.TransparencyLogEntry, error) {
+	if anon.LogID == nil || anon.LogIndex == nil || anon.IntegratedTime == nil {
+		return nil, errors.New("rekor log entry missing required fields")
+	}
+	if anon.Verification == nil {
+		return nil, errors.New("rekor log entry missing verification material")
+	}
+	set := []byte(anon.Verification.SignedEntryTimestamp)
+	if len(set) == 0 {
+		return nil, errors.New("rekor log entry missing signed entry timestamp")
+	}
+	ip := anon.Verification.InclusionProof
+	if ip == nil || ip.LogIndex == nil || ip.RootHash == nil || ip.TreeSize == nil || ip.Checkpoint == nil {
+		return nil, errors.New("rekor log entry missing inclusion proof")
+	}
+
+	logID, err := hex.DecodeString(*anon.LogID)
+	if err != nil {
+		return nil, fmt.Errorf("decoding rekor log ID: %w", err)
+	}
+	rootHash, err := hex.DecodeString(*ip.RootHash)
+	if err != nil {
+		return nil, fmt.Errorf("decoding inclusion proof root hash: %w", err)
+	}
+	hashes := make([][]byte, len(ip.Hashes))
+	for i, h := range ip.Hashes {
+		hashes[i], err = hex.DecodeString(h)
+		if err != nil {
+			return nil, fmt.Errorf("decoding inclusion proof hash: %w", err)
+		}
+	}
+
+	return &rekorpb.TransparencyLogEntry{
+		LogIndex: *anon.LogIndex,
+		LogId:    &protocommon.LogId{KeyId: logID},
+		KindVersion: &rekorpb.KindVersion{
+			Kind:    hashedrekord.KIND,
+			Version: hashedrekord_v001.APIVERSION,
+		},
+		IntegratedTime:   *anon.IntegratedTime,
+		InclusionPromise: &rekorpb.InclusionPromise{SignedEntryTimestamp: set},
+		InclusionProof: &rekorpb.InclusionProof{
+			LogIndex:   *ip.LogIndex,
+			RootHash:   rootHash,
+			TreeSize:   *ip.TreeSize,
+			Hashes:     hashes,
+			Checkpoint: &rekorpb.Checkpoint{Envelope: *ip.Checkpoint},
+		},
+		CanonicalizedBody: body,
+	}, nil
+}
+
+// extractTlogEntry pulls the serialized Rekor TransparencyLogEntry proto out of the
+// CMS unsigned attributes (offline mode). It returns ok=false when the attribute is
+// absent (online mode); a malformed attribute is an error.
+func extractTlogEntry(si *protocol.SignerInfo) (*rekorpb.TransparencyLogEntry, bool, error) {
+	if !si.UnsignedAttrs.HasAttribute(oidRekorTransparencyLogEntry) {
+		return nil, false, nil
+	}
+	rv, err := si.UnsignedAttrs.GetOnlyAttributeValueBytes(oidRekorTransparencyLogEntry)
+	if err != nil {
+		return nil, false, fmt.Errorf("reading tlog attribute: %w", err)
+	}
+	var protoBytes []byte
+	if _, err := asn1.Unmarshal(rv.FullBytes, &protoBytes); err != nil {
+		return nil, false, fmt.Errorf("asn1-decoding tlog attribute: %w", err)
+	}
+	pb := new(rekorpb.TransparencyLogEntry)
+	if err := proto.Unmarshal(protoBytes, pb); err != nil {
+		return nil, false, fmt.Errorf("unmarshaling TransparencyLogEntry: %w", err)
+	}
+	return pb, true, nil
+}
+
+// verifyCMSSignature checks that the detached CMS signature covers signedData and
+// that the signer certificate chains to a Fulcio CA in the trust root. It mirrors
+// gitsign's own pkg/git.CertVerifier, including the "cosign hack" of pinning the
+// verification time to the leaf's NotBefore (the transparency log establishes the
+// real signing time separately).
+func verifyCMSSignature(signedData, cmsRaw []byte, leaf *x509.Certificate, trustedRoot *root.TrustedRoot) error {
+	sd, err := cms.ParseSignedData(cmsRaw)
+	if err != nil {
+		return fmt.Errorf("parsing CMS: %w", err)
+	}
+
+	roots := x509.NewCertPool()
+	intermediates := x509.NewCertPool()
+	for _, ca := range trustedRoot.FulcioCertificateAuthorities() {
+		fca, ok := ca.(*root.FulcioCertificateAuthority)
+		if !ok {
+			continue
+		}
+		if fca.Root != nil {
+			roots.AddCert(fca.Root)
+		}
+		for _, intermediate := range fca.Intermediates {
+			intermediates.AddCert(intermediate)
+		}
+	}
+
+	opts := x509.VerifyOptions{
+		Roots:         roots,
+		Intermediates: intermediates,
+		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
+		// cosign hack: ignore the current time and pin to the cert's validity
+		// window; the tlog inclusion proof establishes the true signing time.
+		CurrentTime: leaf.NotBefore.Add(1 * time.Minute),
+	}
+	if _, err := sd.VerifyDetached(signedData, opts); err != nil {
+		return fmt.Errorf("verifying detached signature: %w", err)
+	}
+	return nil
+}
+
+// canonicalHashedRekordBody reconstructs the exact canonical Rekor hashedrekord body
+// gitsign logs for a signature: data.hash = the given digest (SHA-256 of the CMS
+// signed attributes), signature = si.Signature, public key = the leaf cert PEM. Both
+// the offline bundle assembly and the online lookup rely on this being byte-identical
+// to what Rekor stored. CanonicalizeEntry additionally verifies that the signature
+// validates over the digest with the leaf's public key, so a body that does not
+// correspond to the leaf + signature cannot be reconstructed.
+func canonicalHashedRekordBody(ctx context.Context, leaf *x509.Certificate, signature, digest []byte) ([]byte, error) {
+	certPEM, err := cryptoutils.MarshalCertificateToPEM(leaf)
+	if err != nil {
+		return nil, fmt.Errorf("marshaling certificate to PEM: %w", err)
+	}
+
+	rekorEntry := &hashedrekord_v001.V001Entry{
+		HashedRekordObj: models.HashedrekordV001Schema{
+			Data: &models.HashedrekordV001SchemaData{
+				Hash: &models.HashedrekordV001SchemaDataHash{
+					Algorithm: conv.Pointer("sha256"),
+					Value:     conv.Pointer(hex.EncodeToString(digest)),
+				},
+			},
+			Signature: &models.HashedrekordV001SchemaSignature{
+				Content: strfmt.Base64(signature),
+				PublicKey: &models.HashedrekordV001SchemaSignaturePublicKey{
+					Content: strfmt.Base64(certPEM),
+				},
+			},
+		},
+	}
+	body, err := rekortypes.CanonicalizeEntry(ctx, rekorEntry)
+	if err != nil {
+		return nil, fmt.Errorf("canonicalizing rekor entry: %w", err)
+	}
+	return body, nil
+}
+
+// buildTlogBundle synthesizes the sigstore-go SignedEntity that VerifyTlogEntry
+// consumes. It clones the TransparencyLogEntry (embedded or looked up) and attaches
+// the canonical hashedrekord body rebuilt from the signature pieces, matching gitsign
+// internal/rekor/oid.ToLogEntry.
+//
+// The bundle's MessageSignature carries the SAME digest and signature that the
+// hashedrekord records, so VerifyTlogEntry's equality checks (entry.Signature ==
+// bundle signature, key match, hashedrekord digest == message digest) are satisfied
+// honestly: rebuilding the body with any other digest/signature would fail the
+// inclusion-proof/SET check, and a bundle digest that diverged from the entry would
+// fail the explicit equality check.
+func buildTlogBundle(ctx context.Context, leaf *x509.Certificate, signature, digest []byte, entryProto *rekorpb.TransparencyLogEntry) (*sgbundle.Bundle, error) {
+	body, err := canonicalHashedRekordBody(ctx, leaf, signature, digest)
+	if err != nil {
+		return nil, err
+	}
+
+	entry, ok := proto.Clone(entryProto).(*rekorpb.TransparencyLogEntry)
+	if !ok {
+		return nil, errors.New("cloning transparency log entry")
+	}
+	entry.CanonicalizedBody = body
+
+	// v0.1 bundles require an inclusion promise; v0.2+ require an inclusion proof.
+	// Pick the media type that matches what the embedded entry actually carries.
+	mediaType := "application/vnd.dev.sigstore.bundle.v0.1+json"
+	if entry.GetInclusionProof() != nil {
+		mediaType = "application/vnd.dev.sigstore.bundle.v0.3+json"
+	}
+
+	pb := &protobundle.Bundle{
+		MediaType: mediaType,
+		VerificationMaterial: &protobundle.VerificationMaterial{
+			Content: &protobundle.VerificationMaterial_Certificate{
+				Certificate: &protocommon.X509Certificate{RawBytes: leaf.Raw},
+			},
+			TlogEntries: []*rekorpb.TransparencyLogEntry{entry},
+		},
+		Content: &protobundle.Bundle_MessageSignature{
+			MessageSignature: &protocommon.MessageSignature{
+				MessageDigest: &protocommon.HashOutput{
+					Algorithm: protocommon.HashAlgorithm_SHA2_256,
+					Digest:    digest,
+				},
+				Signature: signature,
+			},
+		},
+	}
+	return sgbundle.NewBundle(pb)
 }
 
 // verifyPGPSignature verifies a PGP commit signature against configured keys.
@@ -529,19 +1056,9 @@ func (c *Collector) verifyPGPSignature(commit *object.Commit) (*sapi.Verificatio
 	}
 
 	// Get the signed data (commit content without signature).
-	encoded := &plumbing.MemoryObject{}
-	if err := commit.EncodeWithoutSignature(encoded); err != nil {
-		return nil, fmt.Errorf("encoding commit without signature: %w", err)
-	}
-
-	reader, err := encoded.Reader()
+	buf, err := encodeWithoutSignature(commit)
 	if err != nil {
-		return nil, fmt.Errorf("reading encoded commit: %w", err)
-	}
-
-	buf, err := io.ReadAll(reader)
-	if err != nil {
-		return nil, fmt.Errorf("buffering commit data: %w", err)
+		return nil, err
 	}
 
 	sigData := []byte(commit.PGPSignature)
