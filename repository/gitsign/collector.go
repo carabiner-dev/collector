@@ -15,6 +15,7 @@ import (
 	"encoding/asn1"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -565,7 +566,7 @@ func (c *Collector) extractTagVerification(ctx context.Context, tagObj *object.T
 			logrus.Debugf("gitsign: encoding tag without signature: %v", err)
 			return nil
 		}
-		v, err := c.verifySigstoreSignature(ctx, signedData, block.Bytes)
+		v, err := c.verifySigstoreSignature(ctx, signedData, block.Bytes, []byte(tagObj.Hash.String()))
 		if err != nil {
 			logrus.Debugf("gitsign: tag sigstore verification failed: %v", err)
 			return nil
@@ -596,7 +597,7 @@ func (c *Collector) extractVerification(ctx context.Context, commit *object.Comm
 			logrus.Debugf("gitsign: encoding commit without signature: %v", err)
 			return nil
 		}
-		v, err := c.verifySigstoreSignature(ctx, signedData, block.Bytes)
+		v, err := c.verifySigstoreSignature(ctx, signedData, block.Bytes, []byte(commit.Hash.String()))
 		if err != nil {
 			logrus.Debugf("gitsign: sigstore verification failed: %v", err)
 			return nil
@@ -649,7 +650,7 @@ func encodeWithoutSignature(obj signedObject) ([]byte, error) {
 //  2. The Rekor entry is included in the transparency log (inclusion proof + SET),
 //     which also fixes the integrated (signing) time.
 //  3. The leaf certificate was valid at signing time and carries a valid SCT.
-func (c *Collector) verifySigstoreSignature(ctx context.Context, signedData, cmsRaw []byte) (*sapi.Verification, error) {
+func (c *Collector) verifySigstoreSignature(ctx context.Context, signedData, cmsRaw, legacyArtifact []byte) (*sapi.Verification, error) {
 	// Parse the CMS with the protocol package to reach the raw SignerInfo (its
 	// signature, signed attributes and the unsigned Rekor-entry attribute).
 	ci, err := protocol.ParseContentInfo(cmsRaw)
@@ -694,22 +695,39 @@ func (c *Collector) verifySigstoreSignature(ctx context.Context, signedData, cms
 	}
 	digest := sha256.Sum256(signedAttrs)
 
-	// Obtain the Rekor TransparencyLogEntry: from the embedded attribute (offline
-	// mode) or, if absent, by looking it up in Rekor (online mode). Either way the
-	// entry is verified below through the same offline path.
+	// Obtain the Rekor TransparencyLogEntry and verify it through the shared
+	// offline path. There are three cases:
+	//
+	//   - Offline signing: the entry is embedded in the CMS. It records the
+	//     modern hashedrekord over the CMS signed attributes, so verify it with
+	//     si.Signature and the signed-attrs digest.
+	//   - Online, modern scheme: no embedded entry; look it up in Rekor by the
+	//     signed-attrs digest and verify it the same way.
+	//   - Online, legacy scheme: gitsign's default online mode (git.LegacySHASign)
+	//     and every older commit/tag instead log a hashedrekord over the object's
+	//     own git hash, signed separately by the ephemeral key. When the modern
+	//     lookup finds nothing, fall back to that: look the entry up by
+	//     sha256(<object git hash>) and verify it with the entry's own signature.
 	entryProto, ok, err := extractTlogEntry(&si)
 	if err != nil {
 		return nil, fmt.Errorf("extracting embedded transparency log entry: %w", err)
 	}
-	if !ok {
-		logrus.Debug("gitsign: signature has no embedded Rekor entry; looking it up online")
-		entryProto, err = c.lookupTlogEntry(ctx, leaf, si.Signature, digest[:])
-		if err != nil {
-			return nil, fmt.Errorf("looking up transparency log entry: %w", err)
-		}
+	if ok {
+		return c.verifyEntry(ctx, leaf, si.Signature, digest[:], entryProto, trustedRoot)
 	}
 
-	return c.verifyEntry(ctx, leaf, si.Signature, digest[:], entryProto, trustedRoot)
+	logrus.Debug("gitsign: signature has no embedded Rekor entry; looking it up online")
+	if entryProto, err = c.lookupTlogEntry(ctx, leaf, si.Signature, digest[:]); err == nil {
+		return c.verifyEntry(ctx, leaf, si.Signature, digest[:], entryProto, trustedRoot)
+	}
+	modernErr := err
+
+	logrus.Debug("gitsign: no modern Rekor entry; trying the legacy (gitsign online) scheme")
+	legacyEntry, legacySig, legacyDigest, legacyErr := c.lookupLegacyTlogEntry(ctx, leaf, legacyArtifact)
+	if legacyErr != nil {
+		return nil, fmt.Errorf("looking up transparency log entry (modern: %s; legacy: %w)", modernErr.Error(), legacyErr)
+	}
+	return c.verifyEntry(ctx, leaf, legacySig, legacyDigest, legacyEntry, trustedRoot)
 }
 
 // verifyEntry runs the shared verification path for a Rekor TransparencyLogEntry,
@@ -826,6 +844,115 @@ func (c *Collector) lookupTlogEntry(ctx context.Context, leaf *x509.Certificate,
 		}
 	}
 	return nil, errors.New("no matching rekor entry for signature")
+}
+
+// lookupLegacyTlogEntry performs the legacy-mode Rekor lookup for gitsign
+// signatures produced by git.LegacySHASign — gitsign's default online mode, and
+// what every older commit and tag used. Those do not log the CMS signed
+// attributes; they log a hashedrekord whose artifact is the object's own git
+// hash string (sha256 of the 40-character SHA-1 hex), signed separately by the
+// ephemeral key. It searches Rekor for that digest and returns the first entry
+// whose logged certificate is the signing leaf, along with the entry's own
+// signature and digest, so verifyEntry can rebuild and verify the exact logged
+// body. It fails closed if the lookup errors or no candidate matches.
+func (c *Collector) lookupLegacyTlogEntry(ctx context.Context, leaf *x509.Certificate, artifact []byte) (entry *rekorpb.TransparencyLogEntry, signature, digest []byte, err error) {
+	if len(artifact) == 0 {
+		return nil, nil, nil, errors.New("no artifact for legacy lookup")
+	}
+	artifactDigest := sha256.Sum256(artifact)
+
+	rekorURL := c.Options.RekorURL
+	if rekorURL == "" {
+		rekorURL = defaultRekorURL
+	}
+	client, err := rekorclient.GetRekorClient(rekorURL)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("creating rekor client: %w", err)
+	}
+
+	searchParams := index.NewSearchIndexParams().
+		WithContext(ctx).
+		WithQuery(&models.SearchIndex{Hash: "sha256:" + hex.EncodeToString(artifactDigest[:])})
+	searchResp, err := client.Index.SearchIndex(searchParams)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("searching rekor index: %w", err)
+	}
+	uuids := searchResp.GetPayload()
+	if len(uuids) == 0 {
+		return nil, nil, nil, errors.New("no legacy rekor entry found for signature")
+	}
+
+	for _, uuid := range uuids {
+		getParams := entries.NewGetLogEntryByUUIDParams().
+			WithContext(ctx).
+			WithEntryUUID(uuid)
+		entryResp, err := client.Entries.GetLogEntryByUUID(getParams)
+		if err != nil {
+			logrus.Debugf("gitsign: fetching legacy rekor entry %s: %v", uuid, err)
+			continue
+		}
+		for _, anon := range entryResp.GetPayload() {
+			body, ok := decodeEntryBody(anon)
+			if !ok {
+				continue
+			}
+			sig, ok := legacyHashedRekordSignature(body, leaf, artifactDigest[:])
+			if !ok {
+				continue
+			}
+			tle, err := logEntryToProto(&anon, body)
+			if err != nil {
+				return nil, nil, nil, fmt.Errorf("converting legacy rekor entry: %w", err)
+			}
+			return tle, sig, artifactDigest[:], nil
+		}
+	}
+	return nil, nil, nil, errors.New("no matching legacy rekor entry for signature")
+}
+
+// legacyHashedRekordSignature parses a fetched hashedrekord body and, when its
+// data hash equals digest and its logged public key is the signing certificate,
+// returns the entry's own signature. The certificate binding ties the Rekor
+// entry to the same leaf that signed the object; the digest binding ties it to
+// this object. It reports whether the entry corresponds to this signature.
+func legacyHashedRekordSignature(body []byte, leaf *x509.Certificate, digest []byte) ([]byte, bool) {
+	var hr struct {
+		Spec struct {
+			Data struct {
+				Hash struct {
+					Value string `json:"value"`
+				} `json:"hash"`
+			} `json:"data"`
+			Signature struct {
+				Content   string `json:"content"`
+				PublicKey struct {
+					Content string `json:"content"`
+				} `json:"publicKey"`
+			} `json:"signature"`
+		} `json:"spec"`
+	}
+	if err := json.Unmarshal(body, &hr); err != nil {
+		return nil, false
+	}
+	if hr.Spec.Data.Hash.Value != hex.EncodeToString(digest) {
+		return nil, false
+	}
+	sig, err := base64.StdEncoding.DecodeString(hr.Spec.Signature.Content)
+	if err != nil {
+		return nil, false
+	}
+	pubPEM, err := base64.StdEncoding.DecodeString(hr.Spec.Signature.PublicKey.Content)
+	if err != nil {
+		return nil, false
+	}
+	pubCerts, err := cryptoutils.UnmarshalCertificatesFromPEM(pubPEM)
+	if err != nil || len(pubCerts) == 0 {
+		return nil, false
+	}
+	if !pubCerts[0].Equal(leaf) {
+		return nil, false
+	}
+	return sig, true
 }
 
 // decodeEntryBody base64-decodes the canonical body carried by a fetched Rekor entry.
