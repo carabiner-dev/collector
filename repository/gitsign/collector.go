@@ -31,8 +31,11 @@ import (
 	cms "github.com/github/smimesign/ietf-cms"
 	"github.com/github/smimesign/ietf-cms/protocol"
 	gogit "github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/go-git/go-git/v5/plumbing/transport"
+	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/go-git/go-git/v5/storage/memory"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag/conv"
@@ -120,6 +123,21 @@ type Options struct {
 	// signatures (those without an embedded Rekor entry). Defaults to the
 	// sigstore public-good instance.
 	RekorURL string
+
+	// Auth authenticates the remote fetch. When nil, openRepo falls back to
+	// vcslocator.GetAuthMethod (system git credentials). Set it (e.g. via
+	// WithToken) to read private repositories or pull-request refs.
+	Auth transport.AuthMethod
+
+	// Ref is an explicit git ref to fetch (e.g. "refs/pull/42/head"). When set,
+	// openRepo fetches only that ref instead of cloning every branch, which is
+	// how a PR head — including a fork PR under refs/pull/N/head — is reached.
+	// When empty, the ref parsed from the locator (if any) is used.
+	Ref string
+
+	// Depth limits the fetched history. 0 fetches full history; 1 fetches only
+	// the ref tip, which is sufficient when the subject commit is that tip.
+	Depth int
 }
 
 var defaultOptions = Options{
@@ -154,6 +172,41 @@ func WithRemote(remote string) optFn {
 func WithRekorURL(url string) optFn {
 	return func(c *Collector) error {
 		c.Options.RekorURL = url
+		return nil
+	}
+}
+
+// WithAuth sets an explicit transport auth method for the remote fetch.
+func WithAuth(auth transport.AuthMethod) optFn {
+	return func(c *Collector) error {
+		c.Options.Auth = auth
+		return nil
+	}
+}
+
+// WithToken authenticates the remote fetch with a bearer/installation token,
+// using GitHub's "x-access-token" basic-auth convention. This is what lets the
+// collector read private repositories and pull-request refs.
+func WithToken(token string) optFn {
+	return func(c *Collector) error {
+		c.Options.Auth = &githttp.BasicAuth{Username: "x-access-token", Password: token}
+		return nil
+	}
+}
+
+// WithRef sets an explicit git ref to fetch (e.g. "refs/pull/42/head"), so the
+// collector reads exactly that ref instead of cloning every branch.
+func WithRef(ref string) optFn {
+	return func(c *Collector) error {
+		c.Options.Ref = ref
+		return nil
+	}
+}
+
+// WithDepth limits the fetched history (1 = a shallow single-commit fetch).
+func WithDepth(depth int) optFn {
+	return func(c *Collector) error {
+		c.Options.Depth = depth
 		return nil
 	}
 }
@@ -318,15 +371,34 @@ func (c *Collector) FetchBySubject(ctx context.Context, opts attestation.FetchOp
 func (c *Collector) openRepo() (*gogit.Repository, error) {
 	components, err := vcslocator.Locator(c.Options.Locator).Parse()
 	if err == nil && components.Transport != vcslocator.TransportFile {
-		// Remote repository — clone to memory.
-		auth, err := vcslocator.GetAuthMethod(c.Options.Locator)
-		if err != nil {
-			return nil, fmt.Errorf("getting auth method: %w", err)
+		// Remote repository — fetch into memory. An explicit auth option wins,
+		// otherwise fall back to system git credentials.
+		auth := c.Options.Auth
+		if auth == nil {
+			auth, err = vcslocator.GetAuthMethod(c.Options.Locator)
+			if err != nil {
+				return nil, fmt.Errorf("getting auth method: %w", err)
+			}
+		}
+
+		// An explicit ref option wins, otherwise use the ref parsed from the
+		// locator (e.g. an "@refs/pull/42/head" suffix).
+		ref := c.Options.Ref
+		if ref == "" {
+			ref = components.RefString
+		}
+
+		// With a specific ref, fetch only that ref — this reaches PR heads
+		// (including fork PRs under refs/pull/N/head) that a default-branch
+		// clone never sees. Otherwise fall back to a full clone.
+		if ref != "" {
+			return fetchRef(components.RepoURL(), c.Options.Remote, ref, auth, c.Options.Depth)
 		}
 
 		repo, err := gogit.Clone(memory.NewStorage(), nil, &gogit.CloneOptions{
-			URL:  components.RepoURL(),
-			Auth: auth,
+			URL:   components.RepoURL(),
+			Auth:  auth,
+			Depth: c.Options.Depth,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("cloning repository: %w", err)
@@ -348,6 +420,37 @@ func (c *Collector) openRepo() (*gogit.Repository, error) {
 	})
 	if err != nil {
 		return nil, fmt.Errorf("opening local repository: %w", err)
+	}
+	return repo, nil
+}
+
+// fetchRef fetches a single ref from a remote into an in-memory repository,
+// without cloning any other branch. This reaches refs a default clone does not
+// — notably refs/pull/N/head, where GitHub exposes a pull request's head commit
+// (fork PRs included) on the base repository, readable with the base repo's
+// installation token. depth 0 fetches full history; 1 fetches only the ref tip.
+func fetchRef(url, remote, ref string, auth transport.AuthMethod, depth int) (*gogit.Repository, error) {
+	if remote == "" {
+		remote = "origin"
+	}
+	repo, err := gogit.Init(memory.NewStorage(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("initializing repository: %w", err)
+	}
+	if _, err := repo.CreateRemote(&config.RemoteConfig{
+		Name: remote,
+		URLs: []string{url},
+	}); err != nil {
+		return nil, fmt.Errorf("creating remote: %w", err)
+	}
+	if err := repo.Fetch(&gogit.FetchOptions{
+		RemoteName: remote,
+		Auth:       auth,
+		Depth:      depth,
+		Tags:       gogit.NoTags,
+		RefSpecs:   []config.RefSpec{config.RefSpec(fmt.Sprintf("+%s:%s", ref, ref))},
+	}); err != nil && !errors.Is(err, gogit.NoErrAlreadyUpToDate) {
+		return nil, fmt.Errorf("fetching ref %q: %w", ref, err)
 	}
 	return repo, nil
 }
