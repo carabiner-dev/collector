@@ -30,11 +30,37 @@ const rekorFixtureUUID = "24296fb24b8ad77a62b622b0ab5955d18e8ed89c257492bc0e56ae
 
 const offlineFixture = "testdata/offline.commit"
 
+// legacyFixture is a commit signed with gitsign's default (legacy, online) mode:
+// no embedded Rekor entry, and the entry logged over the commit's own git hash.
+const legacyFixture = "testdata/legacy-online.commit"
+
+const legacyFixtureUUID = "108e9186e8c5677aa6663e2cc8bdacabf92381f3c3a99ae2a6bbfbd71ef60db0c5aca25e37608fd4"
+
 // loadOfflineCommit reads the raw git commit object fixture (as produced by
 // `git cat-file commit <sha>`) into a go-git commit.
 func loadOfflineCommit(t *testing.T) *object.Commit {
 	t.Helper()
 	raw, err := os.ReadFile(offlineFixture)
+	require.NoError(t, err)
+
+	storage := memory.NewStorage()
+	obj := storage.NewEncodedObject()
+	obj.SetType(plumbing.CommitObject)
+	w, err := obj.Writer()
+	require.NoError(t, err)
+	_, err = w.Write(raw)
+	require.NoError(t, err)
+
+	commit, err := object.DecodeCommit(storage, obj)
+	require.NoError(t, err)
+	return commit
+}
+
+// loadLegacyCommit reads the legacy (online, no embedded entry) commit fixture
+// into a go-git commit.
+func loadLegacyCommit(t *testing.T) *object.Commit {
+	t.Helper()
+	raw, err := os.ReadFile(legacyFixture)
 	require.NoError(t, err)
 
 	storage := memory.NewStorage()
@@ -109,7 +135,7 @@ func TestVerifyOfflineCommit_TamperedBody(t *testing.T) {
 	tampered := append([]byte(nil), f.body...)
 	tampered[len(tampered)/2] ^= 0xff
 
-	v, err := c.verifySigstoreSignature(context.Background(), tampered, f.cmsRaw)
+	v, err := c.verifySigstoreSignature(context.Background(), tampered, f.cmsRaw, nil)
 	require.Error(t, err, "flipping a commit byte must fail verification")
 	require.Nil(t, v)
 }
@@ -134,7 +160,7 @@ func TestVerifyOfflineCommit_TamperedSignature(t *testing.T) {
 	body, err := encodeWithoutSignature(commit)
 	require.NoError(t, err)
 
-	v, err := c.verifySigstoreSignature(context.Background(), body, der)
+	v, err := c.verifySigstoreSignature(context.Background(), body, der, nil)
 	require.Error(t, err, "a tampered signature must fail verification")
 	require.Nil(t, v)
 }
@@ -253,7 +279,7 @@ func TestVerifyOnlineCommit_MockRekor(t *testing.T) {
 	url := mockRekor(t, []string{rekorFixtureUUID}, raw)
 	c := &Collector{Options: Options{RekorURL: url}}
 
-	v, err := c.verifySigstoreSignature(context.Background(), body, der)
+	v, err := c.verifySigstoreSignature(context.Background(), body, der, []byte(f.commit.Hash.String()))
 	require.NoError(t, err)
 	require.NotNil(t, v, "online-mode commit must verify once the entry is fetched")
 	require.True(t, v.GetSignature().GetVerified())
@@ -354,7 +380,7 @@ func TestVerifyOnlineCommit_Live(t *testing.T) {
 	body, der := stripEmbeddedEntry(t, f.commit)
 
 	c := &Collector{} // default: https://rekor.sigstore.dev
-	v, err := c.verifySigstoreSignature(context.Background(), body, der)
+	v, err := c.verifySigstoreSignature(context.Background(), body, der, []byte(f.commit.Hash.String()))
 	require.NoError(t, err)
 	require.NotNil(t, v)
 	require.True(t, v.GetSignature().GetVerified())
@@ -426,4 +452,82 @@ func TestTrustedRootLoads(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, tr.FulcioCertificateAuthorities())
 	require.NotEmpty(t, tr.RekorLogs())
+}
+
+// TestVerifyLegacyOnlineCommit_MockRekor proves the legacy path end to end: a
+// commit signed by gitsign's default git.LegacySHASign — no embedded entry, its
+// Rekor entry logged over the commit's own git hash and signed separately — is
+// verified by falling back from the modern lookup to the legacy lookup, matching
+// the entry by sha256(<commit SHA>) and the signing certificate, then verifying
+// it offline against the embedded trust root. The mock returns the legacy entry
+// for both lookups; the modern lookup rejects it (body mismatch) and the legacy
+// lookup accepts it.
+func TestVerifyLegacyOnlineCommit_MockRekor(t *testing.T) {
+	commit := loadLegacyCommit(t)
+	block, _ := pem.Decode([]byte(commit.PGPSignature))
+	require.NotNil(t, block)
+	signedData, err := encodeWithoutSignature(commit)
+	require.NoError(t, err)
+
+	raw, err := os.ReadFile("testdata/rekor-entry-legacy.json")
+	require.NoError(t, err)
+
+	url := mockRekor(t, []string{legacyFixtureUUID}, raw)
+	c := &Collector{Options: Options{RekorURL: url}}
+
+	v, err := c.verifySigstoreSignature(context.Background(), signedData, block.Bytes, []byte(commit.Hash.String()))
+	require.NoError(t, err, "a legacy online-mode commit must verify via the legacy lookup")
+	require.NotNil(t, v)
+	require.True(t, v.GetSignature().GetVerified())
+	require.Len(t, v.GetSignature().GetIdentities(), 1)
+	require.Equal(t, "puerco@carabiner.dev",
+		v.GetSignature().GetIdentities()[0].GetSigstore().GetIdentity())
+	require.Equal(t, "https://accounts.google.com",
+		v.GetSignature().GetIdentities()[0].GetSigstore().GetIssuer())
+}
+
+// TestLegacyHashedRekordSignature checks the legacy body parser in isolation: it
+// returns the entry's signature only when the data hash matches sha256(<commit
+// SHA>) AND the entry's logged certificate is the signing leaf.
+func TestLegacyHashedRekordSignature(t *testing.T) {
+	commit := loadLegacyCommit(t)
+	block, _ := pem.Decode([]byte(commit.PGPSignature))
+	require.NotNil(t, block)
+	ci, err := protocol.ParseContentInfo(block.Bytes)
+	require.NoError(t, err)
+	psd, err := ci.SignedDataContent()
+	require.NoError(t, err)
+	certs, err := psd.X509Certificates()
+	require.NoError(t, err)
+	leaf, err := psd.SignerInfos[0].FindCertificate(certs)
+	require.NoError(t, err)
+
+	raw, err := os.ReadFile("testdata/rekor-entry-legacy.json")
+	require.NoError(t, err)
+	var le models.LogEntry
+	require.NoError(t, json.Unmarshal(raw, &le))
+	require.Len(t, le, 1)
+	var anon models.LogEntryAnon
+	for _, a := range le {
+		anon = a
+	}
+	body, ok := decodeEntryBody(anon)
+	require.True(t, ok)
+
+	digest := sha256.Sum256([]byte(commit.Hash.String()))
+
+	// Correct digest + correct leaf → returns the entry's signature.
+	sig, ok := legacyHashedRekordSignature(body, leaf, digest[:])
+	require.True(t, ok)
+	require.NotEmpty(t, sig)
+
+	// Wrong digest → no match.
+	wrong := sha256.Sum256([]byte("not-the-commit"))
+	_, ok = legacyHashedRekordSignature(body, leaf, wrong[:])
+	require.False(t, ok, "a mismatched data hash must not match")
+
+	// A different certificate → no match (the offline fixture's leaf is billy@).
+	otherLeaf := loadFixtureCMS(t).leaf
+	_, ok = legacyHashedRekordSignature(body, otherLeaf, digest[:])
+	require.False(t, ok, "a different signing certificate must not match")
 }
