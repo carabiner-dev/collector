@@ -6,6 +6,7 @@ package gitsign
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -40,6 +41,9 @@ func TestWithRefAndDepth(t *testing.T) {
 // non-branch ref (refs/pull/N/head) — the case a default-branch clone misses —
 // entirely offline, from a local source repository.
 func TestFetchRef_PullRef(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("go-git local-path fetch endpoint parsing differs on Windows; production fetches https URLs")
+	}
 	dir := t.TempDir()
 	src, err := gogit.PlainInit(dir, false)
 	require.NoError(t, err)
@@ -65,6 +69,9 @@ func TestFetchRef_PullRef(t *testing.T) {
 
 // TestFetchRef_MissingRef fails closed when the ref does not exist.
 func TestFetchRef_MissingRef(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("go-git local-path fetch endpoint parsing differs on Windows; production fetches https URLs")
+	}
 	dir := t.TempDir()
 	_, err := gogit.PlainInit(dir, false)
 	require.NoError(t, err)
