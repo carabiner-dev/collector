@@ -144,6 +144,10 @@ type Options struct {
 var defaultOptions = Options{
 	Remote:   "origin",
 	RekorURL: defaultRekorURL,
+	// Depth 1 is a lean, single-commit fetch. gitsign verification only needs
+	// the target commit/tag object and its signature, never history, so the
+	// collector always shallow-fetches by default (WithDepth overrides it).
+	Depth: 1,
 }
 
 type optFn func(*Collector) error
