@@ -214,6 +214,11 @@ func (c *Collector) fetchAttestationLayers(ctx context.Context, opts attestation
 		append([]crane.Option{crane.WithContext(ctx)}, c.craneOpts()...)...,
 	)
 	if err != nil {
+		// A missing .att manifest simply means the image has no attestations
+		// attached yet. Treat it as an empty result instead of an error.
+		if isNotFound(err) {
+			return nil, nil
+		}
 		return nil, fmt.Errorf("fetching attestations manifest: %w", err)
 	}
 
