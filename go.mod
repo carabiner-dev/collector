@@ -4,7 +4,7 @@ go 1.25.12
 
 require (
 	github.com/carabiner-dev/attestation v0.2.1
-	github.com/carabiner-dev/ghrfs v0.3.4
+	github.com/carabiner-dev/ghrfs v0.3.6
 	github.com/carabiner-dev/github v0.2.3
 	github.com/carabiner-dev/hasher v0.2.4
 	github.com/carabiner-dev/jsonl v0.2.1
@@ -14,6 +14,7 @@ require (
 	github.com/carabiner-dev/sbomfs v0.1.0
 	github.com/carabiner-dev/signer v0.5.3-0.20260719001721-28ad0843d8a9
 	github.com/carabiner-dev/vcslocator v0.4.4
+	github.com/cenkalti/backoff/v5 v5.0.3
 	github.com/github/smimesign v0.2.0
 	github.com/go-git/go-billy/v5 v5.9.0
 	github.com/go-git/go-git/v5 v5.19.1
@@ -54,7 +55,6 @@ require (
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/carabiner-dev/command v0.3.1 // indirect
 	github.com/carabiner-dev/policy v0.5.1 // indirect
-	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/clipperhouse/displaywidth v0.11.0 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
