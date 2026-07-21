@@ -45,6 +45,7 @@ func New(funcs ...optFn) (*Collector, error) {
 			fmt.Sprintf("%s/releases/tag/%s", c.Options.RepoURL, c.Options.Tag),
 		),
 		ghrfs.WithToken(c.Options.Token),
+		ghrfs.WithRetries(c.Options.Retries),
 		ghrfs.WithCache(true),
 		ghrfs.WithCacheExtensions(
 			[]string{"jsonl", "json", "pub", "sig", "crt", "key", "pub", "pem", "spdx", "cdx", "bundle", "asc", "gpg"},

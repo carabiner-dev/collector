@@ -26,7 +26,8 @@ type Options struct {
 	// GITHUB_TOKEN / GH_TOKEN environment variables are used as a fallback.
 	Token string
 	// Retries is the number of additional attempts (with exponential backoff)
-	// made for each release API request when uploading attestations.
+	// made for each release API request, both when reading a release (fetch)
+	// and when uploading attestations (store).
 	Retries uint
 }
 
@@ -84,8 +85,9 @@ func WithToken(token string) optFn {
 	}
 }
 
-// WithRetries sets how many times an upload request is retried (with
-// exponential backoff) before giving up. Zero disables retries.
+// WithRetries sets how many times a release request is retried (with
+// exponential backoff) before giving up, for both fetch and store operations.
+// Zero disables retries.
 func WithRetries(n uint) optFn {
 	return func(c *Collector) error {
 		c.Options.Retries = n

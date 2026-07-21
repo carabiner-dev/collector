@@ -4,7 +4,7 @@ go 1.25.12
 
 require (
 	github.com/carabiner-dev/attestation v0.2.1
-	github.com/carabiner-dev/ghrfs v0.3.6
+	github.com/carabiner-dev/ghrfs v0.3.7
 	github.com/carabiner-dev/github v0.2.3
 	github.com/carabiner-dev/hasher v0.2.4
 	github.com/carabiner-dev/jsonl v0.2.1
