@@ -26,7 +26,9 @@ var Build = func(istr string) (attestation.Repository, error) {
 
 func New(funcs ...optFn) (*Collector, error) {
 	c := &Collector{
-		Options: defaultOptions,
+		Options:        defaultOptions,
+		apiBaseURL:     defaultAPIBaseURL,
+		uploadsBaseURL: defaultUploadsBaseURL,
 	}
 	for _, fn := range funcs {
 		if err := fn(c); err != nil {
@@ -42,6 +44,8 @@ func New(funcs ...optFn) (*Collector, error) {
 		ghrfs.FromURL(
 			fmt.Sprintf("%s/releases/tag/%s", c.Options.RepoURL, c.Options.Tag),
 		),
+		ghrfs.WithToken(c.Options.Token),
+		ghrfs.WithRetries(c.Options.Retries),
 		ghrfs.WithCache(true),
 		ghrfs.WithCacheExtensions(
 			[]string{"jsonl", "json", "pub", "sig", "crt", "key", "pub", "pem", "spdx", "cdx", "bundle", "asc", "gpg"},
@@ -67,6 +71,11 @@ type Collector struct {
 	Options Options
 	Keys    []key.PublicKeyProvider
 	Driver  attestation.Fetcher
+
+	// GitHub REST hosts used when uploading attestations (Store). They default
+	// to the public GitHub endpoints and are overridable in tests.
+	apiBaseURL     string
+	uploadsBaseURL string
 }
 
 // SetKeys sets the verification keys on the release collector and propagates

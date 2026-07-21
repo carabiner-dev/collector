@@ -92,8 +92,10 @@ github.com/carabiner-dev/attestation v0.2.1 h1:VhjV5YlO9TsW50Sr/Zd54bdbZhhDAqgxC
 github.com/carabiner-dev/attestation v0.2.1/go.mod h1:O84vF84RZG3pJO/6BYrPs718bZviHF5DKajP1HsrDpw=
 github.com/carabiner-dev/command v0.3.1 h1:iBkh+AjwziFZmyihv/izypCV74nkmaslZxb5AgP7GP4=
 github.com/carabiner-dev/command v0.3.1/go.mod h1:0mWfS5BU/krtaI1hgD5wjmLpjWVlf38KY8usA8zfF5c=
-github.com/carabiner-dev/ghrfs v0.3.4 h1:XJoDXkuw+8KQPTC4oI0da8vLpnx7cfQBGgyjzo+Eqrc=
-github.com/carabiner-dev/ghrfs v0.3.4/go.mod h1:u9We7molIUX6sCe4ox70juKOnbNAUpDv+B5Cerbqhio=
+github.com/carabiner-dev/ghrfs v0.3.6 h1:Qu8NZAVTtsRS+D5/0N1fjFkZlhvBRyCPCdjlFUo3Vag=
+github.com/carabiner-dev/ghrfs v0.3.6/go.mod h1:Ax57l8OkALZmIRWfoJwnGYhGjIq1HDox4++8gHiiRio=
+github.com/carabiner-dev/ghrfs v0.3.7 h1:P6BVj5LT6yByZZ70AIG5lwKaavFQhD91VDvyYp+xy5A=
+github.com/carabiner-dev/ghrfs v0.3.7/go.mod h1:Ax57l8OkALZmIRWfoJwnGYhGjIq1HDox4++8gHiiRio=
 github.com/carabiner-dev/github v0.2.3 h1:sky7HXTrgbk9G9gEWBmIeCExprHdnZvKOsFW1bUZXqc=
 github.com/carabiner-dev/github v0.2.3/go.mod h1:8shcF+ie+DvTTQFP0GUR+Nm67w8AxI/kceqT/vWV39Y=
 github.com/carabiner-dev/hasher v0.2.4 h1:VaI04+FBHaNV/UEy0NmVoRg0pKLFeN76KPOHbTDvvhE=
