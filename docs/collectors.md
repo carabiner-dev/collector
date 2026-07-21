@@ -143,6 +143,14 @@ Reads attestations from GitHub release assets. Constructs a virtual
 filesystem from the release's downloadable assets and delegates to the
 **filesystem** collector to parse them.
 
+Also supports storing attestations. When `Store` is called, each envelope is
+JSON-marshaled and uploaded to the release as an individual, content-addressed
+asset named `attestation-<sha256>.json`. Uploads are retried with exponential
+backoff (see `WithRetries`) and an asset that already exists on the release is
+left in place, making `Store` idempotent. A token is required for uploads (and
+for reading private releases); set it with `WithToken` or via the
+`GITHUB_TOKEN` / `GH_TOKEN` environment variables.
+
 ## ossrebuild
 
 Fetches rebuild attestations from the Google OSS Rebuild project. Converts

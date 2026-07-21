@@ -47,7 +47,7 @@ The following table lists all repository drivers currently implemented in the pr
 | **Git Notes** | `note` | Reads and writes attestations stored as git notes on repository commits | `note:git+https://github.com/owner/repo@abc123` or `note:file:///path/to/repo` | ✓ | ✓ |
 | **Dynamic Git Notes** | `dnote` | Dynamically reads and writes attestations from git notes for any commit without preconfiguration | `dnote:https://github.com/owner/repo` | ✓ | ✓ |
 | **OSS Rebuild** | `ossrebuild` | Fetches rebuild attestations from the OSS Rebuild project storage | `ossrebuild:` | ✓ | ✗ |
-| **Release** | `release` | Reads attestations from GitHub release assets | `release:owner/repo@v1.0.0` | ✓ | ✗ |
+| **Release** | `release` | Reads and writes attestations as GitHub release assets | `release:owner/repo@v1.0.0` | ✓ | ✓ |
 
 All of these drivers can be used with tools that use Carabiner's collector such
 as AMPEL or bnd. For more details on each driver see
