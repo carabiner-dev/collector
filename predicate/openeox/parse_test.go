@@ -37,6 +37,13 @@ func TestParse(t *testing.T) {
 			require.NotEmpty(t, p.Data)
 			require.Equal(t, PredicateTypeCore, p.Type)
 		}},
+		{"core-v1", "testdata/sample-core-v1.json", nil, false, nil, func(t *testing.T, p *generic.Predicate) {
+			t.Helper()
+			require.NotNil(t, p.Parsed)
+			require.NotNil(t, p.Data)
+			require.NotEmpty(t, p.Data)
+			require.Equal(t, PredicateTypeCore, p.Type)
+		}},
 		{"other-json", "", []byte(`{"chido":1, "mas": "no", "soy": [1,2] }`), true, attestation.ErrNotCorrectFormat, nil},
 		{"invalid-json", "", []byte(`"chido":1, "mas": "no", "soy": [1,2] }`), true, nil, nil},
 	} {
@@ -60,4 +67,13 @@ func TestParse(t *testing.T) {
 			require.NotNil(t, pred)
 		})
 	}
+}
+
+func TestSupportsType(t *testing.T) {
+	t.Parallel()
+	p := New()
+	require.True(t, p.SupportsType(PredicateTypeShell))
+	require.True(t, p.SupportsType(PredicateTypeCore))
+	require.True(t, p.SupportsType(PredicateTypeCoreLegacy))
+	require.False(t, p.SupportsType(attestation.PredicateType("https://example.com/other/v1.0")))
 }
