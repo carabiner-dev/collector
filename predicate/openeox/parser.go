@@ -17,7 +17,12 @@ import (
 
 var (
 	PredicateTypeShell = attestation.PredicateType("https://docs.oasis-open.org/openeox/shell/v1.0")
-	PredicateTypeCore  = attestation.PredicateType("https://docs.oasis-open.org/openeox/core/v1.0")
+	PredicateTypeCore  = attestation.PredicateType("https://docs.oasis-open.org/openeox/eox-core/v1.0")
+
+	// PredicateTypeCoreLegacy is the core predicate type derived from the
+	// schema URI OpenEoX used before renaming its core track to eox-core
+	// in CSD01 RC3.
+	PredicateTypeCoreLegacy = attestation.PredicateType("https://docs.oasis-open.org/openeox/core/v1.0")
 )
 
 type Parser struct{}
@@ -27,7 +32,9 @@ func New() *Parser {
 }
 
 func (*Parser) SupportsType(predTypes ...attestation.PredicateType) bool {
-	return slices.Contains(predTypes, PredicateTypeShell) || slices.Contains(predTypes, PredicateTypeCore)
+	return slices.Contains(predTypes, PredicateTypeShell) ||
+		slices.Contains(predTypes, PredicateTypeCore) ||
+		slices.Contains(predTypes, PredicateTypeCoreLegacy)
 }
 
 // Parse reads a byte slice with an OpenEoX shell or core and returns an attestation
