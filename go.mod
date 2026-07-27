@@ -8,7 +8,7 @@ require (
 	github.com/carabiner-dev/github v0.2.3
 	github.com/carabiner-dev/hasher v0.2.4
 	github.com/carabiner-dev/jsonl v0.2.1
-	github.com/carabiner-dev/openeox v1.0.0-pre.1
+	github.com/carabiner-dev/openeox v1.0.0
 	github.com/carabiner-dev/osv v0.1.1
 	github.com/carabiner-dev/predicates v0.5.0
 	github.com/carabiner-dev/sbomfs v0.1.0
