@@ -16,7 +16,7 @@ require (
 	github.com/carabiner-dev/vcslocator v0.4.4
 	github.com/cenkalti/backoff/v5 v5.0.3
 	github.com/github/smimesign v0.2.0
-	github.com/go-git/go-billy/v5 v5.9.0
+	github.com/go-git/go-billy/v5 v5.9.1
 	github.com/go-git/go-git/v5 v5.19.1
 	github.com/go-openapi/strfmt v0.27.0
 	github.com/go-openapi/swag/conv v0.27.3
