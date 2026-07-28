@@ -12,8 +12,8 @@ require (
 	github.com/carabiner-dev/osv v0.1.1
 	github.com/carabiner-dev/predicates v0.5.0
 	github.com/carabiner-dev/sbomfs v0.1.0
-	github.com/carabiner-dev/signer v0.5.3-0.20260719001721-28ad0843d8a9
-	github.com/carabiner-dev/vcslocator v0.4.4
+	github.com/carabiner-dev/signer v0.5.3-0.20260728042848-608f5e258e3a
+	github.com/carabiner-dev/vcslocator v0.4.6
 	github.com/cenkalti/backoff/v5 v5.0.3
 	github.com/github/smimesign v0.2.0
 	github.com/go-git/go-billy/v5 v5.9.1
