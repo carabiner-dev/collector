@@ -92,6 +92,8 @@ github.com/carabiner-dev/attestation v0.2.1 h1:VhjV5YlO9TsW50Sr/Zd54bdbZhhDAqgxC
 github.com/carabiner-dev/attestation v0.2.1/go.mod h1:O84vF84RZG3pJO/6BYrPs718bZviHF5DKajP1HsrDpw=
 github.com/carabiner-dev/command v0.3.1 h1:iBkh+AjwziFZmyihv/izypCV74nkmaslZxb5AgP7GP4=
 github.com/carabiner-dev/command v0.3.1/go.mod h1:0mWfS5BU/krtaI1hgD5wjmLpjWVlf38KY8usA8zfF5c=
+github.com/carabiner-dev/deadrop v0.0.0-20260228173914-d95e9ea2877d h1:Gl8o56PI73PE6YcDzUd49iJJBdp/ye/METanFm8gG64=
+github.com/carabiner-dev/deadrop v0.0.0-20260228173914-d95e9ea2877d/go.mod h1:lwgOJlVMxPu8jptfMKOMTTQntzBTTH38VyuvBeaXUVg=
 github.com/carabiner-dev/ghrfs v0.3.7 h1:P6BVj5LT6yByZZ70AIG5lwKaavFQhD91VDvyYp+xy5A=
 github.com/carabiner-dev/ghrfs v0.3.7/go.mod h1:Ax57l8OkALZmIRWfoJwnGYhGjIq1HDox4++8gHiiRio=
 github.com/carabiner-dev/github v0.2.3 h1:sky7HXTrgbk9G9gEWBmIeCExprHdnZvKOsFW1bUZXqc=
@@ -112,6 +114,8 @@ github.com/carabiner-dev/sbomfs v0.1.0 h1:gEsmn85hod7JTLs2dDr5C1x4Af7FUEhI0lbTur
 github.com/carabiner-dev/sbomfs v0.1.0/go.mod h1:UyPyTSNx9JOLZVgTmM9WXdmgVqDWXCYwr1LK1Ts+7H0=
 github.com/carabiner-dev/signer v0.5.3-0.20260728042848-608f5e258e3a h1:7q9CaMyYk8X2noWY7wgysu3aeVEdFN0a5CnY1GR4/gs=
 github.com/carabiner-dev/signer v0.5.3-0.20260728042848-608f5e258e3a/go.mod h1:Dyy5pd6seCI6ao/IP/qy8hywnrOLcfjOmT64vlwJ5zI=
+github.com/carabiner-dev/stash v0.0.0-20260716192412-e2fe293d76a5 h1:ZPlLrqZAZLf8iuJAReJjOTHM8gL3BeVpXtto5+KRDm0=
+github.com/carabiner-dev/stash v0.0.0-20260716192412-e2fe293d76a5/go.mod h1:2RhCP3fDQ9TEuGBhxkd+gWDOlzQYkNSXvmjr8fxfAR4=
 github.com/carabiner-dev/vcslocator v0.4.6 h1:cwoJze9lQC4FDpxNryx4qmBE6pFQiv5JLDjLjIPFZX8=
 github.com/carabiner-dev/vcslocator v0.4.6/go.mod h1:emrQwITbcy5tK/wxUIOGVeMSW8HDcfhSZ6a0kpfJFH8=
 github.com/cenkalti/backoff/v4 v4.3.0 h1:MyRJ/UdXutAwSAT+s3wNd7MfTIcy71VQueUuFK343L8=
@@ -121,6 +125,8 @@ github.com/cenkalti/backoff/v5 v5.0.3/go.mod h1:rkhZdG3JZukswDf7f0cwqPNk4K0sa+F9
 github.com/certifi/gocertifi v0.0.0-20180118203423-deb3ae2ef261/go.mod h1:GJKEexRPVJrBSOjoqN5VNOIKJ5Q3RViH6eu3puDRwx4=
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
 github.com/cespare/xxhash/v2 v2.3.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
+github.com/chainguard-dev/clog v1.8.0 h1:frlTMEdg3XQR+ioQ6O9i92uigY8GTUcWKpuCFkhcCHA=
+github.com/chainguard-dev/clog v1.8.0/go.mod h1:5MQOZi+Iu7fV7GcJG8ag8rCB5elEOpqRMKEASgnGVdo=
 github.com/clipperhouse/displaywidth v0.11.0 h1:lBc6kY44VFw+TDx4I8opi/EtL9m20WSEFgwIwO+UVM8=
 github.com/clipperhouse/displaywidth v0.11.0/go.mod h1:bkrFNkf81G8HyVqmKGxsPufD3JhNl3dSqnGhOoSD/o0=
 github.com/clipperhouse/uax29/v2 v2.7.0 h1:+gs4oBZ2gPfVrKPthwbMzWZDaAFPGYK72F0NJv2v7Vk=

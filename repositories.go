@@ -23,6 +23,7 @@ import (
 	"github.com/carabiner-dev/collector/repository/ossrebuild"
 	"github.com/carabiner-dev/collector/repository/release"
 	"github.com/carabiner-dev/collector/repository/sbomfs"
+	"github.com/carabiner-dev/collector/repository/stash"
 )
 
 var (
@@ -79,6 +80,7 @@ func LoadDefaultRepositoryTypes() error {
 		ossrebuild.TypeMoniker:  ossrebuild.Build,
 		release.TypeMoniker:     release.Build,
 		sbomfs.TypeMoniker:      sbomfs.Build,
+		stash.TypeMoniker:       stash.Build,
 	} {
 		if err := RegisterCollectorType(t, factory); err != nil {
 			if !errors.Is(err, ErrTypeAlreadyRegistered) {
