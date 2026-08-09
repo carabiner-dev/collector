@@ -13,6 +13,7 @@ require (
 	github.com/carabiner-dev/predicates v0.5.0
 	github.com/carabiner-dev/sbomfs v0.1.0
 	github.com/carabiner-dev/signer v0.5.3-0.20260728042848-608f5e258e3a
+	github.com/carabiner-dev/spdx3 v0.1.0
 	github.com/carabiner-dev/stash v0.0.0-20260716192412-e2fe293d76a5
 	github.com/carabiner-dev/vcslocator v0.4.7
 	github.com/cenkalti/backoff/v5 v5.0.3
