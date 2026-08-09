@@ -20,6 +20,7 @@ import (
 	"github.com/carabiner-dev/collector/predicate/protobom"
 	"github.com/carabiner-dev/collector/predicate/slsa"
 	"github.com/carabiner-dev/collector/predicate/spdx"
+	"github.com/carabiner-dev/collector/predicate/spdx3"
 	"github.com/carabiner-dev/collector/predicate/trivy"
 	"github.com/carabiner-dev/collector/predicate/vsa"
 	"github.com/carabiner-dev/collector/predicate/vulns"
@@ -33,6 +34,7 @@ type ParsersList map[attestation.PredicateType]attestation.PredicateParser
 var Parsers = ParsersList{
 	protobom.PredicateType:          protobom.New(),
 	spdx.PredicateType:              spdx.New(),
+	spdx3.PredicateType:             spdx3.New(),
 	cyclonedx.PredicateType:         cyclonedx.New(),
 	ampel.PredicateTypePolicy:       ampel.NewParserPolicyPredicate(),
 	ampel.PredicateTypePolicyGroup:  ampel.NewParserPolicyGroupPredicate(),

@@ -114,6 +114,8 @@ github.com/carabiner-dev/sbomfs v0.1.0 h1:gEsmn85hod7JTLs2dDr5C1x4Af7FUEhI0lbTur
 github.com/carabiner-dev/sbomfs v0.1.0/go.mod h1:UyPyTSNx9JOLZVgTmM9WXdmgVqDWXCYwr1LK1Ts+7H0=
 github.com/carabiner-dev/signer v0.5.3-0.20260728042848-608f5e258e3a h1:7q9CaMyYk8X2noWY7wgysu3aeVEdFN0a5CnY1GR4/gs=
 github.com/carabiner-dev/signer v0.5.3-0.20260728042848-608f5e258e3a/go.mod h1:Dyy5pd6seCI6ao/IP/qy8hywnrOLcfjOmT64vlwJ5zI=
+github.com/carabiner-dev/spdx3 v0.1.0 h1:Q6nMLXV0BhtqDQuwRDOaJDZR670TK4jdOvZqvTW/ctY=
+github.com/carabiner-dev/spdx3 v0.1.0/go.mod h1:d/t010TrZvYZBeYGpvHeId6QpRvGLlqK7cy0E81npPA=
 github.com/carabiner-dev/stash v0.0.0-20260716192412-e2fe293d76a5 h1:ZPlLrqZAZLf8iuJAReJjOTHM8gL3BeVpXtto5+KRDm0=
 github.com/carabiner-dev/stash v0.0.0-20260716192412-e2fe293d76a5/go.mod h1:2RhCP3fDQ9TEuGBhxkd+gWDOlzQYkNSXvmjr8fxfAR4=
 github.com/carabiner-dev/vcslocator v0.4.7 h1:w4548miXp0WaiuBhLyiNLwbX5/j6hqr7Uy3ofgjaZj8=
