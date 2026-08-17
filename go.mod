@@ -9,7 +9,7 @@ require (
 	github.com/carabiner-dev/hasher v0.2.4
 	github.com/carabiner-dev/jsonl v0.2.1
 	github.com/carabiner-dev/openeox v1.0.0
-	github.com/carabiner-dev/osv v0.1.1
+	github.com/carabiner-dev/osv v0.1.2
 	github.com/carabiner-dev/predicates v0.5.0
 	github.com/carabiner-dev/sbomfs v0.1.0
 	github.com/carabiner-dev/signer v0.5.4
@@ -40,7 +40,7 @@ require (
 	github.com/sigstore/sigstore-go v1.3.0
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
-	google.golang.org/protobuf v1.36.11
+	google.golang.org/protobuf v1.36.12
 	sigs.k8s.io/release-utils v0.12.4
 )
 
@@ -124,6 +124,7 @@ require (
 	github.com/olekukonko/errors v1.3.0 // indirect
 	github.com/olekukonko/ll v0.1.8 // indirect
 	github.com/olekukonko/tablewriter v1.1.4 // indirect
+	github.com/ossf/osv-schema/bindings/go v0.0.0-20260730052020-9509daabeece // indirect
 	github.com/pjbgf/sha1cd v0.6.0 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pkg/errors v0.9.1 // indirect
