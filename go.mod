@@ -38,7 +38,7 @@ require (
 	github.com/sigstore/rekor v1.5.3
 	github.com/sigstore/sigstore v1.10.9
 	github.com/sigstore/sigstore-go v1.3.0
-	github.com/sirupsen/logrus v1.9.4
+	github.com/sirupsen/logrus v1.10.0
 	github.com/stretchr/testify v1.11.1
 	google.golang.org/protobuf v1.36.11
 	sigs.k8s.io/release-utils v0.12.4
