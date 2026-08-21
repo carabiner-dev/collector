@@ -114,7 +114,7 @@ func (agent *Agent) Fetch(ctx context.Context, optFn ...FetchOptionsFunc) ([]att
 		}
 	}
 
-	t := throttler.New((agent.Options.ParallelFetches), len(repos))
+	t := throttler.New(agent.Options.ParallelFetches, len(repos))
 
 	for _, r := range repos {
 		go func(r attestation.Fetcher) {
@@ -212,7 +212,7 @@ func (agent *Agent) FetchAttestationsBySubject(ctx context.Context, subjects []a
 				HashSets: m,
 			})
 
-			t := throttler.New((agent.Options.ParallelFetches), len(repos))
+			t := throttler.New(agent.Options.ParallelFetches, len(repos))
 
 			for _, r := range repos {
 				go func(r attestation.Fetcher) {
@@ -294,7 +294,7 @@ func (agent *Agent) FetchAttestationsByPredicateType(ctx context.Context, pt []a
 
 	// If the cache returned data, skip fetching here
 	if len(ret) == 0 {
-		t := throttler.New((agent.Options.ParallelFetches), len(repos))
+		t := throttler.New(agent.Options.ParallelFetches, len(repos))
 		m := map[attestation.PredicateType]struct{}{}
 		for _, predType := range pt {
 			m[predType] = struct{}{}
