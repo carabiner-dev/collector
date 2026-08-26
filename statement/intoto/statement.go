@@ -13,6 +13,7 @@ import (
 
 	"github.com/carabiner-dev/attestation"
 	gointoto "github.com/in-toto/attestation/go/v1"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/carabiner-dev/collector/predicate"
 )
@@ -47,11 +48,51 @@ func NewStatement(opts ...StatementOption) *Statement {
 	return s
 }
 
+// Statement is the collector's in-toto statement. The exported fields are
+// the JSON-facing ones; the embedded proto carries the subjects and the raw
+// predicate as decoded, and its own type and predicate type fields are kept
+// empty so they never render under their Go JSON names.
 type Statement struct {
 	PredicateType attestation.PredicateType `json:"predicateType"`
 	Predicate     attestation.Predicate     `json:"predicate"`
 	Type          string                    `json:"_type"`
 	gointoto.Statement
+}
+
+// MarshalJSON renders the statement in its in-toto JSON form: _type,
+// subject, predicateType and predicate. The embedded proto's fields are not
+// rendered directly, which keeps its Go JSON names (type, predicate_type)
+// out of the output whichever way the statement was built. Subjects are
+// rendered with protojson for the same reason: encoding/json would use the
+// proto's Go names (download_location, media_type) instead of the in-toto
+// ones (downloadLocation, mediaType). An unset type is rendered as the
+// in-toto statement type URI.
+func (s *Statement) MarshalJSON() ([]byte, error) {
+	typ := s.Type
+	if typ == "" {
+		typ = gointoto.StatementTypeUri
+	}
+
+	var subjects []json.RawMessage
+	for i, sbj := range s.Subject {
+		data, err := protojson.Marshal(sbj)
+		if err != nil {
+			return nil, fmt.Errorf("marshaling subject %d: %w", i, err)
+		}
+		subjects = append(subjects, data)
+	}
+
+	return json.Marshal(struct {
+		Type          string                    `json:"_type"`
+		Subject       []json.RawMessage         `json:"subject,omitempty"`
+		PredicateType attestation.PredicateType `json:"predicateType"`
+		Predicate     attestation.Predicate     `json:"predicate"`
+	}{
+		Type:          typ,
+		Subject:       subjects,
+		PredicateType: s.PredicateType,
+		Predicate:     s.Predicate,
+	})
 }
 
 func (s *Statement) AddSubject(sbj attestation.Subject) {
@@ -92,6 +133,12 @@ func (s *Statement) GetPredicateType() attestation.PredicateType {
 	return s.PredicateType
 }
 
+// GetType returns the statement type URI. It shadows the embedded proto's
+// getter, which reads the proto field this type keeps empty.
+func (s *Statement) GetType() string {
+	return s.Type
+}
+
 // ToJson returns a byte slice with the predicate in JSON
 func (s *Statement) ToJson() ([]byte, error) {
 	var b bytes.Buffer
@@ -102,7 +149,6 @@ func (s *Statement) ToJson() ([]byte, error) {
 }
 
 func (s *Statement) WriteJson(w io.Writer) error {
-	s.Type = gointoto.StatementTypeUri // This needs to be coerced as it will not be read from proto
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 	if err := enc.Encode(s); err != nil {

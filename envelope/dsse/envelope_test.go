@@ -1,6 +1,8 @@
 package dsse
 
 import (
+	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -82,4 +84,56 @@ hDjayw2lL6wkyR9k1vWICQYbe4FqOZeulBbfWBU7/BKdtlwKRStEVEffvg==
 			require.False(t, verification.MatchesIdentity(&sapi.Identity{Key: &sapi.IdentityKey{Id: badKey.ID()}}))
 		})
 	}
+}
+
+// A marshaled envelope must be DSSE JSON: parsing it back must yield the
+// same signatures, and they must still verify. Regression test for
+// https://github.com/carabiner-dev/collector/issues/18.
+func TestMarshalJSONRoundTrip(t *testing.T) {
+	t.Parallel()
+	goodKey, err := key.NewParser().ParsePublicKey([]byte(`-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEXkyL5IFxz/Hg6DwUy0HBumXcMxt9
+nQSECAK6r262hPwIzjd6LpE7IPlUbwgheE87vU8EUE9tsS02MShFZGo1gg==
+-----END PUBLIC KEY-----`))
+	require.NoError(t, err)
+
+	f, err := os.Open(filepath.Join("testdata", "rebuild.intoto.json"))
+	require.NoError(t, err)
+	envelopes, err := (&Parser{}).ParseStream(f)
+	require.NoError(t, err)
+	original, ok := envelopes[0].(*Envelope)
+	require.True(t, ok)
+
+	data, err := json.Marshal(original)
+	require.NoError(t, err)
+
+	// DSSE keys, not the wrapper's Go names
+	var raw struct {
+		Payload     string              `json:"payload"`
+		PayloadType string              `json:"payloadType"`
+		Signatures  []map[string]string `json:"signatures"`
+	}
+	require.NoError(t, json.Unmarshal(data, &raw))
+	require.NotEmpty(t, raw.Payload)
+	require.Equal(t, original.GetPayloadType(), raw.PayloadType)
+	require.Len(t, raw.Signatures, 1)
+	require.Contains(t, raw.Signatures[0], "sig")
+	require.Contains(t, raw.Signatures[0], "keyid")
+	require.NotContains(t, raw.Signatures[0], "Signature")
+	require.NotContains(t, raw.Signatures[0], "KeyID")
+
+	// Parsing it back yields the same signatures ...
+	back, err := (&Parser{}).ParseStream(bytes.NewReader(data))
+	require.NoError(t, err)
+	parsed, ok := back[0].(*Envelope)
+	require.True(t, ok)
+	require.Equal(t, original.GetPayload(), parsed.GetPayload())
+	require.Len(t, parsed.Envelope.GetSignatures(), 1)
+	require.Equal(t, original.Envelope.GetSignatures()[0].GetKeyid(), parsed.Envelope.GetSignatures()[0].GetKeyid())
+	require.Equal(t, original.Envelope.GetSignatures()[0].GetSig(), parsed.Envelope.GetSignatures()[0].GetSig())
+
+	// ... which still verify.
+	require.NoError(t, parsed.Verify([]key.PublicKeyProvider{goodKey}))
+	require.NotNil(t, parsed.GetVerification())
+	require.True(t, parsed.GetVerification().GetVerified())
 }
