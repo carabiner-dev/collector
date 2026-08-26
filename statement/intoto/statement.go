@@ -13,6 +13,7 @@ import (
 
 	"github.com/carabiner-dev/attestation"
 	gointoto "github.com/in-toto/attestation/go/v1"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/carabiner-dev/collector/predicate"
 )
@@ -61,21 +62,34 @@ type Statement struct {
 // MarshalJSON renders the statement in its in-toto JSON form: _type,
 // subject, predicateType and predicate. The embedded proto's fields are not
 // rendered directly, which keeps its Go JSON names (type, predicate_type)
-// out of the output whichever way the statement was built. An unset type
-// is rendered as the in-toto statement type URI.
+// out of the output whichever way the statement was built. Subjects are
+// rendered with protojson for the same reason: encoding/json would use the
+// proto's Go names (download_location, media_type) instead of the in-toto
+// ones (downloadLocation, mediaType). An unset type is rendered as the
+// in-toto statement type URI.
 func (s *Statement) MarshalJSON() ([]byte, error) {
 	typ := s.Type
 	if typ == "" {
 		typ = gointoto.StatementTypeUri
 	}
+
+	var subjects []json.RawMessage
+	for i, sbj := range s.Subject {
+		data, err := protojson.Marshal(sbj)
+		if err != nil {
+			return nil, fmt.Errorf("marshaling subject %d: %w", i, err)
+		}
+		subjects = append(subjects, data)
+	}
+
 	return json.Marshal(struct {
-		Type          string                         `json:"_type"`
-		Subject       []*gointoto.ResourceDescriptor `json:"subject,omitempty"`
-		PredicateType attestation.PredicateType      `json:"predicateType"`
-		Predicate     attestation.Predicate          `json:"predicate"`
+		Type          string                    `json:"_type"`
+		Subject       []json.RawMessage         `json:"subject,omitempty"`
+		PredicateType attestation.PredicateType `json:"predicateType"`
+		Predicate     attestation.Predicate     `json:"predicate"`
 	}{
 		Type:          typ,
-		Subject:       s.Subject,
+		Subject:       subjects,
 		PredicateType: s.PredicateType,
 		Predicate:     s.Predicate,
 	})

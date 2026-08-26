@@ -10,6 +10,8 @@ import (
 	"github.com/carabiner-dev/attestation"
 	gointoto "github.com/in-toto/attestation/go/v1"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 func TestToJson(t *testing.T) {
@@ -217,5 +219,59 @@ func TestStatementJSONKeys(t *testing.T) {
 				require.Contains(t, got, "predicate")
 			})
 		}
+	}
+}
+
+// Subjects must render with the in-toto JSON names, not the proto's Go
+// names, and survive a round trip through the parser.
+func TestStatementSubjectJSON(t *testing.T) {
+	t.Parallel()
+	annotations, err := structpb.NewStruct(map[string]any{"k": "v"})
+	require.NoError(t, err)
+	subject := &gointoto.ResourceDescriptor{
+		Name:             "n",
+		Uri:              "pkg:x",
+		Digest:           map[string]string{"sha256": "aa"},
+		Content:          []byte("hi"),
+		DownloadLocation: "https://dl.example.com/x",
+		MediaType:        "application/x-thing",
+		Annotations:      annotations,
+	}
+	stmt := NewStatement(WithSubject(subject))
+	stmt.PredicateType = "https://example.com/pred/v1"
+
+	for _, render := range []struct {
+		name string
+		fn   func() ([]byte, error)
+	}{
+		{"json.Marshal", func() ([]byte, error) { return json.Marshal(stmt) }},
+		{"ToJson", stmt.ToJson},
+	} {
+		t.Run(render.name, func(t *testing.T) {
+			t.Parallel()
+			data, err := render.fn()
+			require.NoError(t, err)
+
+			var got struct {
+				Subject []map[string]any `json:"subject"`
+			}
+			require.NoError(t, json.Unmarshal(data, &got))
+			require.Len(t, got.Subject, 1)
+			sbj := got.Subject[0]
+			require.Equal(t, "https://dl.example.com/x", sbj["downloadLocation"])
+			require.Equal(t, "application/x-thing", sbj["mediaType"])
+			require.Equal(t, "aGk=", sbj["content"])
+			require.Equal(t, map[string]any{"k": "v"}, sbj["annotations"])
+			require.NotContains(t, sbj, "download_location")
+			require.NotContains(t, sbj, "media_type")
+
+			// And the parser reads back exactly what was written
+			parsed, err := (&Parser{}).Parse(data)
+			require.NoError(t, err)
+			require.Len(t, parsed.GetSubjects(), 1)
+			back, ok := parsed.(*Statement)
+			require.True(t, ok)
+			require.True(t, proto.Equal(subject, back.Subject[0]), "subject must round-trip: %s", data)
+		})
 	}
 }
