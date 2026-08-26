@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/carabiner-dev/attestation"
+	gointoto "github.com/in-toto/attestation/go/v1"
 	"github.com/stretchr/testify/require"
 )
 
@@ -143,7 +144,9 @@ func TestSerializeKeys(t *testing.T) {
 	itt, ok := parsed.(*Statement)
 	require.True(t, ok)
 
-	// require.Equal(t, "https://in-toto.io/Statement/v1", itt.Type)
+	require.Equal(t, "https://in-toto.io/Statement/v1", itt.Type)
+	require.Empty(t, itt.Statement.GetType(), "the proto's type must be moved, not copied")
+	require.Empty(t, itt.Statement.GetPredicateType(), "the proto's predicate type must be moved, not copied")
 	require.Equal(t, attestation.PredicateType("https://carabiner.dev/ampel/policyset/v0"), itt.PredicateType)
 	require.Len(t, itt.Subject, 1)
 	require.Len(t, itt.Subject[0].Digest, 1)                                                                              //nolint:protogetter
@@ -162,4 +165,57 @@ func TestSerializeKeys(t *testing.T) {
 	require.Equal(t, "https://in-toto.io/Statement/v1", mapa["_type"])
 	_, ok = mapa["subject"]
 	require.True(t, ok)
+	require.NotContains(t, mapa, "type", "the proto's Go JSON name must not render")
+	require.NotContains(t, mapa, "predicate_type", "the proto's Go JSON name must not render")
+}
+
+// Statements must render the same in-toto JSON keys whether they are
+// written through WriteJson or marshaled directly with encoding/json, and
+// whether they were parsed or built with NewStatement. Regression test for
+// https://github.com/carabiner-dev/collector/issues/39, where a parsed
+// statement rendered "_type": "" next to "type": "<uri>".
+func TestStatementJSONKeys(t *testing.T) {
+	t.Parallel()
+	const uri = "https://in-toto.io/Statement/v1"
+	parsed, err := (&Parser{}).Parse([]byte(`{
+		"_type": "` + uri + `",
+		"predicateType": "https://in-toto.io/attestation/release/v0.1",
+		"predicate": {"tag": "v1.0"},
+		"subject": [{"uri": "pkg:github/puerco/test-immutable-releases@v1.0", "digest": {"sha1": "3ede92d1d86076be3e238618b5a54c8189668e3f"}}]
+	}`))
+	require.NoError(t, err)
+
+	built := NewStatement(
+		WithPredicate(parsed.GetPredicate()),
+		WithSubject(&gointoto.ResourceDescriptor{Uri: "pkg:x", Digest: map[string]string{"sha256": "aa"}}),
+	)
+	require.Equal(t, uri, parsed.GetType())
+	require.Equal(t, uri, built.GetType(), "a built statement must report its type too")
+	parsedStmt, ok := parsed.(*Statement)
+	require.True(t, ok)
+
+	for name, stmt := range map[string]*Statement{"parsed": parsedStmt, "built": built} {
+		for _, render := range []struct {
+			name string
+			fn   func() ([]byte, error)
+		}{
+			{"json.Marshal", func() ([]byte, error) { return json.Marshal(stmt) }},
+			{"ToJson", stmt.ToJson},
+		} {
+			t.Run(name+"/"+render.name, func(t *testing.T) {
+				t.Parallel()
+				data, err := render.fn()
+				require.NoError(t, err)
+
+				got := map[string]any{}
+				require.NoError(t, json.Unmarshal(data, &got))
+				require.Equal(t, uri, got["_type"])
+				require.Equal(t, "https://in-toto.io/attestation/release/v0.1", got["predicateType"])
+				require.NotContains(t, got, "type")
+				require.NotContains(t, got, "predicate_type")
+				require.Contains(t, got, "subject")
+				require.Contains(t, got, "predicate")
+			})
+		}
+	}
 }

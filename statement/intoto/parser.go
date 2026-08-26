@@ -40,9 +40,17 @@ func (p *Parser) Parse(b []byte) (attestation.Statement, error) {
 		return nil, attestation.ErrNotCorrectFormat
 	}
 
+	// The wrapper's own fields are the JSON-facing ones. Move the values
+	// protojson decoded into the embedded proto over to them and clear the
+	// proto's, so that encoding/json never renders the proto's Go names
+	// (type, predicate_type) next to the in-toto ones (_type, predicateType).
 	if stmt.Statement.GetPredicateType() != "" {
 		stmt.PredicateType = attestation.PredicateType(stmt.Statement.GetPredicateType())
 		stmt.Statement.PredicateType = ""
+	}
+	if stmt.Statement.GetType() != "" {
+		stmt.Type = stmt.Statement.GetType()
+		stmt.Statement.Type = ""
 	}
 
 	pdata, err := stmt.Statement.GetPredicate().MarshalJSON()
