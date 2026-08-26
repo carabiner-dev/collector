@@ -8,10 +8,9 @@ import (
 
 	"github.com/carabiner-dev/attestation"
 	"github.com/carabiner-dev/signer"
-	sapi "github.com/carabiner-dev/signer/api/v1"
 	"github.com/carabiner-dev/signer/key"
+	"github.com/carabiner-dev/signer/options"
 	sigstoreProtoDSSE "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
-	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/carabiner-dev/collector/statement"
 )
@@ -51,18 +50,28 @@ func (env *Envelope) GetCertificate() attestation.Certificate {
 	return nil
 }
 
-// Verify checks the payload using the supplied signatures. The function takes
-// either a slice of, or individual key.PublicKeyProvider objects. For more
-// information see the carabiner signer public key library:
+// Verify checks the envelope signatures against the supplied public keys
+// and records the conclusion in the predicate's verification data. The
+// function takes either a slice of, or individual key.PublicKeyProvider
+// objects. For more information see the carabiner signer public key
+// library:
 //
 //	https://github.com/carabiner-dev/signer/blob/main/key/public.go
 //
-// No signatures should not return an error, a verification status is returned
-// but without any identities matched.
+// Every conclusion is recorded, not only success: an envelope without
+// signatures, one verified without any keys to check against, and one
+// whose signatures match none of the keys all leave a Verification whose
+// status says so. An error is returned only when no conclusion could be
+// reached, for example when a key cannot be read.
 func (env *Envelope) Verify(args ...any) error {
-	if env.GetPredicate() == nil {
+	pred := env.GetPredicate()
+	if pred == nil {
 		return fmt.Errorf("unable to set verification, envelope has no predicate")
 	}
+	if env.Envelope == nil {
+		return fmt.Errorf("unable to verify, envelope has no DSSE data")
+	}
+
 	// Prepare the keys to verify
 	keys := []key.PublicKeyProvider{}
 	for _, a := range args {
@@ -76,37 +85,19 @@ func (env *Envelope) Verify(args ...any) error {
 		}
 	}
 
-	var ids []*sapi.Identity
-	verifier := signer.NewVerifier()
-	res, err := verifier.VerifyParsedDSSE(env.Envelope, keys)
+	verification, err := signer.NewVerifier().VerifyStatement(
+		&signer.EnvelopeArtifact{Envelope: env.Envelope},
+		options.WithPublicKeys(keys...),
+	)
 	if err != nil {
-		return err
-	}
-
-	// If verification passed, add the key identities
-	if res.Verified {
-		for _, k := range res.Keys {
-			ids = append(ids, &sapi.Identity{
-				Key: &sapi.IdentityKey{
-					Id:   k.ID(), // Not implemented yet
-					Type: string(k.Scheme),
-					Data: k.Data,
-				},
-			})
-		}
+		return fmt.Errorf("verifying DSSE signatures: %w", err)
 	}
 
 	// Set the verification in the predicate
-	env.GetPredicate().SetVerification(&sapi.Verification{
-		Signature: &sapi.SignatureVerification{
-			Date:       timestamppb.Now(),
-			Verified:   len(ids) > 0,
-			Identities: ids,
-		},
-	})
+	pred.SetVerification(verification)
 
 	// Ensure the predicate has the verificationd data
-	if env.GetPredicate().GetVerification() == nil {
+	if pred.GetVerification() == nil {
 		return fmt.Errorf("unable to fixate signature verification result in predicate")
 	}
 	return nil

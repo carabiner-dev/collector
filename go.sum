@@ -110,8 +110,6 @@ github.com/carabiner-dev/predicates v0.5.0 h1:CG2xO5xTXWXakjJkAFuS2xSA2olP9Ew25k
 github.com/carabiner-dev/predicates v0.5.0/go.mod h1:EUm2p0CwKoUuc+OLbGkoxLdRqBrg/r957b8iN/ACWSA=
 github.com/carabiner-dev/sbomfs v0.1.0 h1:gEsmn85hod7JTLs2dDr5C1x4Af7FUEhI0lbTurNaEZs=
 github.com/carabiner-dev/sbomfs v0.1.0/go.mod h1:UyPyTSNx9JOLZVgTmM9WXdmgVqDWXCYwr1LK1Ts+7H0=
-github.com/carabiner-dev/signer v0.5.4 h1:DbKkbDjWw6NnbasSlZTCeDccr1Nllo4XJJPsMYJfNgA=
-github.com/carabiner-dev/signer v0.5.4/go.mod h1:/huBz9aZZ/kKX1hY5Tvhk0a+2MRUDuOyjB11TMDk6kQ=
 github.com/carabiner-dev/spdx3 v0.1.0 h1:Q6nMLXV0BhtqDQuwRDOaJDZR670TK4jdOvZqvTW/ctY=
 github.com/carabiner-dev/spdx3 v0.1.0/go.mod h1:d/t010TrZvYZBeYGpvHeId6QpRvGLlqK7cy0E81npPA=
 github.com/carabiner-dev/stash v0.0.0-20260716192412-e2fe293d76a5 h1:ZPlLrqZAZLf8iuJAReJjOTHM8gL3BeVpXtto5+KRDm0=

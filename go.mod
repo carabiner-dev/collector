@@ -165,3 +165,5 @@ require (
 	gotest.tools/v3 v3.5.2 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
 )
+
+replace github.com/carabiner-dev/signer => /home/urbano/.claude/jobs/51f4c26f/tmp/signer-verify-statement
