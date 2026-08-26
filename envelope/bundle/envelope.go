@@ -4,20 +4,15 @@
 package bundle
 
 import (
-	"crypto/x509"
 	"fmt"
 
 	"github.com/carabiner-dev/attestation"
 	"github.com/carabiner-dev/signer"
-	sapi "github.com/carabiner-dev/signer/api/v1"
 	"github.com/carabiner-dev/signer/options"
 	sigstore "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
-	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
-	"github.com/sigstore/sigstore-go/pkg/fulcio/certificate"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/carabiner-dev/collector/envelope/dsse"
 	"github.com/carabiner-dev/collector/statement/intoto"
@@ -100,112 +95,47 @@ func (env *Envelope) GetVerification() attestation.Verification {
 	return env.GetStatement().GetVerification()
 }
 
-// Verify checks the bundle signatures and generatesit Verification data.
-// If the envelope is already verified, the signatures are not verified
-// again.
+// Verify checks the bundle signatures against the sigstore or SPIFFE trust
+// material configured in the signer library and records the conclusion in
+// the predicate's verification data. Every conclusion is recorded, not
+// only success: an unsigned envelope, a bundle no configured verifier can
+// check, and a bundle whose signatures do not verify all leave a
+// Verification whose status says so. An error is returned only when no
+// conclusion could be reached.
+//
+// Signer identities are not matched here; the policy checks them at
+// evaluation time against the identities recorded in the verification.
+// If the bundle already carries a successful verification, the signatures
+// are not verified again.
 func (e *Envelope) Verify(_ ...any) error {
 	// If the bundle is already verified, don't retry
-	if e.GetVerification() != nil {
+	if v := e.GetVerification(); v != nil && v.GetVerified() {
 		return nil
 	}
+	pred := e.GetPredicate()
+	if pred == nil {
+		return fmt.Errorf("unable to set verification, bundle has no predicate")
+	}
 
-	// Verify the sigstore signatures
-	verifier := signer.NewVerifier()
-
-	// We skip the identity verification as the policy chekcs it at runtime:
-	verifier.Options.SkipIdentityCheck = true
-
-	// Verify the bundle. We discard the result for now as it does not include
-	// the signature. We may capture it at some point.
-	if _, err := verifier.VerifyParsedBundle(
-		&sgbundle.Bundle{Bundle: &e.Bundle},
+	verification, err := signer.NewVerifier().VerifyStatement(
+		&signer.BundleArtifact{Bundle: &sgbundle.Bundle{Bundle: &e.Bundle}},
 		options.WithSkipIdentityCheck(true),
-	); err != nil {
+	)
+	if err != nil {
 		return fmt.Errorf("verifying sigstore signatures: %w", err)
 	}
 
-	if e.GetVerificationMaterial() == nil {
-		return fmt.Errorf("no verification material found in bundle")
+	sig := verification.GetSignature()
+	logrus.Debugf("Bundle signature verification: %s", sig.GetStatus())
+	for _, id := range sig.GetIdentities() {
+		logrus.Debugf("  Signer: %s", id.Principal())
+	}
+	if !sig.GetVerified() {
+		logrus.Debugf("  Reason: %s", sig.GetError())
 	}
 
-	// Fetch the cert, depending on the verification material, it may
-	// be in the chain or just the certificate.
-	var cert *protocommon.X509Certificate
-	if c := e.Bundle.GetVerificationMaterial().GetCertificate(); c != nil {
-		cert = c
-	}
-
-	if chain := e.Bundle.GetVerificationMaterial().GetX509CertificateChain(); cert == nil && chain != nil && len(chain.GetCertificates()) > 0 {
-		cert = chain.GetCertificates()[0]
-	}
-
-	if cert == nil {
-		return fmt.Errorf("no certificate found in bundle")
-	}
-
-	x509cert, err := x509.ParseCertificate(cert.GetRawBytes())
-	if err != nil {
-		return fmt.Errorf("parsing cert: %w", err)
-	}
-
-	summary, err := certificate.SummarizeCertificate(x509cert)
-	if err != nil {
-		return fmt.Errorf("summarizing cert: %w", err)
-	}
-
-	logrus.Debug("Parsed sigstore cert data:")
-	logrus.Debugf("  OIDC issuer:  %s", summary.Issuer)
-	logrus.Debugf("  Cert SAN:     %s", summary.SubjectAlternativeName)
-	logrus.Debugf("  Cert Issuer:  %s", summary.CertificateIssuer)
-
-	// Pick the identity shape that matches what the leaf actually
-	// carries. A SPIFFE SVID puts the workload's spiffe:// URI in the
-	// cert's URI SANs; Fulcio puts the OIDC issuer + identity values
-	// summarized above. Emitting a Sigstore identity for a SPIFFE-
-	// signed bundle would silently fail policy.identities matching
-	// because policies pin on the variant that matches the actual
-	// signer (trust_domain_match vs OIDC issuer).
-	identity := &sapi.Identity{
-		Sigstore: &sapi.IdentitySigstore{
-			Issuer:              summary.Issuer,
-			Identity:            summary.SubjectAlternativeName,
-			SourceRepositoryUri: summary.SourceRepositoryURI,
-		},
-	}
-	if svid := spiffeURIFromCert(x509cert); svid != "" {
-		identity = &sapi.Identity{
-			Spiffe: &sapi.IdentitySpiffe{
-				Svid: svid,
-			},
-		}
-	}
-
-	// Register the verification data
-	e.GetPredicate().SetVerification(&sapi.Verification{
-		Signature: &sapi.SignatureVerification{
-			Date:       timestamppb.Now(),
-			Verified:   true,
-			Identities: []*sapi.Identity{identity},
-		},
-	})
-
+	pred.SetVerification(verification)
 	return nil
-}
-
-// spiffeURIFromCert returns the first spiffe:// URI SAN found on the
-// leaf certificate, or "" if none is present. Used to choose between
-// the Sigstore / SPIFFE identity shapes when registering verified
-// signers on a parsed bundle envelope.
-func spiffeURIFromCert(cert *x509.Certificate) string {
-	if cert == nil {
-		return ""
-	}
-	for _, u := range cert.URIs {
-		if u != nil && u.Scheme == "spiffe" {
-			return u.String()
-		}
-	}
-	return ""
 }
 
 // MarshalJSON implements the json.Marshaler interface by wrapping the protojson

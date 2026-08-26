@@ -1,11 +1,11 @@
 package dsse
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 
+	sapi "github.com/carabiner-dev/signer/api/v1"
 	"github.com/carabiner-dev/signer/key"
 	"github.com/stretchr/testify/require"
 )
@@ -29,14 +29,16 @@ hDjayw2lL6wkyR9k1vWICQYbe4FqOZeulBbfWBU7/BKdtlwKRStEVEffvg==
 	for _, tt := range []struct {
 		name         string
 		mustFail     bool
-		mustVerify   bool
 		envelopePath string
 		keys         []key.PublicKeyProvider
+		unsign       bool
+		wantStatus   sapi.VerificationStatus
 	}{
-		{"good-key", false, true, "rebuild.intoto.json", []key.PublicKeyProvider{goodKey}},
-		{"bad-key", false, false, "rebuild.intoto.json", []key.PublicKeyProvider{badKey}},
-		{"both-keys", false, true, "rebuild.intoto.json", []key.PublicKeyProvider{badKey, goodKey}},
-		{"no-keys", false, false, "rebuild.intoto.json", []key.PublicKeyProvider{}},
+		{"good-key", false, "rebuild.intoto.json", []key.PublicKeyProvider{goodKey}, false, sapi.VerificationStatus_VERIFIED},
+		{"bad-key", false, "rebuild.intoto.json", []key.PublicKeyProvider{badKey}, false, sapi.VerificationStatus_FAILED},
+		{"both-keys", false, "rebuild.intoto.json", []key.PublicKeyProvider{badKey, goodKey}, false, sapi.VerificationStatus_VERIFIED},
+		{"no-keys", false, "rebuild.intoto.json", []key.PublicKeyProvider{}, false, sapi.VerificationStatus_UNVERIFIABLE},
+		{"unsigned", false, "rebuild.intoto.json", []key.PublicKeyProvider{goodKey}, true, sapi.VerificationStatus_UNSIGNED},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
@@ -45,26 +47,39 @@ hDjayw2lL6wkyR9k1vWICQYbe4FqOZeulBbfWBU7/BKdtlwKRStEVEffvg==
 			require.NoError(t, err)
 			envelopes, err := dsseParser.ParseStream(f)
 			require.NoError(t, err)
+			env, ok := envelopes[0].(*Envelope)
+			require.True(t, ok)
+			if tt.unsign {
+				env.Envelope.Signatures = nil
+				env.Signatures = nil
+			}
 
-			fmt.Printf("%+v\n", envelopes[0])
-			err = envelopes[0].Verify(tt.keys)
+			err = env.Verify(tt.keys)
 			if tt.mustFail {
 				require.Error(t, err)
 				return
 			}
 			require.NoError(t, err)
 
-			// Check the results
-			verification := envelopes[0].GetVerification()
+			// Every conclusion is recorded, whichever way it went
+			verification := env.GetVerification()
 			require.NotNil(t, verification)
+			sv, ok := verification.(*sapi.Verification)
+			require.True(t, ok)
+			require.Equal(t, tt.wantStatus, sv.GetSignature().GetStatus())
+			require.Equal(t, tt.wantStatus == sapi.VerificationStatus_VERIFIED, verification.GetVerified())
 
-			if !tt.mustVerify {
-				require.False(t, verification.GetVerified())
+			if tt.wantStatus != sapi.VerificationStatus_VERIFIED {
+				require.NotEmpty(t, sv.GetSignature().GetError())
+				require.Empty(t, sv.GetSignature().GetIdentities())
 				return
 			}
 
-			require.True(t, verification.GetVerified())
-			// Check identity
+			// Check identity: the good key must be the recorded signer
+			require.Len(t, sv.GetSignature().GetIdentities(), 1)
+			require.Equal(t, goodKey.ID(), sv.GetSignature().GetIdentities()[0].GetKey().GetId())
+			require.True(t, verification.MatchesIdentity(&sapi.Identity{Key: &sapi.IdentityKey{Id: goodKey.ID()}}))
+			require.False(t, verification.MatchesIdentity(&sapi.Identity{Key: &sapi.IdentityKey{Id: badKey.ID()}}))
 		})
 	}
 }

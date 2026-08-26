@@ -45,6 +45,13 @@ func (p *Parser) Parse(data []byte) (attestation.Predicate, error) {
 		return nil, attestation.ErrNotCorrectFormat
 	}
 
+	// This parser handles SPDX 2 only. The sniffer also recognizes SPDX 3
+	// documents, which the spdx3 parser owns; decline them here so that
+	// which parser claims a document does not depend on dispatch order.
+	if format.Major() != "2" {
+		return nil, attestation.ErrNotCorrectFormat
+	}
+
 	pred, err := json.New(json.WithJson(data), json.WithType(PredicateType))
 	if err != nil {
 		return nil, err

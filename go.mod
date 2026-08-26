@@ -11,8 +11,8 @@ require (
 	github.com/carabiner-dev/openeox v1.0.0
 	github.com/carabiner-dev/osv v0.1.2
 	github.com/carabiner-dev/predicates v0.5.0
-	github.com/carabiner-dev/sbomfs v0.1.0
-	github.com/carabiner-dev/signer v0.5.4
+	github.com/carabiner-dev/sbomfs v0.2.0
+	github.com/carabiner-dev/signer v0.6.0
 	github.com/carabiner-dev/spdx3 v0.1.0
 	github.com/carabiner-dev/stash v0.0.0-20260716192412-e2fe293d76a5
 	github.com/carabiner-dev/vcslocator v0.4.7
@@ -31,7 +31,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/openvex/go-vex v0.2.8
 	github.com/package-url/packageurl-go v0.1.7
-	github.com/protobom/protobom v0.5.8
+	github.com/protobom/protobom v0.6.0
 	github.com/regclient/regclient v0.11.5
 	github.com/sigstore/gitsign v0.16.0
 	github.com/sigstore/protobuf-specs v0.5.2
@@ -41,7 +41,7 @@ require (
 	github.com/sirupsen/logrus v1.10.1
 	github.com/stretchr/testify v1.12.1
 	google.golang.org/protobuf v1.36.12
-	sigs.k8s.io/release-utils v0.12.4
+	sigs.k8s.io/release-utils v0.12.5-0.20260825061901-4f1f891011bb
 )
 
 require (
