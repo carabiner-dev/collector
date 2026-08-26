@@ -121,8 +121,8 @@ func (c *Collector) fetchRekorTlogEntries(ctx context.Context, digestHex string)
 		return nil, fmt.Errorf("creating rekor client: %w", err)
 	}
 
-	res, err := rc.Index.SearchIndex(
-		rekorindex.NewSearchIndexParamsWithContext(ctx).
+	res, err := rc.Index.SearchIndexContext(ctx,
+		rekorindex.NewSearchIndexParams().
 			WithQuery(&rekormodels.SearchIndex{Hash: "sha256:" + digestHex}),
 	)
 	if err != nil {
@@ -131,8 +131,8 @@ func (c *Collector) fetchRekorTlogEntries(ctx context.Context, digestHex string)
 
 	var tlogs []*protorekor.TransparencyLogEntry
 	for _, uuid := range res.Payload {
-		entry, err := rc.Entries.GetLogEntryByUUID(
-			rekorentries.NewGetLogEntryByUUIDParamsWithContext(ctx).WithEntryUUID(uuid),
+		entry, err := rc.Entries.GetLogEntryByUUIDContext(ctx,
+			rekorentries.NewGetLogEntryByUUIDParams().WithEntryUUID(uuid),
 		)
 		if err != nil {
 			logrus.Debugf("fetching rekor entry %s: %v", uuid, err)

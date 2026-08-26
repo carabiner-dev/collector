@@ -815,9 +815,8 @@ func (c *Collector) lookupTlogEntry(ctx context.Context, leaf *x509.Certificate,
 
 	// Search the log index by the artifact digest (the hashedrekord data.hash).
 	searchParams := index.NewSearchIndexParams().
-		WithContext(ctx).
 		WithQuery(&models.SearchIndex{Hash: "sha256:" + hex.EncodeToString(digest)})
-	searchResp, err := client.Index.SearchIndex(searchParams)
+	searchResp, err := client.Index.SearchIndexContext(ctx, searchParams)
 	if err != nil {
 		return nil, fmt.Errorf("searching rekor index: %w", err)
 	}
@@ -828,9 +827,8 @@ func (c *Collector) lookupTlogEntry(ctx context.Context, leaf *x509.Certificate,
 
 	for _, uuid := range uuids {
 		getParams := entries.NewGetLogEntryByUUIDParams().
-			WithContext(ctx).
 			WithEntryUUID(uuid)
-		entryResp, err := client.Entries.GetLogEntryByUUID(getParams)
+		entryResp, err := client.Entries.GetLogEntryByUUIDContext(ctx, getParams)
 		if err != nil {
 			logrus.Debugf("gitsign: fetching rekor entry %s: %v", uuid, err)
 			continue
@@ -875,9 +873,8 @@ func (c *Collector) lookupLegacyTlogEntry(ctx context.Context, leaf *x509.Certif
 	}
 
 	searchParams := index.NewSearchIndexParams().
-		WithContext(ctx).
 		WithQuery(&models.SearchIndex{Hash: "sha256:" + hex.EncodeToString(artifactDigest[:])})
-	searchResp, err := client.Index.SearchIndex(searchParams)
+	searchResp, err := client.Index.SearchIndexContext(ctx, searchParams)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("searching rekor index: %w", err)
 	}
@@ -888,9 +885,8 @@ func (c *Collector) lookupLegacyTlogEntry(ctx context.Context, leaf *x509.Certif
 
 	for _, uuid := range uuids {
 		getParams := entries.NewGetLogEntryByUUIDParams().
-			WithContext(ctx).
 			WithEntryUUID(uuid)
-		entryResp, err := client.Entries.GetLogEntryByUUID(getParams)
+		entryResp, err := client.Entries.GetLogEntryByUUIDContext(ctx, getParams)
 		if err != nil {
 			logrus.Debugf("gitsign: fetching legacy rekor entry %s: %v", uuid, err)
 			continue
