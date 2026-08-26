@@ -4,6 +4,7 @@
 package dsse
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/carabiner-dev/attestation"
@@ -11,6 +12,7 @@ import (
 	"github.com/carabiner-dev/signer/key"
 	"github.com/carabiner-dev/signer/options"
 	sigstoreProtoDSSE "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/carabiner-dev/collector/statement"
 )
@@ -109,6 +111,19 @@ func (env *Envelope) GetVerification() attestation.Verification {
 		return nil
 	}
 	return env.GetStatement().GetVerification()
+}
+
+// MarshalJSON implements the json.Marshaler interface by wrapping the
+// protojson package, so the envelope renders in its DSSE JSON form
+// (payload, payloadType and signatures with sig and keyid). Without it,
+// encoding/json would render the wrapper's Signatures field, whose Go
+// names are not the DSSE ones, and a parser reading the output back would
+// keep the signature count but lose their contents.
+func (env *Envelope) MarshalJSON() ([]byte, error) {
+	if env.Envelope == nil {
+		return nil, errors.New("unable to marshal, envelope has no DSSE data")
+	}
+	return protojson.Marshal(env.Envelope)
 }
 
 // Signature is a clone of the dsse signature struct that can be copied around
