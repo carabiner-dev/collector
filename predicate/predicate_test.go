@@ -4,12 +4,15 @@
 package predicate
 
 import (
+	"os"
 	"testing"
 
 	"github.com/carabiner-dev/attestation"
+	protoOSV "github.com/carabiner-dev/osv/go/osv"
 	"github.com/stretchr/testify/require"
 
 	"github.com/carabiner-dev/collector/predicate/json"
+	"github.com/carabiner-dev/collector/predicate/osv"
 	"github.com/carabiner-dev/collector/predicate/spdx"
 	"github.com/carabiner-dev/collector/predicate/spdx3"
 )
@@ -27,6 +30,28 @@ const spdx3Doc = `{
   ]
 }`
 
+// TestGetTypeParsersLegacyOSVType ensures that a @v1.6.7 type hint selects the
+// OSV parser (registered under @v1) via SupportsType, so the predicate is
+// returned as *osv.Results and not as a generic DataMap.
+func TestGetTypeParsersLegacyOSVType(t *testing.T) {
+	t.Parallel()
+	data := mustReadFile(t, "osv/testdata/osv-scan-2.0.0.json")
+	pred, err := Parsers.Parse(data, WithTypeHints([]attestation.PredicateType{
+		"https://ossf.github.io/osv-schema/results@v1.6.7",
+	}))
+	require.NoError(t, err)
+	require.NotNil(t, pred)
+	_, ok := pred.GetParsed().(*protoOSV.Results)
+	require.True(t, ok, "expected *osv.Results, got %T", pred.GetParsed())
+}
+
+func mustReadFile(t *testing.T, path string) []byte {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+	return data
+}
+
 func TestParse(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct {
@@ -42,6 +67,16 @@ func TestParse(t *testing.T) {
 		{"spdx3-type-hint", []byte(spdx3Doc), []ParseOption{WithTypeHints([]attestation.PredicateType{spdx3.PredicateType})}, spdx3.PredicateType, false},
 		// SPDX 2 keeps routing to its own parser, not the SPDX 3 one.
 		{"spdx2", []byte(`{"spdxVersion":"SPDX-2.3","SPDXID":"SPDXRef-DOCUMENT","name":"example"}`), nil, spdx.PredicateType, false},
+		// Legacy @v1.6.7 type hint must select the OSV parser (registered as @v1).
+		// Regression test for GetTypeParsers ignoring SupportsType.
+		{
+			name: "osv-legacy-type-hint",
+			data: mustReadFile(t, "osv/testdata/osv-scan-2.0.0.json"),
+			options: []ParseOption{
+				WithTypeHints([]attestation.PredicateType{"https://ossf.github.io/osv-schema/results@v1.6.7"}),
+			},
+			expectType: osv.PredicateType,
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
