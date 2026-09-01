@@ -112,6 +112,8 @@ github.com/carabiner-dev/sbomfs v0.2.0 h1:7OG0Su6iz9sPWcAFzSsaauVZQpKayzrJvGWe0N
 github.com/carabiner-dev/sbomfs v0.2.0/go.mod h1:KaTNcHjm5qbu5G0RCc/7uo3U1KZj1IqRZLFiG+nwC8g=
 github.com/carabiner-dev/signer v0.6.1 h1:3GnpNt16Qzw476lgCGMZRThtofTy7Ke1A60HqNboWnc=
 github.com/carabiner-dev/signer v0.6.1/go.mod h1:dg1OvK3lTePsPrbvoBZO5SBt0DHd2/NLdM2wfB2/4/8=
+github.com/carabiner-dev/signer v0.6.2-0.20260901235141-7abffe0fc666 h1:YMToHatLXJK1205jRGyfVZcBFrgUN+u/3ytCb+uRnL0=
+github.com/carabiner-dev/signer v0.6.2-0.20260901235141-7abffe0fc666/go.mod h1:Vhx/hRcLL4pxnDTofmDZAkLuUmMlTvo3dYqvgfB2FA0=
 github.com/carabiner-dev/spdx3 v0.1.0 h1:Q6nMLXV0BhtqDQuwRDOaJDZR670TK4jdOvZqvTW/ctY=
 github.com/carabiner-dev/spdx3 v0.1.0/go.mod h1:d/t010TrZvYZBeYGpvHeId6QpRvGLlqK7cy0E81npPA=
 github.com/carabiner-dev/stash v0.0.0-20260716192412-e2fe293d76a5 h1:ZPlLrqZAZLf8iuJAReJjOTHM8gL3BeVpXtto5+KRDm0=
