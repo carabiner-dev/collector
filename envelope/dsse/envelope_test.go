@@ -86,6 +86,59 @@ hDjayw2lL6wkyR9k1vWICQYbe4FqOZeulBbfWBU7/BKdtlwKRStEVEffvg==
 	}
 }
 
+// Verify sorts its arguments by type. Anything it does not recognize must
+// be an error: dropping it would run the verification against no keys and
+// hand the caller a conclusion about a check that never happened. This is
+// exactly what happened to a caller passing raw crypto public keys.
+func TestVerifyRejectsUnsupportedKeyArguments(t *testing.T) {
+	t.Parallel()
+	goodKey, err := key.NewParser().ParsePublicKey([]byte(`-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEXkyL5IFxz/Hg6DwUy0HBumXcMxt9
+nQSECAK6r262hPwIzjd6LpE7IPlUbwgheE87vU8EUE9tsS02MShFZGo1gg==
+-----END PUBLIC KEY-----`))
+	require.NoError(t, err)
+
+	for _, tt := range []struct {
+		name       string
+		args       []any
+		wantErr    string
+		wantStatus sapi.VerificationStatus
+	}{
+		// Any key provider is accepted on its own, not just the concrete
+		// signer key types.
+		{"provider", []any{goodKey}, "", sapi.VerificationStatus_VERIFIED},
+		{"provider-slice", []any{[]key.PublicKeyProvider{goodKey}}, "", sapi.VerificationStatus_VERIFIED},
+		// A raw crypto key is not a provider.
+		{"crypto-key", []any{goodKey.Key}, "*ecdsa.PublicKey", 0},
+		// Nor is a slice of any, even one holding providers.
+		{"any-slice", []any{[]any{goodKey}}, "[]interface {}", 0},
+		{"nil", []any{nil}, "<nil>", 0},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			f, err := os.Open(filepath.Join("testdata", "rebuild.intoto.json"))
+			require.NoError(t, err)
+			dsseParser := Parser{}
+			envelopes, err := dsseParser.ParseStream(f)
+			require.NoError(t, err)
+			env, ok := envelopes[0].(*Envelope)
+			require.True(t, ok)
+
+			err = env.Verify(tt.args...)
+			if tt.wantErr != "" {
+				require.ErrorContains(t, err, tt.wantErr)
+				// No conclusion was reached, so none must be recorded
+				require.Nil(t, env.GetVerification())
+				return
+			}
+			require.NoError(t, err)
+			sv, ok := env.GetVerification().(*sapi.Verification)
+			require.True(t, ok)
+			require.Equal(t, tt.wantStatus, sv.GetSignature().GetStatus())
+		})
+	}
+}
+
 // A marshaled envelope must be DSSE JSON: parsing it back must yield the
 // same signatures, and they must still verify. Regression test for
 // https://github.com/carabiner-dev/collector/issues/18.

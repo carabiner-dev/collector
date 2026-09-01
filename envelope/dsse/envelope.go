@@ -64,7 +64,10 @@ func (env *Envelope) GetCertificate() attestation.Certificate {
 // signatures, one verified without any keys to check against, and one
 // whose signatures match none of the keys all leave a Verification whose
 // status says so. An error is returned only when no conclusion could be
-// reached, for example when a key cannot be read.
+// reached, for example when a key cannot be read, or when an argument is
+// not a key provider: a caller passing keys in a form Verify does not
+// understand must hear about it, not have them dropped and the
+// signatures checked against nothing.
 func (env *Envelope) Verify(args ...any) error {
 	pred := env.GetPredicate()
 	if pred == nil {
@@ -80,10 +83,12 @@ func (env *Envelope) Verify(args ...any) error {
 		switch vm := a.(type) {
 		case []key.PublicKeyProvider:
 			keys = append(keys, vm...)
-		case *key.Private:
+		case key.PublicKeyProvider:
 			keys = append(keys, vm)
-		case *key.Public:
-			keys = append(keys, vm)
+		default:
+			return fmt.Errorf(
+				"unsupported key argument of type %T: Verify takes key.PublicKeyProvider values or a slice of them", a,
+			)
 		}
 	}
 
