@@ -74,15 +74,30 @@ func TestFetch(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			c := &Collector{
-				Options: Options{
-					Reference: tt.ref,
-				},
-			}
+			c, err := New(WithReference(tt.ref))
+			require.NoError(t, err)
 
 			atts, err := c.Fetch(t.Context(), attestation.FetchOptions{})
 			require.NoError(t, err)
 			require.Len(t, atts, tt.expectedAtts)
 		})
 	}
+}
+
+func TestReadOptionsDefaultOn(t *testing.T) {
+	t.Parallel()
+	c, err := New(WithReference("example.com/repo:v1"))
+	require.NoError(t, err)
+	require.True(t, c.Options.ReadAttestations)
+	require.True(t, c.Options.ReadSignatures)
+	require.True(t, c.Options.ReadSBOMs)
+
+	c, err = New(
+		WithReference("example.com/repo:v1"),
+		WithReadAttestations(false), WithReadSignatures(false), WithReadSBOMs(false),
+	)
+	require.NoError(t, err)
+	require.False(t, c.Options.ReadAttestations)
+	require.False(t, c.Options.ReadSignatures)
+	require.False(t, c.Options.ReadSBOMs)
 }

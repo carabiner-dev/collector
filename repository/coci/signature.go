@@ -19,7 +19,6 @@ import (
 	"github.com/carabiner-dev/signer/key"
 	"github.com/google/go-containerregistry/pkg/crane"
 	ggcr "github.com/google/go-containerregistry/pkg/v1"
-	gointoto "github.com/in-toto/attestation/go/v1"
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	sbundle "github.com/sigstore/sigstore-go/pkg/bundle"
@@ -189,17 +188,10 @@ func buildSignatureBundleEnvelope(imageInfo *ImageInfo, material *protobundle.Ve
 		return nil, err
 	}
 
-	hexDigest, ok := strings.CutPrefix(imageInfo.Digest, "sha256:")
-	if !ok {
-		return nil, fmt.Errorf("unsupported digest format: %s", imageInfo.Digest)
-	}
-
 	// Build the synthetic statement that the envelope will serve
-	rd := &gointoto.ResourceDescriptor{
-		Name: imageInfo.Repository,
-		Digest: map[string]string{
-			"sha256": hexDigest,
-		},
+	rd, err := imageSubject(imageInfo)
+	if err != nil {
+		return nil, err
 	}
 
 	pred := &generic.Predicate{
@@ -404,16 +396,9 @@ func (c *Collector) verifyWithKeys(payload, sigData []byte) (*sapi.Verification,
 // buildSignatureVirtualAttestation creates a virtual attestation for a verified
 // cosign signature layer.
 func buildSignatureVirtualAttestation(imageInfo *ImageInfo, payload []byte, verification *sapi.Verification) (attestation.Envelope, error) {
-	hexDigest, ok := strings.CutPrefix(imageInfo.Digest, "sha256:")
-	if !ok {
-		return nil, fmt.Errorf("unsupported digest format: %s", imageInfo.Digest)
-	}
-
-	rd := &gointoto.ResourceDescriptor{
-		Name: imageInfo.Repository,
-		Digest: map[string]string{
-			"sha256": hexDigest,
-		},
+	rd, err := imageSubject(imageInfo)
+	if err != nil {
+		return nil, err
 	}
 
 	pred := &generic.Predicate{

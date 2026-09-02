@@ -111,6 +111,12 @@ type (
 	Options struct {
 		Reference string
 		craneOpts []crane.Option
+
+		// The three tags cosign's legacy layout hangs off an image digest,
+		// each of which can be switched off. All are read by default.
+		ReadAttestations bool // `.att`: DSSE attestation layers
+		ReadSignatures   bool // `.sig`: cosign signature layers
+		ReadSBOMs        bool // `.sbom`: SBOM document layers
 	}
 )
 
@@ -135,11 +141,42 @@ func WithCraneOpts(opts ...crane.Option) optFn {
 	}
 }
 
+// WithReadAttestations controls whether the `.att` attestation layers are
+// read. On by default.
+func WithReadAttestations(doit bool) optFn {
+	return func(o *Options) error {
+		o.ReadAttestations = doit
+		return nil
+	}
+}
+
+// WithReadSignatures controls whether the `.sig` signature layers are read.
+// On by default.
+func WithReadSignatures(doit bool) optFn {
+	return func(o *Options) error {
+		o.ReadSignatures = doit
+		return nil
+	}
+}
+
+// WithReadSBOMs controls whether the `.sbom` SBOM layers are read. On by
+// default.
+func WithReadSBOMs(doit bool) optFn {
+	return func(o *Options) error {
+		o.ReadSBOMs = doit
+		return nil
+	}
+}
+
 func (o *Options) Validate() error {
 	return nil
 }
 
-var defaultOptions = Options{}
+var defaultOptions = Options{
+	ReadAttestations: true,
+	ReadSignatures:   true,
+	ReadSBOMs:        true,
+}
 
 type Collector struct {
 	Options Options
@@ -170,22 +207,35 @@ func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([
 		return nil, err
 	}
 
-	// Fetch .att attestation layers and .sig signature layers concurrently.
+	// Fetch the enabled tags (.att attestation layers, .sig signature
+	// layers and .sbom SBOM layers) concurrently.
 	var (
-		attAtts, sigAtts []attestation.Envelope
-		attErr, sigErr   error
-		wg               sync.WaitGroup
+		attAtts, sigAtts, sbomAtts []attestation.Envelope
+		attErr, sigErr, sbomErr    error
+		wg                         sync.WaitGroup
 	)
 
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
-		attAtts, attErr = c.fetchAttestationLayers(ctx, opts, imageInfo)
-	}()
-	go func() {
-		defer wg.Done()
-		sigAtts, sigErr = c.fetchSignatures(ctx, opts, imageInfo)
-	}()
+	if c.Options.ReadAttestations {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			attAtts, attErr = c.fetchAttestationLayers(ctx, opts, imageInfo)
+		}()
+	}
+	if c.Options.ReadSignatures {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sigAtts, sigErr = c.fetchSignatures(ctx, opts, imageInfo)
+		}()
+	}
+	if c.Options.ReadSBOMs {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sbomAtts, sbomErr = c.fetchSBOMLayers(ctx, opts, imageInfo)
+		}()
+	}
 	wg.Wait()
 
 	if attErr != nil {
@@ -197,6 +247,11 @@ func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([
 		logrus.Debugf("coci: fetching .sig image: %v", sigErr)
 	} else {
 		atts = append(atts, sigAtts...)
+	}
+	if sbomErr != nil {
+		logrus.Debugf("coci: fetching .sbom image: %v", sbomErr)
+	} else {
+		atts = append(atts, sbomAtts...)
 	}
 
 	return atts, nil

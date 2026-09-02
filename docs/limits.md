@@ -42,7 +42,7 @@ agent, _ := collector.New(
 |-----------|-------------|
 | **github** | HTTP response body wrapped with `io.LimitReader` before JSON decoding |
 | **http** | Response byte-slice length checked against the limit after download |
-| **coci** | OCI layer blob wrapped with `io.LimitReader` before protobuf unmarshal |
+| **coci** | OCI layer blob wrapped with `io.LimitReader` before parsing (DSSE, signature and SBOM layers) |
 | **jsonl** | File reader wrapped with `io.LimitReader` before JSONL iteration |
 | **note** | Git notes reader wrapped with `io.LimitReader` before JSONL iteration |
 | **filesystem** | File size checked via `DirEntry.Info()` before reading |
