@@ -151,7 +151,7 @@ func (c *Collector) openOrCloneRepoForNotes(components *vcslocator.Components) (
 	})
 	if err != nil && !errors.Is(err, git.NoErrAlreadyUpToDate) {
 		// Notes ref may not exist yet, which is fine
-		if !strings.Contains(err.Error(), "couldn't find remote ref") {
+		if !errors.Is(err, git.NoMatchingRefSpecError{}) {
 			return nil, fmt.Errorf("fetching notes: %w", err)
 		}
 	}
