@@ -5,6 +5,7 @@ package dsse
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 
@@ -38,9 +39,29 @@ func (p *Parser) ParseStream(r io.Reader) ([]attestation.Envelope, error) {
 		return nil, fmt.Errorf("unmarshalling data: %w", err)
 	}
 
-	// Assign the proto to our envelope wrapper
+	// Assign the proto to our envelope wrapper, keeping the original
+	// bytes: they carry what the proto cannot (the cert extension) and
+	// transparency log lookups key on them.
 	env := Envelope{
 		Envelope: dsseEnvelope,
+	}
+	env.SetRaw(data)
+
+	// Sidecar-decode the cert extension keyless signers attach to each
+	// signature; both decoders keep the array order, so the
+	// certificates stay index-aligned with the proto signatures.
+	var ext struct {
+		Signatures []struct {
+			Cert string `json:"cert"`
+		} `json:"signatures"`
+	}
+	certs := map[int][]byte{}
+	if err := json.Unmarshal(data, &ext); err == nil && len(ext.Signatures) == len(dsseEnvelope.GetSignatures()) {
+		for i, sig := range ext.Signatures {
+			if sig.Cert != "" {
+				certs[i] = []byte(sig.Cert)
+			}
+		}
 	}
 
 	// If there is no payload and no sig, then don't treat the envelope as DSSE
@@ -48,10 +69,11 @@ func (p *Parser) ParseStream(r io.Reader) ([]attestation.Envelope, error) {
 		return nil, attestation.ErrNotCorrectFormat
 	}
 
-	for _, s := range env.Envelope.GetSignatures() {
+	for i, s := range env.Envelope.GetSignatures() {
 		env.Signatures = append(env.Signatures, &Signature{
-			KeyID:     s.GetKeyid(),
-			Signature: s.GetSig(),
+			KeyID:       s.GetKeyid(),
+			Signature:   s.GetSig(),
+			Certificate: certs[i],
 		})
 	}
 

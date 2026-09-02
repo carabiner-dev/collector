@@ -12,7 +12,7 @@ require (
 	github.com/carabiner-dev/osv v0.1.2
 	github.com/carabiner-dev/predicates v0.5.0
 	github.com/carabiner-dev/sbomfs v0.2.0
-	github.com/carabiner-dev/signer v0.6.1
+	github.com/carabiner-dev/signer v0.6.2-0.20260901235141-7abffe0fc666
 	github.com/carabiner-dev/spdx3 v0.1.0
 	github.com/carabiner-dev/stash v0.0.0-20260716192412-e2fe293d76a5
 	github.com/carabiner-dev/vcslocator v0.4.7

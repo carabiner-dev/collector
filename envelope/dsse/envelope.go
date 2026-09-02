@@ -23,7 +23,16 @@ type Envelope struct {
 	Signatures []attestation.Signature `json:"signatures"`
 	Statement  attestation.Statement   `json:"-"`
 	*sigstoreProtoDSSE.Envelope
+
+	// raw preserves the envelope's original serialization when it was
+	// parsed from bytes. It carries what the proto cannot — the cert
+	// extension keyless signers attach to signatures — and transparency
+	// log lookups key on it.
+	raw []byte
 }
+
+// SetRaw records the envelope's original serialization.
+func (env *Envelope) SetRaw(data []byte) { env.raw = data }
 
 // GetStatement parses the envelope state, stetement.
 func (env *Envelope) GetStatement() attestation.Statement {
@@ -77,24 +86,30 @@ func (env *Envelope) Verify(args ...any) error {
 		return fmt.Errorf("unable to verify, envelope has no DSSE data")
 	}
 
-	// Prepare the keys to verify
+	// Prepare the keys and verification options
 	keys := []key.PublicKeyProvider{}
+	optFns := []options.VerificationOptFunc{}
 	for _, a := range args {
 		switch vm := a.(type) {
 		case []key.PublicKeyProvider:
 			keys = append(keys, vm...)
 		case key.PublicKeyProvider:
 			keys = append(keys, vm)
+		case []options.VerificationOptFunc:
+			optFns = append(optFns, vm...)
+		case options.VerificationOptFunc:
+			optFns = append(optFns, vm)
 		default:
 			return fmt.Errorf(
-				"unsupported key argument of type %T: Verify takes key.PublicKeyProvider values or a slice of them", a,
+				"unsupported argument of type %T: Verify takes key.PublicKeyProvider values or signer "+
+					"verification options, or slices of them", a,
 			)
 		}
 	}
 
 	verification, err := signer.NewVerifier().VerifyStatement(
-		&signer.EnvelopeArtifact{Envelope: env.Envelope},
-		options.WithPublicKeys(keys...),
+		env.toArtifact(),
+		append([]options.VerificationOptFunc{options.WithPublicKeys(keys...)}, optFns...)...,
 	)
 	if err != nil {
 		return fmt.Errorf("verifying DSSE signatures: %w", err)
@@ -108,6 +123,25 @@ func (env *Envelope) Verify(args ...any) error {
 		return fmt.Errorf("unable to fixate signature verification result in predicate")
 	}
 	return nil
+}
+
+// toArtifact builds the signer's view of the envelope, carrying the
+// original bytes and the signature certificates so keyless envelopes
+// can be verified against the transparency log.
+func (env *Envelope) toArtifact() *signer.EnvelopeArtifact {
+	art := &signer.EnvelopeArtifact{Envelope: env.Envelope, Raw: env.raw}
+	certs := make([][]byte, len(env.Signatures))
+	var found bool
+	for i, sig := range env.Signatures {
+		if withCert, ok := sig.(interface{ GetCertificate() []byte }); ok && len(withCert.GetCertificate()) > 0 {
+			certs[i] = withCert.GetCertificate()
+			found = true
+		}
+	}
+	if found {
+		art.SignatureCerts = certs
+	}
+	return art
 }
 
 // GetVerifications returns the envelop signtature verifications
@@ -128,6 +162,13 @@ func (env *Envelope) MarshalJSON() ([]byte, error) {
 	if env.Envelope == nil {
 		return nil, errors.New("unable to marshal, envelope has no DSSE data")
 	}
+	// An envelope parsed from bytes re-emits them: the proto keeps only
+	// spec fields, and re-marshaling would strip the cert extension a
+	// keyless envelope needs to stay verifiable when stored and read
+	// back.
+	if env.raw != nil {
+		return env.raw, nil
+	}
 	return protojson.Marshal(env.Envelope)
 }
 
@@ -135,4 +176,20 @@ func (env *Envelope) MarshalJSON() ([]byte, error) {
 type Signature struct {
 	KeyID     string
 	Signature []byte
+
+	// Certificate is the PEM certificate some keyless signers attach to
+	// the signature in the non-standard "cert" field (the
+	// slsa-github-generator's provenance carries one). Nil when the
+	// signature has none.
+	Certificate []byte
 }
+
+// GetKeyid returns the signature's key id.
+func (s *Signature) GetKeyid() string { return s.KeyID }
+
+// GetSig returns the signature bytes.
+func (s *Signature) GetSig() []byte { return s.Signature }
+
+// GetCertificate returns the PEM certificate attached to the signature,
+// if any.
+func (s *Signature) GetCertificate() []byte { return s.Certificate }
