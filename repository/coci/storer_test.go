@@ -98,6 +98,26 @@ func TestStoreRoundTripPlainDSSE(t *testing.T) {
 	require.NotNil(t, atts[0].GetStatement())
 }
 
+func TestFetchAttestationLayersDisabled(t *testing.T) {
+	t.Parallel()
+	host := startTestRegistry(t)
+	ctx := t.Context()
+
+	repo := fmt.Sprintf("%s/test/coci/att-off:v1", host)
+	pushEmptySubject(t, ctx, repo)
+
+	c, err := New(WithReference(repo), WithCraneOpts(crane.Insecure))
+	require.NoError(t, err)
+	require.NoError(t, c.Store(ctx, attestation.StoreOptions{}, []attestation.Envelope{makeDSSEEnvelope()}))
+
+	off, err := New(WithReference(repo), WithCraneOpts(crane.Insecure), WithReadAttestations(false))
+	require.NoError(t, err)
+
+	atts, err := off.Fetch(ctx, attestation.FetchOptions{})
+	require.NoError(t, err)
+	require.Empty(t, atts)
+}
+
 func TestStoreAppendsToExistingAttestationImage(t *testing.T) {
 	t.Parallel()
 	host := startTestRegistry(t)

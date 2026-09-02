@@ -127,3 +127,20 @@ func TestFetchSBOMLayersMissingTag(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, atts)
 }
+
+func TestFetchSBOMLayersDisabled(t *testing.T) {
+	t.Parallel()
+	host := startTestRegistry(t)
+	ctx := t.Context()
+
+	repo := fmt.Sprintf("%s/test/coci/sbom-off", host)
+	digest := pushEmptySubject(t, ctx, repo+":v1")
+	pushSBOMImage(t, ctx, repo, digest, spdxJSONMediaType, []byte(testSPDXDocument))
+
+	c, err := New(WithReference(repo+":v1"), WithCraneOpts(crane.Insecure), WithReadSBOMs(false))
+	require.NoError(t, err)
+
+	atts, err := c.Fetch(ctx, attestation.FetchOptions{})
+	require.NoError(t, err)
+	require.Empty(t, atts)
+}

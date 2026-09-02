@@ -81,7 +81,9 @@ with the SPDX 2/3 and CycloneDX predicate parsers and returned as
 the subject. They never verify and carry no signer identity. Other SBOM
 encodings (tag-value, XML, syft) are skipped. Problems reading the `.sig` or
 `.sbom` images are logged and do not fail the fetch; a missing tag is an
-empty result.
+empty result. Each of the three tags can be switched off with
+`WithReadAttestations(false)`, `WithReadSignatures(false)` and
+`WithReadSBOMs(false)`; all are read by default.
 
 When `Store` is called the inverse path runs:
 
