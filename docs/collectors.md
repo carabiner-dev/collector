@@ -71,6 +71,18 @@ legacy cosign tag convention (`<repo>:sha256-<digest>.att`). On read, the
 Sigstore bundle is synthesized from the layer body plus its cosign
 annotations (certificates, transparency log entries, RFC 3161 timestamps).
 
+The same read also covers the two other tags cosign's legacy layout hangs
+off an image digest. `.sig` holds signatures, which come back as
+`https://cosign.sigstore.dev/signature/v1` attestations. `.sbom` is the
+deprecated `cosign attach sbom` layout (still produced by ko): layers with
+media type `text/spdx+json` or `application/vnd.cyclonedx+json` are parsed
+with the SPDX 2/3 and CycloneDX predicate parsers and returned as
+**unsigned** in-toto statements in bare envelopes, with the image digest as
+the subject. They never verify and carry no signer identity. Other SBOM
+encodings (tag-value, XML, syft) are skipped. Problems reading the `.sig` or
+`.sbom` images are logged and do not fail the fetch; a missing tag is an
+empty result.
+
 When `Store` is called the inverse path runs:
 
 1. The reference is resolved to its image digest so the `.att` tag can be

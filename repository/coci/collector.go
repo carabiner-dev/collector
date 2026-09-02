@@ -170,14 +170,15 @@ func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([
 		return nil, err
 	}
 
-	// Fetch .att attestation layers and .sig signature layers concurrently.
+	// Fetch the .att attestation layers, the .sig signature layers and the
+	// .sbom SBOM layers concurrently.
 	var (
-		attAtts, sigAtts []attestation.Envelope
-		attErr, sigErr   error
-		wg               sync.WaitGroup
+		attAtts, sigAtts, sbomAtts []attestation.Envelope
+		attErr, sigErr, sbomErr    error
+		wg                         sync.WaitGroup
 	)
 
-	wg.Add(2)
+	wg.Add(3)
 	go func() {
 		defer wg.Done()
 		attAtts, attErr = c.fetchAttestationLayers(ctx, opts, imageInfo)
@@ -185,6 +186,10 @@ func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([
 	go func() {
 		defer wg.Done()
 		sigAtts, sigErr = c.fetchSignatures(ctx, opts, imageInfo)
+	}()
+	go func() {
+		defer wg.Done()
+		sbomAtts, sbomErr = c.fetchSBOMLayers(ctx, opts, imageInfo)
 	}()
 	wg.Wait()
 
@@ -197,6 +202,11 @@ func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([
 		logrus.Debugf("coci: fetching .sig image: %v", sigErr)
 	} else {
 		atts = append(atts, sigAtts...)
+	}
+	if sbomErr != nil {
+		logrus.Debugf("coci: fetching .sbom image: %v", sbomErr)
+	} else {
+		atts = append(atts, sbomAtts...)
 	}
 
 	return atts, nil
