@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"strings"
 
 	"github.com/carabiner-dev/attestation"
@@ -202,16 +203,35 @@ func (c *Collector) extractCommitBundle() (io.Reader, error) {
 		return &bufferShard, nil
 	case bufferFile.Len() > 0:
 		return &bufferFile, nil
+	case err == nil || noteMissing(err):
+		// No note data for the commit is not an error
+		return &bytes.Buffer{}, nil
 	default:
-		// Now, here we need to check. If the error is not found, then it means
-		// there is no attestation data, not that there is an error
-		err1, err2, _ := strings.Cut(err.Error(), "\n")
-		if strings.Contains(err1, "file does not exist") &&
-			strings.Contains(err2, "file does not exist") {
-			return &bytes.Buffer{}, nil
-		}
 		return nil, err
 	}
+}
+
+// noteMissing returns true when the error returned reading the note locators
+// means the commit has no note rather than that reading failed: either the
+// repository has no notes reference yet or none of the locators point to an
+// existing file.
+func noteMissing(err error) bool {
+	var list *vcslocator.ErrorList
+	if !errors.As(err, &list) {
+		return errors.Is(err, vcslocator.ErrRefNotFound)
+	}
+
+	found := false
+	for _, e := range list.Errors {
+		if e == nil {
+			continue
+		}
+		if !errors.Is(e, vcslocator.ErrRefNotFound) && !errors.Is(e, fs.ErrNotExist) {
+			return false
+		}
+		found = true
+	}
+	return found
 }
 
 // FetchBySubject calls the attestation reader with a filter preconfigured
