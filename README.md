@@ -48,6 +48,7 @@ The following table lists all repository drivers currently implemented in the pr
 | **Dynamic Git Notes** | `dnote` | Dynamically reads and writes attestations from git notes for any commit without preconfiguration | `dnote:https://github.com/owner/repo` | ✓ | ✓ |
 | **OSS Rebuild** | `ossrebuild` | Fetches rebuild attestations from the OSS Rebuild project storage | `ossrebuild:` | ✓ | ✗ |
 | **Release** | `release` | Reads and writes attestations as GitHub release assets | `release:owner/repo@v1.0.0` | ✓ | ✓ |
+| **Actions** | `actions` | Reads attestations from the artifacts of a GitHub Actions workflow run, including on GitHub Enterprise hosts | `actions://github.com/owner/repo/run/34180821665` | ✓ | ✗ |
 
 All of these drivers can be used with tools that use Carabiner's collector such
 as AMPEL or bnd. For more details on each driver see
@@ -126,12 +127,13 @@ Both limits are propagated from the agent to every repository collector through
 
 ## Virtual Attestations from Detached Signatures
 
-Filesystem-derived collectors (**fs**, **release**, and **git**) can synthesize
-"virtual" attestations from detached signature files found alongside artifacts.
-When a file like `artifact.tar.gz.sig` or `artifact.tar.gz.sigstore.json` is
-found next to `artifact.tar.gz`, the collector verifies the signature and
-produces an in-toto attestation with predicate type
-`https://carabiner.dev/ampel/signature/v1` whose subject is the signed artifact.
+Filesystem-derived collectors (**fs**, **release**, **actions**, and **git**)
+can synthesize "virtual" attestations from detached signature files found
+alongside artifacts. When a file like `artifact.tar.gz.sig` or
+`artifact.tar.gz.sigstore.json` is found next to `artifact.tar.gz`, the
+collector verifies the signature and produces an in-toto attestation with
+predicate type `https://carabiner.dev/ampel/signature/v1` whose subject is the
+signed artifact.
 
 Two kinds of detached signatures are supported:
 

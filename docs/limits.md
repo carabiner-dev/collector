@@ -48,6 +48,7 @@ agent, _ := collector.New(
 | **filesystem** | File size checked via `DirEntry.Info()` before reading |
 | **git** | Delegates to **filesystem** (limit enforced there) |
 | **release** | Delegates to **filesystem** (limit enforced there) |
+| **actions** | Artifact archive size checked against the limit before downloading and while reading; files inside delegate to **filesystem** |
 | **ossrebuild** | Delegates to **http** (limit enforced there) |
 
 ## Limit (maximum attestations)
@@ -83,6 +84,7 @@ reached, avoiding unnecessary network requests, file reads, or parsing:
 | **filesystem** | Exits `fs.WalkDir` early via a sentinel error, stopping file reads |
 | **git** | Delegates to **filesystem** (limit enforced there) |
 | **release** | Delegates to **filesystem** (limit enforced there) |
+| **actions** | Stops downloading artifacts once the limit is reached; files inside delegate to **filesystem** |
 | **ossrebuild** | Delegates to **http** (limit enforced there) |
 
 Note: the agent itself also applies `FetchOptions.Limit` after merging
