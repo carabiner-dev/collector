@@ -165,6 +165,31 @@ left in place, making `Store` idempotent. A token is required for uploads (and
 for reading private releases); set it with `WithToken` or via the
 `GITHUB_TOKEN` / `GH_TOKEN` environment variables.
 
+## actions
+
+Reads attestations from the artifacts of a GitHub Actions workflow run. Runs
+are addressed with a locator of the form
+`actions://<host>/<owner>/<repo>/run/<run-id>`, for example
+`actions://github.com/carabiner-labs/baseline-init/run/34180821665`. The host
+may be github.com, a GitHub Enterprise Cloud data residency host (`*.ghe.com`)
+or a GitHub Enterprise Server; the REST API location is derived from it. The
+`run` segment is fixed so other things can be addressed later.
+
+Only the artifacts whose name carries one of the configured extensions are
+downloaded (by default the **filesystem** collector's extensions plus `zip`)
+and expired artifacts are skipped. GitHub delivers every artifact as a zip
+archive, which is handed to the **filesystem** collector, so bare statements,
+DSSE envelopes, Sigstore bundles, JSONL files and sidecar signatures are all
+supported. Zip files found inside an artifact are expanded and scanned with
+the same extensions. `WithExtensions` changes the list.
+
+Workflow run artifacts cannot be downloaded anonymously, so a token is always
+required. Set it with `WithToken` or via the `GITHUB_TOKEN` / `GH_TOKEN`
+environment variables; a workflow's own token can read the artifacts of its
+run. The token is only sent to the API host, never to the storage host the
+downloads redirect to. Storing is not supported as GitHub offers no API to add
+artifacts to a run.
+
 ## ossrebuild
 
 Fetches rebuild attestations from the Google OSS Rebuild project. Converts
