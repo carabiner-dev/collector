@@ -10,7 +10,7 @@ require (
 	github.com/carabiner-dev/jsonl v0.2.1
 	github.com/carabiner-dev/openeox v1.0.0
 	github.com/carabiner-dev/osv v0.1.2
-	github.com/carabiner-dev/predicates v0.5.0
+	github.com/carabiner-dev/predicates v0.5.1
 	github.com/carabiner-dev/sbomfs v0.2.0
 	github.com/carabiner-dev/signer v0.6.2-0.20260901235141-7abffe0fc666
 	github.com/carabiner-dev/spdx3 v0.1.0
@@ -45,7 +45,7 @@ require (
 )
 
 require (
-	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260415201107-50325440f8f2.1 // indirect
+	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.12-20260825204119-511051f7f437.2 // indirect
 	dario.cat/mergo v1.0.2 // indirect
 	github.com/CycloneDX/cyclonedx-go v0.12.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
@@ -56,7 +56,7 @@ require (
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/carabiner-dev/command v0.3.1 // indirect
 	github.com/carabiner-dev/deadrop v0.0.0-20260228173914-d95e9ea2877d // indirect
-	github.com/carabiner-dev/policy v0.5.1 // indirect
+	github.com/carabiner-dev/policy v0.5.5 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chainguard-dev/clog v1.8.0 // indirect
 	github.com/clipperhouse/displaywidth v0.11.0 // indirect
@@ -143,7 +143,6 @@ require (
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
-	github.com/zalando/go-keyring v0.2.8 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/otel v1.45.0 // indirect
 	go.opentelemetry.io/otel/metric v1.45.0 // indirect
@@ -157,8 +156,8 @@ require (
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/term v0.45.0 // indirect
 	golang.org/x/text v0.41.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20260803160001-6ac0973c030d // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260803160001-6ac0973c030d // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260819154853-08b0e4226688 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260819154853-08b0e4226688 // indirect
 	google.golang.org/grpc v1.83.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
