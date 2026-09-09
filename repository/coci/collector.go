@@ -483,7 +483,13 @@ func getAttestationEnvelope(ctx context.Context, opts *attestation.FetchOptions,
 
 	origin := hset.ToResourceDescriptors()
 	origin[0].Uri = originURI
-	envelope.GetPredicate().SetOrigin(origin[0])
+
+	// The payload may not be a parseable in-toto statement (for example an
+	// attestation whose predicate is not a JSON object). Return the envelope
+	// as is and let the caller decide what to do with it.
+	if pred := envelope.GetPredicate(); pred != nil {
+		pred.SetOrigin(origin[0])
+	}
 
 	return envelope, nil
 }
@@ -510,8 +516,8 @@ func buildPlainDSSEEnvelope(dsseEnv *protobundle.Bundle_DsseEnvelope, originURI 
 
 	origin := hset.ToResourceDescriptors()
 	origin[0].Uri = originURI
-	if env.GetPredicate() != nil {
-		env.GetPredicate().SetOrigin(origin[0])
+	if pred := env.GetPredicate(); pred != nil {
+		pred.SetOrigin(origin[0])
 	}
 
 	return env, nil
