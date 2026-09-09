@@ -319,6 +319,66 @@ func TestPredicateTypeForLayer(t *testing.T) {
 	require.Empty(t, predicateTypeForLayer(plain, []byte("{")))
 }
 
+// TestFetchSkipsUnparseableStatement stores an attestation whose payload is
+// not a valid in-toto statement (its predicate is a JSON string, as some
+// older cosign SBOM attestations have) next to a valid one and checks that
+// Fetch skips it instead of failing or panicking, with or without cosign
+// verification material on the layer.
+func TestFetchSkipsUnparseableStatement(t *testing.T) {
+	t.Parallel()
+	host := startTestRegistry(t)
+	ctx := t.Context()
+
+	repo := fmt.Sprintf("%s/test/coci/unparseable:v1", host)
+	pushEmptySubject(t, ctx, repo)
+
+	c, err := New(WithReference(repo), WithCraneOpts(crane.Insecure))
+	require.NoError(t, err)
+
+	badPayload := []byte(`{"_type":"https://in-toto.io/Statement/v0.1","predicateType":"https://spdx.dev/Document","subject":[{"name":"x","digest":{"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"}}],"predicate":"{\"SPDXID\":\"SPDXRef-DOCUMENT\"}"}`)
+
+	// Plain DSSE layer (no verification material)
+	plain := &dsse.Envelope{
+		Envelope: &protodsse.Envelope{
+			PayloadType: "application/vnd.in-toto+json",
+			Payload:     badPayload,
+			Signatures:  []*protodsse.Signature{{Keyid: "k", Sig: []byte("sig")}},
+		},
+	}
+
+	// Bundle layer, stored with the certificate annotation so the fetch
+	// path rebuilds a bundle from it
+	mt, err := sbundle.MediaTypeString("v0.3")
+	require.NoError(t, err)
+	withCert := &bundle.Envelope{
+		Bundle: protobundle.Bundle{
+			MediaType: mt,
+			Content: &protobundle.Bundle_DsseEnvelope{
+				DsseEnvelope: &protodsse.Envelope{
+					PayloadType: "application/vnd.in-toto+json",
+					Payload:     badPayload,
+					Signatures:  []*protodsse.Signature{{Keyid: "k", Sig: []byte("sig")}},
+				},
+			},
+			VerificationMaterial: &protobundle.VerificationMaterial{
+				Content: &protobundle.VerificationMaterial_X509CertificateChain{
+					X509CertificateChain: &protocommon.X509CertificateChain{
+						Certificates: []*protocommon.X509Certificate{{RawBytes: []byte{0x30, 0x82, 0x01, 0x0a}}},
+					},
+				},
+			},
+		},
+	}
+
+	require.NoError(t, c.Store(ctx, attestation.StoreOptions{}, []attestation.Envelope{plain, withCert, makeDSSEEnvelope()}))
+
+	atts, err := c.Fetch(ctx, attestation.FetchOptions{})
+	require.NoError(t, err)
+	require.Len(t, atts, 1, "only the valid statement should be returned")
+	require.NotNil(t, atts[0].GetStatement())
+	require.Equal(t, attestation.PredicateType("https://example.com/test/v1"), atts[0].GetStatement().GetPredicateType())
+}
+
 func TestStoreEmptyEnvelopesIsNoop(t *testing.T) {
 	t.Parallel()
 	host := startTestRegistry(t)
