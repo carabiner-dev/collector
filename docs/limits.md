@@ -47,7 +47,7 @@ agent, _ := collector.New(
 | **note** | Git notes reader wrapped with `io.LimitReader` before JSONL iteration |
 | **filesystem** | File size checked via `DirEntry.Info()` before reading |
 | **git** | Delegates to **filesystem** (limit enforced there) |
-| **release** | Delegates to **filesystem** (limit enforced there) |
+| **release** | Delegates to **filesystem** for assets; the immutable-release attestation response is read through `io.LimitReader` |
 | **actions** | Artifact archive size checked against the limit before downloading and while reading; files inside delegate to **filesystem** |
 | **ossrebuild** | Delegates to **http** (limit enforced there) |
 
@@ -83,7 +83,7 @@ reached, avoiding unnecessary network requests, file reads, or parsing:
 | **note** | Breaks the JSONL line iteration loop, stopping parsing early |
 | **filesystem** | Exits `fs.WalkDir` early via a sentinel error, stopping file reads |
 | **git** | Delegates to **filesystem** (limit enforced there) |
-| **release** | Delegates to **filesystem** (limit enforced there) |
+| **release** | Delegates to **filesystem** for assets; the immutable-release attestation is only fetched if the limit is not yet met |
 | **actions** | Stops downloading artifacts once the limit is reached; files inside delegate to **filesystem** |
 | **ossrebuild** | Delegates to **http** (limit enforced there) |
 
