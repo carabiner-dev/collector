@@ -49,7 +49,9 @@ var _ attestation.Storer = (*Collector)(nil)
 // into the cosign layer annotations (`dev.sigstore.cosign/certificate`,
 // `dev.sigstore.cosign/bundle`, `dev.sigstore.cosign/rfc3161timestamp`) so the
 // resulting image is fully round-trippable with cosign and with this
-// collector's own `Fetch`.
+// collector's own `Fetch`. Each layer also carries the `predicateType`
+// annotation `cosign attest` writes, holding the predicate type of the
+// in-toto statement in the layer.
 func (c *Collector) Store(ctx context.Context, _ attestation.StoreOptions, envelopes []attestation.Envelope) error {
 	if len(envelopes) == 0 {
 		return nil
@@ -80,6 +82,12 @@ func (c *Collector) Store(ctx context.Context, _ attestation.StoreOptions, envel
 		annotations, err := cosignAnnotationsFromMaterial(material)
 		if err != nil {
 			return fmt.Errorf("building cosign annotations for envelope %d: %w", i, err)
+		}
+		if pt := predicateTypeForLayer(env, layerBytes); pt != "" {
+			if annotations == nil {
+				annotations = map[string]string{}
+			}
+			annotations[predicateTypeAnnotation] = pt
 		}
 		addendums = append(addendums, mutate.Addendum{
 			Layer:       static.NewLayer(layerBytes, dsseEnvelopeMediaType),
@@ -134,6 +142,38 @@ func isNotFound(err error) bool {
 		}
 	}
 	return false
+}
+
+// predicateTypeAnnotation is the layer annotation `cosign attest` sets to the
+// predicate type of the attestation stored in the layer.
+const predicateTypeAnnotation = "predicateType"
+
+// predicateTypeForLayer returns the predicate type of the in-toto statement
+// carried by env, to be recorded in the layer's `predicateType` annotation.
+// The envelope's parsed statement is preferred; when the envelope has not
+// been parsed (e.g. it was built in memory) the predicate type is read from
+// the statement in the DSSE payload. Returns an empty string when the
+// payload is not an in-toto statement.
+func predicateTypeForLayer(env attestation.Envelope, layerBytes []byte) string {
+	if st := env.GetStatement(); st != nil {
+		if pt := string(st.GetPredicateType()); pt != "" {
+			return pt
+		}
+	}
+
+	var dsseLayer struct {
+		Payload []byte `json:"payload"`
+	}
+	if err := json.Unmarshal(layerBytes, &dsseLayer); err != nil || len(dsseLayer.Payload) == 0 {
+		return ""
+	}
+	var statement struct {
+		PredicateType string `json:"predicateType"`
+	}
+	if err := json.Unmarshal(dsseLayer.Payload, &statement); err != nil {
+		return ""
+	}
+	return statement.PredicateType
 }
 
 // dsseLayerForEnvelope returns the DSSE JSON bytes that should be used as the
