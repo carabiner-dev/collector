@@ -26,6 +26,9 @@ func TestFetch(t *testing.T) {
 		mustErr     bool
 	}{
 		{"single-attestation", "protobom/protobom", "v0.5.2", 1, false},
+		// Immutable release with no assets: the attestation comes from the
+		// GitHub attestations store, not from the release assets.
+		{"immutable-release", "openvex/discovery", "v0.1.1", 1, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()

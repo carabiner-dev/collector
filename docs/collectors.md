@@ -157,6 +157,15 @@ Reads attestations from GitHub release assets. Constructs a virtual
 filesystem from the release's downloadable assets and delegates to the
 **filesystem** collector to parse them.
 
+For [immutable releases](https://github.blog/changelog/2025-10-28-immutable-releases-are-now-generally-available/)
+the collector also returns the release attestation GitHub generates
+(predicate type `https://in-toto.io/attestation/release/v0.2`). That
+attestation is not a release asset: GitHub keeps it in the repository's
+attestation store, keyed by the digest of the release tag reference, so the
+collector resolves the tag and reads it from there, the same lookup
+`gh release verify` performs. Releases that are not immutable have no such
+attestation and only their assets are read.
+
 Also supports storing attestations. When `Store` is called, each envelope is
 JSON-marshaled and uploaded to the release as an individual, content-addressed
 asset named `attestation-<sha256>.json`. Uploads are retried with exponential

@@ -90,50 +90,60 @@ func (c *Collector) SetKeys(keys []key.PublicKeyProvider) {
 	}
 }
 
-// Fetch queries the repository and retrieves any attestations matching the query
+// Fetch queries the repository and retrieves any attestations matching the query.
+// Attestations are read from the release assets and, for immutable releases,
+// from the attestation GitHub generates for the release itself.
 func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
-	return c.Driver.Fetch(ctx, opts)
+	atts, err := c.Driver.Fetch(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+	if opts.Limit > 0 && len(atts) >= opts.Limit {
+		return atts[:opts.Limit], nil
+	}
+
+	relAtts, err := c.fetchReleaseAttestations(ctx, opts)
+	if err != nil {
+		return nil, fmt.Errorf("reading release attestations: %w", err)
+	}
+	if opts.Query != nil {
+		relAtts = opts.Query.Run(relAtts)
+	}
+	atts = append(atts, relAtts...)
+	if opts.Limit > 0 && len(atts) > opts.Limit {
+		atts = atts[:opts.Limit]
+	}
+	return atts, nil
 }
 
-// FetchBySubject handles collecting by subject hash. If the driver implements
-// the FetcherBySubject interface we'll use it
+// FetchBySubject retrieves the release attestations matching the subjects.
 func (c *Collector) FetchBySubject(ctx context.Context, opts attestation.FetchOptions, subj []attestation.Subject) ([]attestation.Envelope, error) {
-	if fr, ok := c.Driver.(attestation.FetcherBySubject); ok {
-		return fr.FetchBySubject(ctx, opts, subj)
-	}
-	m := []map[string]string{}
+	sets := make([]map[string]string, 0, len(subj))
 	for _, s := range subj {
-		m = append(m, s.GetDigest())
+		sets = append(sets, s.GetDigest())
 	}
-
-	q := attestation.NewQuery().WithFilter(&filters.SubjectHashMatcher{
-		HashSets: m,
-	})
-
-	atts, err := c.Driver.Fetch(ctx, opts)
-	if err != nil {
-		return nil, fmt.Errorf("retrieving attestations from driver: %w", err)
-	}
-
-	return q.Run(atts), nil
+	return c.Fetch(ctx, withFilter(opts, &filters.SubjectHashMatcher{HashSets: sets}))
 }
 
-// FetchByPredicateType fe
+// FetchByPredicateType retrieves the release attestations of the given types.
 func (c *Collector) FetchByPredicateType(ctx context.Context, opts attestation.FetchOptions, pts []attestation.PredicateType) ([]attestation.Envelope, error) {
-	if fr, ok := c.Driver.(attestation.FetcherByPredicateType); ok {
-		return fr.FetchByPredicateType(ctx, opts, pts)
+	m := make(map[attestation.PredicateType]struct{}, len(pts))
+	for _, pt := range pts {
+		m[pt] = struct{}{}
 	}
-	m := map[attestation.PredicateType]struct{}{}
-	for _, predType := range pts {
-		m[predType] = struct{}{}
-	}
-	q := attestation.NewQuery().WithFilter(&filters.PredicateTypeMatcher{
-		PredicateTypes: m,
-	})
+	return c.Fetch(ctx, withFilter(opts, &filters.PredicateTypeMatcher{PredicateTypes: m}))
+}
 
-	atts, err := c.Driver.Fetch(ctx, opts)
-	if err != nil {
-		return nil, fmt.Errorf("fetching attestations from driver: %w", err)
+// withFilter returns a copy of opts with the filter appended to its query, so
+// that both the release assets and the release attestations are filtered
+// before the fetch limit is applied.
+func withFilter(opts attestation.FetchOptions, f attestation.Filter) attestation.FetchOptions {
+	if opts.Query == nil {
+		opts.Query = &attestation.Query{Filters: []attestation.Filter{f}}
+		return opts
 	}
-	return q.Run(atts), nil
+	q := *opts.Query
+	q.Filters = append(append([]attestation.Filter{}, q.Filters...), f)
+	opts.Query = &q
+	return opts
 }

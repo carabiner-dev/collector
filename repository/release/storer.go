@@ -91,8 +91,16 @@ func (c *Collector) ownerRepo() (owner, repo string, err error) {
 	return parts[0], parts[1], nil
 }
 
-// fetchReleaseID resolves the numeric id of the release for the configured tag.
-func (c *Collector) fetchReleaseID(ctx context.Context, token, owner, repo string) (int64, error) {
+// releaseInfo captures the fields of a GitHub release the collector needs.
+type releaseInfo struct {
+	ID        int64  `json:"id"`
+	Tag       string `json:"tag_name"`
+	Immutable bool   `json:"immutable"`
+}
+
+// fetchRelease resolves the release for the configured tag. The token may be
+// empty, in which case the request is sent anonymously (public releases only).
+func (c *Collector) fetchRelease(ctx context.Context, token, owner, repo string) (*releaseInfo, error) {
 	endpoint := fmt.Sprintf(
 		"%s/repos/%s/%s/releases/tags/%s",
 		c.apiBaseURL, owner, repo, url.PathEscape(c.Options.Tag),
@@ -112,17 +120,24 @@ func (c *Collector) fetchReleaseID(ctx context.Context, token, owner, repo strin
 		return readResponse(resp, maxResponseSize)
 	})
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
-	var rel struct {
-		ID int64 `json:"id"`
-	}
-	if err := json.Unmarshal(body, &rel); err != nil {
-		return 0, fmt.Errorf("decoding release response: %w", err)
+	rel := &releaseInfo{}
+	if err := json.Unmarshal(body, rel); err != nil {
+		return nil, fmt.Errorf("decoding release response: %w", err)
 	}
 	if rel.ID == 0 {
-		return 0, fmt.Errorf("release for tag %q not found", c.Options.Tag)
+		return nil, fmt.Errorf("release for tag %q not found", c.Options.Tag)
+	}
+	return rel, nil
+}
+
+// fetchReleaseID resolves the numeric id of the release for the configured tag.
+func (c *Collector) fetchReleaseID(ctx context.Context, token, owner, repo string) (int64, error) {
+	rel, err := c.fetchRelease(ctx, token, owner, repo)
+	if err != nil {
+		return 0, err
 	}
 	return rel.ID, nil
 }
@@ -151,9 +166,9 @@ func (c *Collector) uploadAsset(ctx context.Context, token, owner, repo string, 
 	return err
 }
 
-// ghRequest issues an authenticated GitHub REST request. It does not interpret
-// the status code; callers use readResponse to turn HTTP errors into (retryable
-// or permanent) Go errors.
+// ghRequest issues a GitHub REST request, authenticated when a token is set.
+// It does not interpret the status code; callers use readResponse to turn HTTP
+// errors into (retryable or permanent) Go errors.
 func (c *Collector) ghRequest(ctx context.Context, method, endpoint, token, contentType string, body []byte) (*http.Response, error) {
 	var reader io.Reader
 	if body != nil {
@@ -163,7 +178,9 @@ func (c *Collector) ghRequest(ctx context.Context, method, endpoint, token, cont
 	if err != nil {
 		return nil, backoff.Permanent(fmt.Errorf("building request: %w", err))
 	}
-	req.Header.Set("Authorization", "Bearer "+token)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("X-Github-Api-Version", githubAPIVersion)
 	if contentType != "" {
