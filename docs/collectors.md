@@ -99,7 +99,9 @@ When `Store` is called the inverse path runs:
    verification material is hoisted back into cosign layer annotations
    (`dev.sigstore.cosign/certificate`, `dev.sigstore.cosign/bundle`,
    `dev.sigstore.cosign/rfc3161timestamp`) so the result round-trips with
-   both this collector's `Fetch` and with cosign itself.
+   both this collector's `Fetch` and with cosign itself. Each layer also
+   gets the `predicateType` annotation `cosign attest` writes, set to the
+   predicate type of the in-toto statement in the layer.
 4. The resulting OCI image manifest is pushed at the `.att` tag.
 
 Authentication uses the standard Docker keychain

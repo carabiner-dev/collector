@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/carabiner-dev/attestation"
@@ -225,6 +226,97 @@ func TestStoreRoundTripBundleWithCosignAnnotations(t *testing.T) {
 	ts := got.Bundle.GetVerificationMaterial().GetTimestampVerificationData().GetRfc3161Timestamps()
 	require.Len(t, ts, 1)
 	require.Equal(t, tsDER, ts[0].GetSignedTimestamp())
+}
+
+// layerAnnotations returns the annotations of every layer in the .att manifest
+// hanging off ref, in layer order.
+func layerAnnotations(t *testing.T, ctx context.Context, ref, digest string) []map[string]string {
+	t.Helper()
+	info, err := parseImageReference(ctx, ref, crane.Insecure)
+	require.NoError(t, err)
+	attTag := fmt.Sprintf("%s/%s:%s.att", info.Registry, info.Repository, strings.Replace(digest, "sha256:", "sha256-", 1))
+	raw, err := crane.Manifest(attTag, crane.WithContext(ctx), crane.Insecure)
+	require.NoError(t, err)
+	var manifest struct {
+		Layers []struct {
+			Annotations map[string]string `json:"annotations"`
+		} `json:"layers"`
+	}
+	require.NoError(t, json.Unmarshal(raw, &manifest))
+	ret := make([]map[string]string, 0, len(manifest.Layers))
+	for _, l := range manifest.Layers {
+		ret = append(ret, l.Annotations)
+	}
+	return ret
+}
+
+func TestStoreWritesPredicateTypeAnnotation(t *testing.T) {
+	t.Parallel()
+	host := startTestRegistry(t)
+	ctx := t.Context()
+
+	repo := fmt.Sprintf("%s/test/coci/predicatetype:v1", host)
+	digest := pushEmptySubject(t, ctx, repo)
+
+	c, err := New(WithReference(repo), WithCraneOpts(crane.Insecure))
+	require.NoError(t, err)
+
+	// One plain DSSE envelope built in memory and one bundle envelope, the
+	// two shapes Store unwraps. Both carry validIntotoPayload().
+	mt, err := sbundle.MediaTypeString("v0.3")
+	require.NoError(t, err)
+	bun := &bundle.Envelope{
+		Bundle: protobundle.Bundle{
+			MediaType: mt,
+			Content: &protobundle.Bundle_DsseEnvelope{
+				DsseEnvelope: &protodsse.Envelope{
+					PayloadType: "application/vnd.in-toto+json",
+					Payload:     validIntotoPayload(),
+					Signatures:  []*protodsse.Signature{{Keyid: "k", Sig: []byte("sig")}},
+				},
+			},
+			VerificationMaterial: &protobundle.VerificationMaterial{
+				Content: &protobundle.VerificationMaterial_X509CertificateChain{
+					X509CertificateChain: &protocommon.X509CertificateChain{
+						Certificates: []*protocommon.X509Certificate{{RawBytes: []byte{0x30, 0x82, 0x01, 0x0a}}},
+					},
+				},
+			},
+		},
+	}
+	require.NoError(t, c.Store(ctx, attestation.StoreOptions{}, []attestation.Envelope{makeDSSEEnvelope(), bun}))
+
+	layers := layerAnnotations(t, ctx, repo, digest)
+	require.Len(t, layers, 2)
+	for i, ann := range layers {
+		require.Equal(t, "https://example.com/test/v1", ann[predicateTypeAnnotation], "layer %d", i)
+	}
+	// The cosign annotations are still hoisted next to it on the bundle layer.
+	require.Contains(t, layers[1], "dev.sigstore.cosign/certificate")
+}
+
+func TestPredicateTypeForLayer(t *testing.T) {
+	t.Parallel()
+	// Envelope with a statement: read from the parsed statement or the payload
+	env := makeDSSEEnvelope()
+	layerBytes, _, err := dsseLayerForEnvelope(env)
+	require.NoError(t, err)
+	require.Equal(t, "https://example.com/test/v1", predicateTypeForLayer(env, layerBytes))
+
+	// Payload that is not an in-toto statement yields no annotation
+	plain := &dsse.Envelope{
+		Envelope: &protodsse.Envelope{
+			PayloadType: "text/plain",
+			Payload:     []byte("not a statement"),
+			Signatures:  []*protodsse.Signature{{Keyid: "k", Sig: []byte("sig")}},
+		},
+	}
+	layerBytes, _, err = dsseLayerForEnvelope(plain)
+	require.NoError(t, err)
+	require.Empty(t, predicateTypeForLayer(plain, layerBytes))
+
+	// Garbage layer bytes never panic
+	require.Empty(t, predicateTypeForLayer(plain, []byte("{")))
 }
 
 func TestStoreEmptyEnvelopesIsNoop(t *testing.T) {
