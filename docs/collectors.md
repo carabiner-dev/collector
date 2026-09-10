@@ -199,6 +199,43 @@ run. The token is only sent to the API host, never to the storage host the
 downloads redirect to. Storing is not supported as GitHub offers no API to add
 artifacts to a run.
 
+## maven
+
+Reads attestations published alongside an artifact in a Maven repository.
+The init string is the `maven:` moniker followed by a Maven package URL
+(purl) with namespace, name and version, for example
+`maven:pkg:maven/org.apache.commons/commons-lang3@3.21.0-SNAPSHOT`. The purl
+maps to the artifact's version directory under the repository base URL
+(`<base>/org/apache/commons/commons-lang3/3.21.0-SNAPSHOT/`). The base URL
+defaults to Maven Central and can be changed with `WithBaseURL` or with a
+`repository_url` qualifier on the purl.
+
+The collector reads the directory's `maven-metadata.xml` and resolves every
+file through its `snapshotVersions` entries, the layout Maven writes for
+SNAPSHOT deployments, so it needs that metadata to be present. Three kinds of
+files are collected from it:
+
+- **JSONL attestation bundles** (`<artifact>-<version>.intoto.jsonl`), parsed
+  as any other JSONL file.
+- **Unsigned SBOMs**: SPDX (`.spdx.json`) and CycloneDX (`.cdx.json`, or a
+  `.json` file with the `cyclonedx` classifier), returned as unsigned
+  statements.
+- **PGP-signed artifacts**: when the artifact and its `.asc` signature are
+  both listed at the same snapshot version, the artifact is downloaded and
+  the signature checked against the public keys registered on the collector
+  (see [virtual attestations](virtual-attestations.md)). A verified signature
+  yields a virtual attestation with the artifact's digest as its subject; no
+  keys or a signature that no key verifies yields nothing. The artifact is
+  selected by the purl's `type` qualifier (default `jar`) and `classifier`
+  qualifier.
+
+With an empty init string (`maven:`) the collector runs in global mode and
+resolves purls from the subjects handed to `FetchBySubject` (from their URI or
+name fields), reading each one from its own `repository_url` qualifier or the
+configured base URL. In either mode `FetchBySubject` returns only the
+attestations whose subject digests match those of the requested subjects.
+Storing is not supported.
+
 ## ossrebuild
 
 Fetches rebuild attestations from the Google OSS Rebuild project. Converts
