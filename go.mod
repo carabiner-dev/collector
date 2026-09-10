@@ -1,6 +1,6 @@
 module github.com/carabiner-dev/collector
 
-go 1.27.0
+go 1.26.0
 
 require (
 	github.com/carabiner-dev/attestation v0.2.1
@@ -36,7 +36,7 @@ require (
 	github.com/sigstore/gitsign v0.17.1
 	github.com/sigstore/protobuf-specs v0.5.2
 	github.com/sigstore/rekor v1.5.4
-	github.com/sigstore/sigstore v1.10.10
+	github.com/sigstore/sigstore v1.10.9
 	github.com/sigstore/sigstore-go v1.3.0
 	github.com/sirupsen/logrus v1.10.2
 	github.com/stretchr/testify v1.12.1
