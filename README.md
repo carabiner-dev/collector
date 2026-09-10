@@ -46,7 +46,9 @@ The following table lists all repository drivers currently implemented in the pr
 | **JSONL** | `jsonl` | Reads attestations from JSON Lines (JSONL) formatted files | `jsonl:/path/to/file.jsonl` | ✓ | ✗ |
 | **Git Notes** | `note` | Reads and writes attestations stored as git notes on repository commits | `note:git+https://github.com/owner/repo@abc123` or `note:file:///path/to/repo` | ✓ | ✓ |
 | **Dynamic Git Notes** | `dnote` | Dynamically reads and writes attestations from git notes for any commit without preconfiguration | `dnote:https://github.com/owner/repo` | ✓ | ✓ |
+| **Maven** | `maven` | Reads attestations published next to a Maven artifact: JSONL bundles, unsigned SBOMs, and PGP-signed artifacts as virtual attestations | `maven:pkg:maven/org.apache.commons/commons-lang3@3.21.0-SNAPSHOT` | ✓ | ✗ |
 | **OSS Rebuild** | `ossrebuild` | Fetches rebuild attestations from the OSS Rebuild project storage | `ossrebuild:` | ✓ | ✗ |
+| **PyPI** | `pypi` | Reads PEP 740 attestations (trusted publishing provenance) from a Python package index, one verifiable sigstore bundle per attestation | `pypi:pkg:pypi/sampleproject@4.0.0` | ✓ | ✗ |
 | **Release** | `release` | Reads and writes attestations as GitHub release assets, plus the immutable-release attestation | `release:owner/repo@v1.0.0` | ✓ | ✓ |
 | **Actions** | `actions` | Reads attestations from the artifacts of a GitHub Actions workflow run, including on GitHub Enterprise hosts | `actions://github.com/owner/repo/run/34180821665` | ✓ | ✗ |
 

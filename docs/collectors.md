@@ -201,8 +201,122 @@ run. The token is only sent to the API host, never to the storage host the
 downloads redirect to. Storing is not supported as GitHub offers no API to add
 artifacts to a run.
 
+## maven
+
+Reads attestations published alongside an artifact in a Maven repository.
+The init string is the `maven:` moniker followed by a Maven package URL
+(purl) with namespace, name and version, for example
+`maven:pkg:maven/org.apache.commons/commons-lang3@3.21.0-SNAPSHOT`. The purl
+maps to the artifact's version directory under the repository base URL
+(`<base>/org/apache/commons/commons-lang3/3.21.0-SNAPSHOT/`). The base URL
+defaults to Maven Central and can be changed with `WithBaseURL` or with a
+`repository_url` qualifier on the purl.
+
+The collector reads the directory's `maven-metadata.xml` and resolves every
+file through its `snapshotVersions` entries, the layout Maven writes for
+SNAPSHOT deployments, so it needs that metadata to be present. Three kinds of
+files are collected from it:
+
+- **JSONL attestation bundles** (`<artifact>-<version>.intoto.jsonl`), parsed
+  as any other JSONL file.
+- **Unsigned SBOMs**: SPDX (`.spdx.json`) and CycloneDX (`.cdx.json`, or a
+  `.json` file with the `cyclonedx` classifier), returned as unsigned
+  statements.
+- **PGP-signed artifacts**: when the artifact and its `.asc` signature are
+  both listed at the same snapshot version, the artifact is downloaded and
+  the signature checked against the public keys registered on the collector
+  (see [virtual attestations](virtual-attestations.md)). A verified signature
+  yields a virtual attestation with the artifact's digest as its subject; no
+  keys or a signature that no key verifies yields nothing. The artifact is
+  selected by the purl's `type` qualifier (default `jar`) and `classifier`
+  qualifier.
+
+With an empty init string (`maven:`) the collector runs in global mode and
+resolves purls from the subjects handed to `FetchBySubject` (from their URI or
+name fields), reading each one from its own `repository_url` qualifier or the
+configured base URL. In either mode `FetchBySubject` returns only the
+attestations whose subject digests match those of the requested subjects.
+Storing is not supported.
+
 ## ossrebuild
 
 Fetches rebuild attestations from the Google OSS Rebuild project. Converts
 package URLs (purls) in the subject URI into storage URLs and delegates to
 the **http** collector to fetch the JSONL data.
+
+## pypi
+
+Reads [PEP 740](https://peps.python.org/pep-0740/) attestations from a Python
+package index. The init string is the `pypi:` moniker followed by a PyPI
+package URL (purl), which selects what to read:
+
+| Init string | Reads |
+| --- | --- |
+| `pypi:pkg:pypi/sampleproject@4.0.0` | every distribution file of the release |
+| `pypi:pkg:pypi/sampleproject` | every file of the latest release |
+| `pypi:pkg:pypi/sampleproject@4.0.0?file_name=sampleproject-4.0.0.tar.gz` | a single wheel or sdist |
+| `pypi:` | global mode (see below) |
+
+Project names are normalized as described in PEP 503, so `Sample_Project` and
+`sample-project` address the same project. With an empty init string
+(`pypi:`) the collector runs in global mode and resolves purls from the
+subjects handed to `FetchBySubject` (from their URI or name fields), so a
+subject with `pkg:pypi/sampleproject@4.0.0` as its URI is enough to find its
+attestations. `WithIndexURL` points the collector at
+another index; both the JSON API (`/pypi/<project>/<version>/json`, used to
+list a release's files) and the integrity API
+(`/integrity/<project>/<version>/<file>/provenance`) must be served under it.
+
+For each file the collector reads the provenance object and returns every
+attestation of every attestation bundle in it. Each one is reassembled into a
+sigstore bundle (the DSSE envelope, the Fulcio signing certificate and the
+Rekor transparency log entries) so it verifies offline through the regular
+bundle path. Files that have no provenance are skipped.
+
+PyPI's publish attestation (predicate type
+`https://docs.pypi.org/attestations/publish/v1`) has a null predicate by
+specification: on its own it asserts nothing beyond the subject and the signer
+identity. The collector keeps the predicate type but serves a synthesized
+predicate whose only key is `_policylabs`. The leading underscore marks the
+contents as a collector extension, not part of the PyPI specification, and
+keeps the key a valid CEL identifier (`predicate._policylabs.publisher`).
+Under it are
+`publisher` (the index's trusted publisher record, verbatim), `distribution`
+(project, version, filename, packageType, url, index), `certificate` (a summary
+of the Fulcio signing certificate: certificateIssuer, subjectAlternativeName,
+issuer, sourceRepositoryURI, sourceRepositoryDigest, sourceRepositoryRef,
+buildConfigURI, buildTrigger, runInvocationURI, runnerEnvironment and the
+other build extensions), `loggedAt` (the Rekor integrated time) and
+`logIndex`. Abbreviated:
+
+```json
+{
+  "_policylabs": {
+    "publisher": {
+      "kind": "GitHub",
+      "repository": "pypa/sampleproject",
+      "workflow": "release.yml"
+    },
+    "distribution": {
+      "project": "sampleproject",
+      "version": "4.0.0",
+      "filename": "sampleproject-4.0.0-py3-none-any.whl"
+    },
+    "certificate": {
+      "issuer": "https://token.actions.githubusercontent.com",
+      "subjectAlternativeName": "https://github.com/pypa/sampleproject/.github/workflows/release.yml@refs/heads/main",
+      "sourceRepositoryDigest": "621e4974ca25ce531773def586ba3ed8e736b3fc",
+      "buildTrigger": "push",
+      "runInvocationURI": "https://github.com/pypa/sampleproject/actions/runs/11713038981/attempts/1"
+    },
+    "loggedAt": "2024-11-06T22:37:08Z",
+    "logIndex": 147137144
+  }
+}
+```
+
+The signed payload is not modified: verification runs over the original bytes
+and the signer identity lands in the verification result as with any other
+bundle. Attestations whose statement carries a real predicate (PyPI also
+accepts SLSA provenance v1) are served exactly as signed. Storing is not
+supported.

@@ -22,6 +22,7 @@ import (
 	"github.com/carabiner-dev/collector/repository/note"
 	"github.com/carabiner-dev/collector/repository/oci"
 	"github.com/carabiner-dev/collector/repository/ossrebuild"
+	"github.com/carabiner-dev/collector/repository/pypi"
 	"github.com/carabiner-dev/collector/repository/release"
 	"github.com/carabiner-dev/collector/repository/sbomfs"
 	"github.com/carabiner-dev/collector/repository/stash"
@@ -80,6 +81,7 @@ func LoadDefaultRepositoryTypes() error {
 		note.TypeMoniker:        note.Build,
 		note.TypeMonikerDynamic: note.BuildDynamic,
 		ossrebuild.TypeMoniker:  ossrebuild.Build,
+		pypi.TypeMoniker:        pypi.Build,
 		release.TypeMoniker:     release.Build,
 		sbomfs.TypeMoniker:      sbomfs.Build,
 		stash.TypeMoniker:       stash.Build,

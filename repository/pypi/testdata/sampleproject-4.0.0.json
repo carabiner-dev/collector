@@ -1,0 +1,28 @@
+{
+ "info": {
+  "name": "sampleproject",
+  "version": "4.0.0"
+ },
+ "urls": [
+  {
+   "filename": "sampleproject-4.0.0-py3-none-any.whl",
+   "packagetype": "bdist_wheel",
+   "digests": {
+    "blake2b_256": "d773c16e5f3f0d37c60947e70865c255a58dc408780a6474de0523afd0ec553a",
+    "md5": "d3857a217dacbca9e40a85f06f2b34f1",
+    "sha256": "c23e447ea90d796d1e645c35c4b2de125040add12a845825546f91c93f391b6b"
+   },
+   "url": "https://files.pythonhosted.org/packages/d7/73/c16e5f3f0d37c60947e70865c255a58dc408780a6474de0523afd0ec553a/sampleproject-4.0.0-py3-none-any.whl"
+  },
+  {
+   "filename": "sampleproject-4.0.0.tar.gz",
+   "packagetype": "sdist",
+   "digests": {
+    "blake2b_256": "488cc18d25735962870ccb6d1cd2ac7bde40008a332211055e260cb7ec4c6bab",
+    "md5": "9eab89661feaaf3b05b60fb1ed1f7171",
+    "sha256": "0ace7980f82c5815ede4cd7bf9f6693684cec2ae47b9b7ade9add533b8627c6b"
+   },
+   "url": "https://files.pythonhosted.org/packages/48/8c/c18d25735962870ccb6d1cd2ac7bde40008a332211055e260cb7ec4c6bab/sampleproject-4.0.0.tar.gz"
+  }
+ ]
+}
