@@ -13,6 +13,7 @@ import (
 
 	"github.com/carabiner-dev/attestation"
 	"github.com/carabiner-dev/github"
+	intoto "github.com/in-toto/attestation/go/v1"
 	"github.com/stretchr/testify/require"
 
 	"github.com/carabiner-dev/collector/envelope"
@@ -145,6 +146,9 @@ func TestWithRepo(t *testing.T) {
 		{"repo", "cel", "", "cel", &Options{}},
 		{"blank", "", "", "", &Options{}},
 		{"no-overwrite", "cel", "protobom", "cel", &Options{Owner: "protobom"}},
+		{"host-prefix", "github.com/protobom/cel", "protobom", "cel", &Options{}},
+		{"url", "https://github.com/protobom/cel", "protobom", "cel", &Options{}},
+		{"url-git", "https://github.com/protobom/cel.git", "protobom", "cel", &Options{}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -154,4 +158,26 @@ func TestWithRepo(t *testing.T) {
 			require.Equal(t, tc.expectedRepo, tc.start.Repo)
 		})
 	}
+}
+
+// TestFetchBySubjectDedupes checks that a subject with several digests,
+// which makes the API return the same attestations once per digest, only
+// yields each attestation once.
+func TestFetchBySubjectDedupes(t *testing.T) {
+	t.Parallel()
+	client, err := github.NewClient(
+		github.WithCaller(&github.FileCaller{SourcePath: "testdata/output.json"}),
+		github.WithEnsureToken(false),
+	)
+	require.NoError(t, err)
+	collector := &Collector{Options: Options{Owner: "org", Repo: "repo"}, client: client}
+
+	subject := &intoto.ResourceDescriptor{Digest: map[string]string{
+		"sha256": "2775bba8b2170bef2f91b79d4f179fd87724ffee32b4a20b8304856fd3bf4b8f",
+		"sha512": "9a4e4c8c0c0f6a3c1b2d6f0e5c6a5e7a2d4c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e",
+	}}
+	res, err := collector.FetchBySubject(t.Context(), attestation.FetchOptions{}, []attestation.Subject{subject})
+	require.NoError(t, err)
+	// testdata/output.json holds two attestations, served for both digests
+	require.Len(t, res, 2)
 }
