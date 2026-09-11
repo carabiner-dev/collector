@@ -19,6 +19,20 @@ type StoreError struct {
 	Failed map[int]error
 }
 
+// NewStoreError returns an empty StoreError ready to record failures.
+func NewStoreError() *StoreError {
+	return &StoreError{Failed: map[int]error{}}
+}
+
+// ErrorOrNil returns e as an error when any envelope failed and nil
+// otherwise, so a Store implementation can end with it.
+func (e *StoreError) ErrorOrNil() error {
+	if len(e.Failed) == 0 {
+		return nil
+	}
+	return e
+}
+
 // Error lists the failed envelopes in order.
 func (e *StoreError) Error() string {
 	msgs := make([]string, 0, len(e.Failed))

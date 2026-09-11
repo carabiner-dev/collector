@@ -203,7 +203,7 @@ func (ppb preParsedBundle) MarshalJSON() ([]byte, error) {
 // of them cannot be stored the returned error is a *repository.StoreError
 // listing the failed ones, while the others stay stored.
 func (c *Collector) Store(ctx context.Context, _ attestation.StoreOptions, envelopes []attestation.Envelope) error {
-	serr := &repository.StoreError{Failed: map[int]error{}}
+	serr := repository.NewStoreError()
 	for i, env := range envelopes {
 		if err := c.storeEnvelope(ctx, env); err != nil {
 			serr.Failed[i] = err
@@ -211,10 +211,7 @@ func (c *Collector) Store(ctx context.Context, _ attestation.StoreOptions, envel
 		}
 		serr.Stored++
 	}
-	if len(serr.Failed) > 0 {
-		return serr
-	}
-	return nil
+	return serr.ErrorOrNil()
 }
 
 // storeEnvelope uploads a single envelope to the attestations store.

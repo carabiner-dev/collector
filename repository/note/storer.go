@@ -21,6 +21,8 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/filemode"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/storage/memory"
+
+	"github.com/carabiner-dev/collector/repository"
 )
 
 var _ attestation.Storer = (*Collector)(nil)
@@ -70,10 +72,11 @@ func (c *Collector) Store(ctx context.Context, opts attestation.StoreOptions, en
 		}
 	}
 
-	// Serialize new attestations to JSONL
-	newJSONL, err := c.serializeToJSONL(envelopes)
-	if err != nil {
-		return fmt.Errorf("serializing attestations: %w", err)
+	// Serialize new attestations to JSONL. Envelopes that cannot be
+	// serialized are skipped and reported once the rest is written.
+	newJSONL, serr := c.serializeToJSONL(envelopes)
+	if len(envelopes) > 0 && serr.AllFailed() {
+		return serr
 	}
 
 	// Append new JSONL to existing data
@@ -104,7 +107,7 @@ func (c *Collector) Store(ctx context.Context, opts attestation.StoreOptions, en
 		}
 	}
 
-	return nil
+	return serr.ErrorOrNil()
 }
 
 // openOrCloneRepoForNotes opens an existing repository or clones it for notes operations
@@ -232,25 +235,24 @@ func (c *Collector) validateJSONL(data []byte) error {
 }
 
 // serializeToJSONL serializes envelopes to JSONL format
-func (c *Collector) serializeToJSONL(envelopes []attestation.Envelope) ([]byte, error) {
+func (c *Collector) serializeToJSONL(envelopes []attestation.Envelope) ([]byte, *repository.StoreError) {
 	var buf bytes.Buffer
+	serr := repository.NewStoreError()
 
-	for _, env := range envelopes {
+	for i, env := range envelopes {
 		data, err := json.Marshal(env)
 		if err != nil {
-			return nil, fmt.Errorf("marshaling envelope: %w", err)
+			serr.Failed[i] = fmt.Errorf("marshaling envelope: %w", err)
+			continue
 		}
 
-		if _, err := buf.Write(data); err != nil {
-			return nil, fmt.Errorf("writing to buffer: %w", err)
-		}
-
-		if err := buf.WriteByte('\n'); err != nil {
-			return nil, fmt.Errorf("writing newline: %w", err)
-		}
+		// Writes to a bytes.Buffer never fail
+		buf.Write(data)
+		buf.WriteByte('\n')
+		serr.Stored++
 	}
 
-	return buf.Bytes(), nil
+	return buf.Bytes(), serr
 }
 
 // shouldShardNotes determines if the notes should be sharded based on repository state

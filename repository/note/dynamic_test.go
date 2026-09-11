@@ -20,6 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/carabiner-dev/collector/envelope/dsse"
+	"github.com/carabiner-dev/collector/repository"
 )
 
 // createTestAttestationForCommit creates a DSSE envelope with a gitCommit subject
@@ -137,6 +138,8 @@ func TestDynamicStoreRejectsNonCommitSubject(t *testing.T) {
 	env := createTestAttestation(t)
 
 	err = dc.Store(context.Background(), attestation.StoreOptions{}, []attestation.Envelope{env})
-	require.Error(t, err)
+	var serr *repository.StoreError
+	require.ErrorAs(t, err, &serr)
+	require.True(t, serr.AllFailed())
 	require.Contains(t, err.Error(), "no sha1 or gitCommit subject")
 }

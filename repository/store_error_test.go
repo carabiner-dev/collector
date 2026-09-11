@@ -30,4 +30,10 @@ func TestStoreError(t *testing.T) {
 	total := &StoreError{Failed: map[int]error{0: errors.New("nope")}}
 	require.True(t, total.AllFailed())
 	require.Equal(t, "failed to store 1 of 1 envelopes: #0: nope", total.Error())
+
+	clean := NewStoreError()
+	clean.Stored = 3
+	require.NoError(t, clean.ErrorOrNil(), "no failures means no error")
+	clean.Failed[0] = sentinel
+	require.ErrorIs(t, clean.ErrorOrNil(), sentinel)
 }

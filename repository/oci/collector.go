@@ -21,6 +21,7 @@ import (
 
 	"github.com/carabiner-dev/collector/envelope/bundle"
 	"github.com/carabiner-dev/collector/internal/readlimit"
+	"github.com/carabiner-dev/collector/repository"
 )
 
 const (
@@ -144,12 +145,17 @@ func (c *Collector) Store(ctx context.Context, _ attestation.StoreOptions, envel
 	subjDesc := subjMan.GetDescriptor()
 	subjRef := r.SetDigest(subjDesc.Digest.String())
 
+	// Store every envelope on its own so one failing does not stop the
+	// rest. The failures are reported together in a StoreError.
+	serr := repository.NewStoreError()
 	for i, env := range envelopes {
 		if err := c.storeEnvelope(ctx, rc, &subjRef, &subjDesc, env); err != nil {
-			return fmt.Errorf("storing envelope %d: %w", i, err)
+			serr.Failed[i] = err
+			continue
 		}
+		serr.Stored++
 	}
-	return nil
+	return serr.ErrorOrNil()
 }
 
 // storeEnvelope pushes a single envelope as a sigstore bundle referrer

@@ -362,12 +362,14 @@ func (agent *Agent) Store(ctx context.Context, envelopes []attestation.Envelope,
 		f(&opts)
 	}
 
+	// Every repository gets the envelopes even when another one failed
+	errs := []error{}
 	for _, repo := range repos {
 		if err := repo.Store(ctx, opts, envelopes); err != nil {
-			return fmt.Errorf("storing attestation: %w", err)
+			errs = append(errs, fmt.Errorf("storing attestation: %w", err))
 		}
 	}
-	return nil
+	return errors.Join(errs...)
 }
 
 // StoreFromFiles calls Store but takes a list of file paths which are parsed before

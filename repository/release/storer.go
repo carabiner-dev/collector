@@ -20,6 +20,7 @@ import (
 	"github.com/cenkalti/backoff/v5"
 
 	"github.com/carabiner-dev/collector/internal/creds"
+	"github.com/carabiner-dev/collector/repository"
 )
 
 const (
@@ -65,17 +66,23 @@ func (c *Collector) Store(ctx context.Context, _ attestation.StoreOptions, envel
 		return fmt.Errorf("resolving release %q: %w", c.Options.Tag, err)
 	}
 
+	// Upload every envelope on its own so one failing does not stop the
+	// rest. The failures are reported together in a StoreError.
+	serr := repository.NewStoreError()
 	for i, env := range envelopes {
 		data, err := json.Marshal(env)
 		if err != nil {
-			return fmt.Errorf("marshaling envelope #%d: %w", i, err)
+			serr.Failed[i] = fmt.Errorf("marshaling envelope: %w", err)
+			continue
 		}
 		name := assetName(data)
 		if err := c.uploadAsset(ctx, token, owner, repo, releaseID, name, data); err != nil {
-			return fmt.Errorf("uploading attestation %q: %w", name, err)
+			serr.Failed[i] = fmt.Errorf("uploading attestation %q: %w", name, err)
+			continue
 		}
+		serr.Stored++
 	}
-	return nil
+	return serr.ErrorOrNil()
 }
 
 // ownerRepo extracts the owner and repository slug from the configured repo URL.
