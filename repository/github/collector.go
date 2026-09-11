@@ -8,15 +8,16 @@ package github
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"slices"
 	"strings"
 
 	"github.com/carabiner-dev/attestation"
 	gh "github.com/carabiner-dev/github"
-	ita "github.com/in-toto/attestation/go/v1"
+	"github.com/sirupsen/logrus"
 
 	"github.com/carabiner-dev/collector/envelope/bundle"
 	"github.com/carabiner-dev/collector/internal/readlimit"
@@ -73,6 +74,11 @@ func WithOwner(owner string) optFn {
 
 func WithRepo(repo string) optFn {
 	return func(opts *Options) {
+		// Tolerate repository URLs and slugs prefixed with the host
+		for _, prefix := range []string{"https://github.com/", "http://github.com/", "github.com/"} {
+			repo = strings.TrimPrefix(repo, prefix)
+		}
+		repo = strings.TrimSuffix(strings.TrimSuffix(repo, "/"), ".git")
 		owner, r, sino := strings.Cut(repo, "/")
 		if sino {
 			opts.Owner = owner
@@ -81,10 +87,6 @@ func WithRepo(repo string) optFn {
 			opts.Repo = repo
 		}
 	}
-}
-
-var SupportedAlgorithms = []string{
-	string(ita.AlgorithmSHA256), string(ita.AlgorithmSHA512),
 }
 
 // New returns a new collector
@@ -107,10 +109,17 @@ func New(funcs ...optFn) (*Collector, error) {
 
 type attResponse struct {
 	Attestations []struct {
-		Bundle       *bundle.Envelope `json:"bundle"`
-		RepositoryID int64            `json:"repository_id"`
-		BundleURL    string           `json:"bundle_url"`
+		Bundle       json.RawMessage `json:"bundle"`
+		RepositoryID int64           `json:"repository_id"`
+		BundleURL    string          `json:"bundle_url"`
 	} `json:"attestations"`
+}
+
+// fetchedEnvelope pairs an envelope read from the API with a key that
+// identifies the attestation across responses.
+type fetchedEnvelope struct {
+	envelope attestation.Envelope
+	key      string
 }
 
 // Fetch queries the repository and retrieves any attestations matching the query
@@ -125,18 +134,19 @@ func (c *Collector) FetchBySubject(ctx context.Context, opts attestation.FetchOp
 		return nil, fmt.Errorf("missing repository data")
 	}
 
-	// Build a list of subjects to query
+	// Build a list of subjects to query. The GitHub API looks attestations
+	// up by the literal algo:value digest string, without restricting the
+	// algorithm, so every digest of the subjects is queried.
 	subjects := map[string]string{}
 	for _, s := range subj {
 		for algo, value := range s.GetDigest() {
-			algo = strings.ToLower(algo)
-			if !slices.Contains(SupportedAlgorithms, strings.ToLower(algo)) {
-				continue
-			}
-			subjects[fmt.Sprintf("%s:%s", algo, value)] = s.GetName()
+			subjects[fmt.Sprintf("%s:%s", strings.ToLower(algo), value)] = s.GetName()
 		}
 	}
 	ret := []attestation.Envelope{}
+	// A subject with several digests returns the same attestation once
+	// per digest, keep track of what was already read.
+	seen := map[string]struct{}{}
 	// Get all the attestations up to the configured limit
 	for digest := range subjects {
 		url := fmt.Sprintf("users/%s/attestations/%s", c.Options.Owner, digest)
@@ -148,7 +158,13 @@ func (c *Collector) FetchBySubject(ctx context.Context, opts attestation.FetchOp
 		if err != nil {
 			return nil, fmt.Errorf("fetching attestations: %w", err)
 		}
-		ret = append(ret, envs...)
+		for _, fe := range envs {
+			if _, ok := seen[fe.key]; ok {
+				continue
+			}
+			seen[fe.key] = struct{}{}
+			ret = append(ret, fe.envelope)
+		}
 
 		if opts.Limit > 0 && len(ret) >= opts.Limit {
 			return ret[:opts.Limit], nil
@@ -161,8 +177,8 @@ func (c *Collector) FetchBySubject(ctx context.Context, opts attestation.FetchOp
 // this will return true in the boolean if more requests are needed.
 //
 //nolint:unparam
-func (c *Collector) fetchFromUrl(ctx context.Context, url string, maxReadSize int64) ([]attestation.Envelope, bool, error) {
-	ret := []attestation.Envelope{}
+func (c *Collector) fetchFromUrl(ctx context.Context, url string, maxReadSize int64) ([]fetchedEnvelope, bool, error) {
+	ret := []fetchedEnvelope{}
 
 	// Call the API:
 	resp, err := c.client.Call(ctx, http.MethodGet, url, nil)
@@ -183,7 +199,18 @@ func (c *Collector) fetchFromUrl(ctx context.Context, url string, maxReadSize in
 	}
 
 	for _, e := range res.Attestations {
-		ret = append(ret, e.Bundle)
+		if len(e.Bundle) == 0 {
+			logrus.Debugf("github: attestation without inline bundle, skipping (%s)", e.BundleURL)
+			continue
+		}
+		env := &bundle.Envelope{}
+		if err := json.Unmarshal(e.Bundle, env); err != nil {
+			return nil, false, fmt.Errorf("parsing attestation bundle: %w", err)
+		}
+		// Key the attestation on the bundle bytes as served, the same
+		// attestation is returned for every digest of its subject.
+		sum := sha256.Sum256(e.Bundle)
+		ret = append(ret, fetchedEnvelope{envelope: env, key: hex.EncodeToString(sum[:])})
 	}
 	return ret, false, nil
 }
