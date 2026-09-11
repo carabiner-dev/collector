@@ -334,3 +334,29 @@ func TestFetchAttestationsByPredicateType(t *testing.T) {
 		})
 	}
 }
+
+// fakeStorer records the store calls it gets and fails with err when set.
+type fakeStorer struct {
+	err   error
+	calls int
+}
+
+func (f *fakeStorer) Store(_ context.Context, _ attestation.StoreOptions, _ []attestation.Envelope) error {
+	f.calls++
+	return f.err
+}
+
+func TestStoreReachesEveryRepository(t *testing.T) {
+	t.Parallel()
+	failing := &fakeStorer{err: errors.New("boom")}
+	working := &fakeStorer{}
+
+	agent, err := New()
+	require.NoError(t, err)
+	require.NoError(t, agent.AddRepository(failing, working))
+
+	err = agent.Store(t.Context(), nil)
+	require.ErrorContains(t, err, "boom")
+	require.Equal(t, 1, failing.calls)
+	require.Equal(t, 1, working.calls, "a failing repository must not stop the others")
+}

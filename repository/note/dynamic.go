@@ -12,6 +12,7 @@ import (
 	intoto "github.com/in-toto/attestation/go/v1"
 
 	"github.com/carabiner-dev/collector/filters"
+	"github.com/carabiner-dev/collector/repository"
 )
 
 var (
@@ -111,37 +112,64 @@ func (c *Dynamic) FetchBySubject(ctx context.Context, opts attestation.FetchOpti
 // group using a dedicated notes collector. If any envelope lacks a sha1 or
 // gitCommit subject, an error is returned before any writes occur.
 func (c *Dynamic) Store(ctx context.Context, opts attestation.StoreOptions, envelopes []attestation.Envelope) error {
-	// First pass: validate all envelopes and group by commit digest.
+	serr := repository.NewStoreError()
+
+	// First pass: group the envelopes by commit digest, remembering their
+	// position to report failures. Envelopes without a commit subject
+	// cannot be stored as notes and are skipped.
 	commitEnvelopes := map[string][]attestation.Envelope{}
+	commitIndexes := map[string][]int{}
 	for i, env := range envelopes {
 		commits := extractCommitDigests(env)
 		if len(commits) == 0 {
-			return fmt.Errorf("envelope %d has no sha1 or gitCommit subject", i)
+			serr.Failed[i] = errors.New("envelope has no sha1 or gitCommit subject")
+			continue
 		}
 		for _, commit := range commits {
 			commitEnvelopes[commit] = append(commitEnvelopes[commit], env)
+			commitIndexes[commit] = append(commitIndexes[commit], i)
 		}
 	}
 
-	// Second pass: store attestations per commit.
-	errs := []error{}
+	// Second pass: store attestations per commit. An envelope that fails
+	// under any of its commits counts as failed.
 	for commit, envs := range commitEnvelopes {
+		indexes := commitIndexes[commit]
 		notesCollector, err := New(
 			WithLocator(fmt.Sprintf("%s@%s", c.Options.DynamicRepoURL, commit)),
 			WithHttpAuth(c.Options.HttpUsername, c.Options.HttpPassword),
 			WithPush(*c.Options.Push),
 		)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("building collector for commit %s: %w", commit, err))
+			failIndexes(serr, indexes, fmt.Errorf("building collector for commit %s: %w", commit, err))
 			continue
 		}
 
-		if err := notesCollector.Store(ctx, opts, envs); err != nil {
-			errs = append(errs, fmt.Errorf("storing attestations for commit %s: %w", commit, err))
+		err = notesCollector.Store(ctx, opts, envs)
+		var sub *repository.StoreError
+		switch {
+		case err == nil:
+		case errors.As(err, &sub):
+			for j, ferr := range sub.Failed {
+				serr.Failed[indexes[j]] = fmt.Errorf("storing attestation for commit %s: %w", commit, ferr)
+			}
+		default:
+			failIndexes(serr, indexes, fmt.Errorf("storing attestations for commit %s: %w", commit, err))
 		}
 	}
 
-	return errors.Join(errs...)
+	serr.Stored = len(envelopes) - len(serr.Failed)
+	return serr.ErrorOrNil()
+}
+
+// failIndexes marks the envelopes at indexes as failed with err, keeping
+// the error already recorded for an envelope that failed before.
+func failIndexes(serr *repository.StoreError, indexes []int, err error) {
+	for _, i := range indexes {
+		if _, failed := serr.Failed[i]; !failed {
+			serr.Failed[i] = err
+		}
+	}
 }
 
 // extractCommitDigests returns deduplicated commit hashes from an envelope's

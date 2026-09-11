@@ -20,6 +20,7 @@ import (
 
 	"github.com/carabiner-dev/collector/envelope/bundle"
 	"github.com/carabiner-dev/collector/internal/readlimit"
+	"github.com/carabiner-dev/collector/repository"
 )
 
 const (
@@ -197,34 +198,46 @@ func (ppb preParsedBundle) MarshalJSON() ([]byte, error) {
 	return ppb, nil
 }
 
-// Store implements the attestations.Storer interface
+// Store implements the attestations.Storer interface. Every envelope is
+// uploaded on its own, and one failing does not stop the rest: when any
+// of them cannot be stored the returned error is a *repository.StoreError
+// listing the failed ones, while the others stay stored.
 func (c *Collector) Store(ctx context.Context, _ attestation.StoreOptions, envelopes []attestation.Envelope) error {
-	// Cal the API to upload the bundle
-	for _, env := range envelopes {
-		envelopeData, err := json.Marshal(env)
-		if err != nil {
-			return fmt.Errorf("marshaling envelope data: %w", err)
+	serr := repository.NewStoreError()
+	for i, env := range envelopes {
+		if err := c.storeEnvelope(ctx, env); err != nil {
+			serr.Failed[i] = err
+			continue
 		}
+		serr.Stored++
+	}
+	return serr.ErrorOrNil()
+}
 
-		payload := uploadRequestValueParsed{
-			Bundle: preParsedBundle(envelopeData),
-		}
-
-		payloadData, err := json.Marshal(payload)
-		if err != nil {
-			return fmt.Errorf("marshaling payload: %w", err)
-		}
-
-		res, err := c.client.Call(
-			ctx, http.MethodPost,
-			fmt.Sprintf(gitHubAttestationsUploadEndpoint, c.Options.Owner, c.Options.Repo),
-			bytes.NewReader(payloadData),
-		)
-		if err != nil {
-			return fmt.Errorf("uploading attestation bundle: %w", err)
-		}
-		res.Body.Close() //nolint:errcheck,gosec
+// storeEnvelope uploads a single envelope to the attestations store.
+func (c *Collector) storeEnvelope(ctx context.Context, env attestation.Envelope) error {
+	envelopeData, err := json.Marshal(env)
+	if err != nil {
+		return fmt.Errorf("marshaling envelope data: %w", err)
 	}
 
+	payload := uploadRequestValueParsed{
+		Bundle: preParsedBundle(envelopeData),
+	}
+
+	payloadData, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("marshaling payload: %w", err)
+	}
+
+	res, err := c.client.Call(
+		ctx, http.MethodPost,
+		fmt.Sprintf(gitHubAttestationsUploadEndpoint, c.Options.Owner, c.Options.Repo),
+		bytes.NewReader(payloadData),
+	)
+	if err != nil {
+		return fmt.Errorf("uploading attestation bundle: %w", err)
+	}
+	res.Body.Close() //nolint:errcheck,gosec
 	return nil
 }

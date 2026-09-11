@@ -21,6 +21,7 @@ import (
 	"github.com/protobom/protobom/pkg/writer"
 
 	"github.com/carabiner-dev/collector/filters"
+	"github.com/carabiner-dev/collector/repository"
 	"github.com/carabiner-dev/collector/repository/filesystem"
 )
 
@@ -132,10 +133,14 @@ func (c *Collector) Store(_ context.Context, _ attestation.StoreOptions, envelop
 	}
 	idx := len(entries)
 
+	// Write every envelope on its own so one failing does not stop the
+	// rest. The failures are reported together in a StoreError.
+	serr := repository.NewStoreError()
 	for i, env := range envelopes {
 		data, err := json.Marshal(env)
 		if err != nil {
-			return fmt.Errorf("marshaling envelope %d: %w", i, err)
+			serr.Failed[i] = fmt.Errorf("marshaling envelope: %w", err)
+			continue
 		}
 
 		fname := fmt.Sprintf("attestation-%04d.json", idx+i)
@@ -148,8 +153,10 @@ func (c *Collector) Store(_ context.Context, _ attestation.StoreOptions, envelop
 		}
 
 		if err := c.fs.WriteFile(fname, data); err != nil {
-			return fmt.Errorf("writing attestation %d to sbomfs: %w", i, err)
+			serr.Failed[i] = fmt.Errorf("writing attestation to sbomfs: %w", err)
+			continue
 		}
+		serr.Stored++
 	}
 
 	// Write the SBOM document back to disk in its original format.
@@ -157,7 +164,7 @@ func (c *Collector) Store(_ context.Context, _ attestation.StoreOptions, envelop
 		return fmt.Errorf("writing SBOM document: %w", err)
 	}
 
-	return nil
+	return serr.ErrorOrNil()
 }
 
 // writeDocument persists the SBOM document back to disk in its original format.

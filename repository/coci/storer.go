@@ -31,6 +31,7 @@ import (
 
 	"github.com/carabiner-dev/collector/envelope/bundle"
 	"github.com/carabiner-dev/collector/envelope/dsse"
+	"github.com/carabiner-dev/collector/repository"
 )
 
 // dsseEnvelopeMediaType is the layer media type cosign uses for DSSE-wrapped
@@ -73,15 +74,21 @@ func (c *Collector) Store(ctx context.Context, _ attestation.StoreOptions, envel
 		return fmt.Errorf("preparing base attestation image: %w", err)
 	}
 
+	// Every envelope becomes a layer of one image. Envelopes that cannot
+	// be turned into a layer are skipped and reported in a StoreError once
+	// the rest is pushed.
+	serr := repository.NewStoreError()
 	addendums := make([]mutate.Addendum, 0, len(envelopes))
 	for i, env := range envelopes {
 		layerBytes, material, err := dsseLayerForEnvelope(env)
 		if err != nil {
-			return fmt.Errorf("preparing layer for envelope %d: %w", i, err)
+			serr.Failed[i] = fmt.Errorf("preparing layer: %w", err)
+			continue
 		}
 		annotations, err := cosignAnnotationsFromMaterial(material)
 		if err != nil {
-			return fmt.Errorf("building cosign annotations for envelope %d: %w", i, err)
+			serr.Failed[i] = fmt.Errorf("building cosign annotations: %w", err)
+			continue
 		}
 		if pt := predicateTypeForLayer(env, layerBytes); pt != "" {
 			if annotations == nil {
@@ -93,6 +100,12 @@ func (c *Collector) Store(ctx context.Context, _ attestation.StoreOptions, envel
 			Layer:       static.NewLayer(layerBytes, dsseEnvelopeMediaType),
 			Annotations: annotations,
 		})
+		serr.Stored++
+	}
+
+	// Nothing left to push
+	if len(addendums) == 0 {
+		return serr.ErrorOrNil()
 	}
 
 	img, err := mutate.Append(base, addendums...)
@@ -106,7 +119,7 @@ func (c *Collector) Store(ctx context.Context, _ attestation.StoreOptions, envel
 	if err := crane.Push(img, attTag, opts...); err != nil {
 		return fmt.Errorf("pushing attestation image to %s: %w", attTag, err)
 	}
-	return nil
+	return serr.ErrorOrNil()
 }
 
 // pullExistingOrEmpty fetches the current attestation image at attTag so its
