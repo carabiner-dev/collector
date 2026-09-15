@@ -10,7 +10,7 @@ require (
 	github.com/carabiner-dev/jsonl v0.2.2
 	github.com/carabiner-dev/openeox v1.0.0
 	github.com/carabiner-dev/osv v0.1.2
-	github.com/carabiner-dev/predicates v0.5.1
+	github.com/carabiner-dev/predicates v0.5.2-0.20260914235924-fec2bb07398b
 	github.com/carabiner-dev/sbomfs v0.2.0
 	github.com/carabiner-dev/signer v0.6.2
 	github.com/carabiner-dev/spdx3 v0.1.0
@@ -154,6 +154,7 @@ require (
 	github.com/hashicorp/go-sockaddr v1.0.7 // indirect
 	github.com/hashicorp/hcl v1.0.1-vault-7 // indirect
 	github.com/hashicorp/vault/api v1.23.0 // indirect
+	github.com/hjson/hjson-go/v4 v4.7.1 // indirect
 	github.com/in-toto/in-toto-golang v0.11.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
