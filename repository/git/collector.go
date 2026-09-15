@@ -74,10 +74,14 @@ func (c *Collector) clone() error {
 	}
 	c.Repo = r
 
-	fscollector, err := filesystem.New(
+	fsOpts := []filesystem.OptFn{
 		filesystem.WithFS(iofs.New(fs)),
 		filesystem.WithPath(c.Options.Path),
-	)
+	}
+	if c.Options.Extensions != nil {
+		fsOpts = append(fsOpts, filesystem.WithExtensions(c.Options.Extensions))
+	}
+	fscollector, err := filesystem.New(fsOpts...)
 	if err != nil {
 		return fmt.Errorf("creating new fs collector: %w", err)
 	}

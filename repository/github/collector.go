@@ -203,14 +203,17 @@ func (c *Collector) fetchFromUrl(ctx context.Context, url string, maxReadSize in
 			logrus.Debugf("github: attestation without inline bundle, skipping (%s)", e.BundleURL)
 			continue
 		}
-		env := &bundle.Envelope{}
-		if err := json.Unmarshal(e.Bundle, env); err != nil {
+		// Parse through the bundle parser so the envelope origin is set
+		parsed, err := (&bundle.Parser{}).Parse(e.Bundle)
+		if err != nil {
 			return nil, false, fmt.Errorf("parsing attestation bundle: %w", err)
 		}
 		// Key the attestation on the bundle bytes as served, the same
 		// attestation is returned for every digest of its subject.
 		sum := sha256.Sum256(e.Bundle)
-		ret = append(ret, fetchedEnvelope{envelope: env, key: hex.EncodeToString(sum[:])})
+		for _, env := range parsed {
+			ret = append(ret, fetchedEnvelope{envelope: env, key: hex.EncodeToString(sum[:])})
+		}
 	}
 	return ret, false, nil
 }

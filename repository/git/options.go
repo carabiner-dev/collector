@@ -21,6 +21,10 @@ type Options struct {
 	Path   string
 	Ref    string
 	Commit string
+
+	// Extensions are the file extensions read from the cloned repository.
+	// When nil, the filesystem collector's defaults are used.
+	Extensions []string
 }
 
 var defaultOptions = Options{}
@@ -75,6 +79,15 @@ func isLocalPath(s string) bool {
 func WithPath(path string) optFn {
 	return func(opts *Options) error {
 		opts.Path = path
+		return nil
+	}
+}
+
+// WithExtensions sets the file extensions (without the dot) attestations are
+// read from in the cloned repository, replacing the filesystem defaults.
+func WithExtensions(exts []string) optFn {
+	return func(opts *Options) error {
+		opts.Extensions = exts
 		return nil
 	}
 }

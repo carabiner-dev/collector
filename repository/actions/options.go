@@ -13,6 +13,8 @@ import (
 	"strings"
 
 	"github.com/carabiner-dev/signer/key"
+
+	"github.com/carabiner-dev/collector/repository/filesystem"
 )
 
 const (
@@ -31,7 +33,7 @@ const (
 
 // defaultExtensions mirrors the filesystem collector's default extensions
 // (see TestDefaultExtensions) plus zip, so zipped artifacts are expanded.
-var defaultExtensions = []string{"json", "jsonl", "spdx", "cdx", "bundle", zipExtension}
+var defaultExtensions = append(slices.Clone(filesystem.DefaultExtensions), zipExtension)
 
 var defaultOptions = Options{
 	Retries: 5,

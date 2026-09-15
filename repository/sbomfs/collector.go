@@ -78,10 +78,14 @@ func (c *Collector) SetKeys(keys []key.PublicKeyProvider) {
 
 // Fetch queries the sbomfs and retrieves any attestations stored as properties.
 func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
-	driver, err := filesystem.New(
+	fsOpts := []filesystem.OptFn{
 		filesystem.WithFS(c.fs),
 		filesystem.WithKey(c.Keys...),
-	)
+	}
+	if c.Options.Extensions != nil {
+		fsOpts = append(fsOpts, filesystem.WithExtensions(c.Options.Extensions))
+	}
+	driver, err := filesystem.New(fsOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("creating filesystem collector driver: %w", err)
 	}

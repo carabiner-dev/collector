@@ -31,9 +31,15 @@ var Build = func(istr string) (attestation.Repository, error) {
 	return New(WithInitString(istr))
 }
 
-func New(opts ...fnOpts) (*Collector, error) {
+// DefaultExtensions are the file extensions the collector reads attestations
+// from when no other list is configured: bare statements, DSSE envelopes and
+// sigstore bundles (json, bundle), JSONL multi-attestation files, SBOM
+// documents (spdx, cdx) and policy materials authored in HJSON.
+var DefaultExtensions = []string{"json", "jsonl", "spdx", "cdx", "bundle", "hjson"}
+
+func New(opts ...OptFn) (*Collector, error) {
 	c := &Collector{
-		Extensions:               []string{"json", "jsonl", "spdx", "cdx", "bundle"},
+		Extensions:               slices.Clone(DefaultExtensions),
 		SignatureExtensions:      append([]string{}, defaultSignatureExtensions...),
 		SigstoreBundleExtensions: append([]string{}, defaultSigstoreBundleExtensions...),
 		CertificateExtensions:    append([]string{}, defaultCertificateExtensions...),
@@ -49,23 +55,24 @@ func New(opts ...fnOpts) (*Collector, error) {
 	return c, nil
 }
 
-type fnOpts func(*Collector) error
+// OptFn configures a filesystem collector.
+type OptFn func(*Collector) error
 
-var WithInitString = func(s string) fnOpts {
+var WithInitString = func(s string) OptFn {
 	return func(c *Collector) error {
 		c.FS = os.DirFS(s)
 		return nil
 	}
 }
 
-var WithFS = func(iofs fs.FS) fnOpts {
+var WithFS = func(iofs fs.FS) OptFn {
 	return func(c *Collector) error {
 		c.FS = iofs
 		return nil
 	}
 }
 
-var WithPath = func(path string) fnOpts {
+var WithPath = func(path string) OptFn {
 	return func(c *Collector) error {
 		c.Path = strings.TrimPrefix(path, "/")
 		if c.Path == "" {
@@ -75,35 +82,44 @@ var WithPath = func(path string) fnOpts {
 	}
 }
 
-var WithSignatureExtensions = func(exts []string) fnOpts {
+// WithExtensions sets the file extensions (without the dot) the collector
+// reads attestations from, replacing DefaultExtensions.
+var WithExtensions = func(exts []string) OptFn {
+	return func(c *Collector) error {
+		c.Extensions = slices.Clone(exts)
+		return nil
+	}
+}
+
+var WithSignatureExtensions = func(exts []string) OptFn {
 	return func(c *Collector) error {
 		c.SignatureExtensions = exts
 		return nil
 	}
 }
 
-var WithSigstoreBundleExtensions = func(exts []string) fnOpts {
+var WithSigstoreBundleExtensions = func(exts []string) OptFn {
 	return func(c *Collector) error {
 		c.SigstoreBundleExtensions = exts
 		return nil
 	}
 }
 
-var WithCertificateExtensions = func(exts []string) fnOpts {
+var WithCertificateExtensions = func(exts []string) OptFn {
 	return func(c *Collector) error {
 		c.CertificateExtensions = exts
 		return nil
 	}
 }
 
-var WithRekorURL = func(url string) fnOpts {
+var WithRekorURL = func(url string) OptFn {
 	return func(c *Collector) error {
 		c.RekorURL = url
 		return nil
 	}
 }
 
-var WithKey = func(keys ...key.PublicKeyProvider) fnOpts {
+var WithKey = func(keys ...key.PublicKeyProvider) OptFn {
 	return func(c *Collector) error {
 		c.Keys = append(c.Keys, keys...)
 		return nil

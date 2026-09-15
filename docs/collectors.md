@@ -8,15 +8,16 @@ repository collector drivers. Each driver implements one or more of the
 ## filesystem (`fs`)
 
 Walks a local or embedded `fs.FS` filesystem and parses any files with
-recognized extensions (`.json`, `.jsonl`, `.spdx`, `.cdx`, `.bundle`).
-JSONL files are parsed as multi-attestation bundles; all other files are
-passed to the standard envelope parsers.
+recognized extensions (`.json`, `.jsonl`, `.spdx`, `.cdx`, `.bundle`,
+`.hjson`). JSONL files are parsed as multi-attestation bundles; all other
+files are passed to the standard envelope parsers. `WithExtensions` replaces
+the list (`DefaultExtensions` holds the default one).
 
 ## git
 
 Clones a remote git repository (shallow, single-branch, depth 1) into
 memory and delegates to the **filesystem** collector to read attestations
-from the cloned worktree.
+from the cloned worktree. `WithExtensions` is passed through to it.
 
 ## github
 
@@ -157,7 +158,10 @@ on `cosign`.
 
 Reads attestations from GitHub release assets. Constructs a virtual
 filesystem from the release's downloadable assets and delegates to the
-**filesystem** collector to parse them.
+**filesystem** collector to parse them. Only assets with the attestation
+extensions (the **filesystem** defaults, or the list given to
+`WithExtensions`) and their signature, certificate and key sidecars are
+downloaded.
 
 For [immutable releases](https://github.blog/changelog/2025-10-28-immutable-releases-are-now-generally-available/)
 the collector also returns the release attestation GitHub generates
