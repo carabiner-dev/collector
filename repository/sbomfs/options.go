@@ -17,11 +17,25 @@ type optFn = func(*Collector) error
 
 type Options struct {
 	Path string
+
+	// Extensions are the file extensions (without the dot) attestations are
+	// read from in the SBOM filesystem. When nil, the filesystem collector's
+	// defaults are used.
+	Extensions []string
 }
 
 func WithPath(path string) optFn {
 	return func(c *Collector) error {
 		c.Options.Path = path
+		return nil
+	}
+}
+
+// WithExtensions sets the file extensions (without the dot) attestations are
+// read from, replacing the filesystem defaults.
+func WithExtensions(exts []string) optFn {
+	return func(c *Collector) error {
+		c.Options.Extensions = exts
 		return nil
 	}
 }

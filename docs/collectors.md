@@ -158,7 +158,10 @@ on `cosign`.
 
 Reads attestations from GitHub release assets. Constructs a virtual
 filesystem from the release's downloadable assets and delegates to the
-**filesystem** collector to parse them.
+**filesystem** collector to parse them. Only assets with the attestation
+extensions (the **filesystem** defaults, or the list given to
+`WithExtensions`) and their signature, certificate and key sidecars are
+downloaded.
 
 For [immutable releases](https://github.blog/changelog/2025-10-28-immutable-releases-are-now-generally-available/)
 the collector also returns the release attestation GitHub generates

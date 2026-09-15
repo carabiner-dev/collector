@@ -6,6 +6,7 @@ package release
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/carabiner-dev/attestation"
 	"github.com/carabiner-dev/ghrfs"
@@ -47,9 +48,7 @@ func New(funcs ...optFn) (*Collector, error) {
 		ghrfs.WithToken(c.Options.Token),
 		ghrfs.WithRetries(c.Options.Retries),
 		ghrfs.WithCache(true),
-		ghrfs.WithCacheExtensions(
-			[]string{"jsonl", "json", "pub", "sig", "crt", "key", "pub", "pem", "spdx", "cdx", "bundle", "asc", "gpg"},
-		),
+		ghrfs.WithCacheExtensions(cacheExtensions(c.Options.Extensions)),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("creating GHRFS from: %w", err)
@@ -58,6 +57,7 @@ func New(funcs ...optFn) (*Collector, error) {
 	fscollector, err := filesystem.New(
 		filesystem.WithFS(fs),
 		filesystem.WithKey(c.Keys...),
+		filesystem.WithExtensions(attestationExtensions(c.Options.Extensions)),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("creating filesystem collector driver: %w", err)
@@ -146,4 +146,30 @@ func withFilter(opts attestation.FetchOptions, f attestation.Filter) attestation
 	q.Filters = append(append([]attestation.Filter{}, q.Filters...), f)
 	opts.Query = &q
 	return opts
+}
+
+// sidecarExtensions are the extensions of the files published next to
+// attestations that the filesystem collector pairs with them: detached
+// signatures, certificates and keys.
+var sidecarExtensions = []string{"sig", "asc", "gpg", "pem", "crt", "cert", "key", "pub"}
+
+// attestationExtensions returns the extensions attestations are read from:
+// the configured ones or the filesystem collector's defaults.
+func attestationExtensions(configured []string) []string {
+	if configured != nil {
+		return slices.Clone(configured)
+	}
+	return slices.Clone(filesystem.DefaultExtensions)
+}
+
+// cacheExtensions returns the extensions of the release assets worth
+// downloading: the attestation extensions plus their sidecars.
+func cacheExtensions(configured []string) []string {
+	exts := attestationExtensions(configured)
+	for _, ext := range sidecarExtensions {
+		if !slices.Contains(exts, ext) {
+			exts = append(exts, ext)
+		}
+	}
+	return exts
 }

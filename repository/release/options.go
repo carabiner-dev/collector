@@ -29,6 +29,12 @@ type Options struct {
 	// made for each release API request, both when reading a release (fetch)
 	// and when uploading attestations (store).
 	Retries uint
+
+	// Extensions are the file extensions (without the dot) of the release
+	// assets attestations are read from. When nil, the filesystem
+	// collector's defaults are used. Signature and certificate sidecars are
+	// always downloaded along with them.
+	Extensions []string
 }
 
 // WithInitURL is specially crafte
@@ -88,6 +94,15 @@ func WithToken(token string) optFn {
 // WithRetries sets how many times a release request is retried (with
 // exponential backoff) before giving up, for both fetch and store operations.
 // Zero disables retries.
+// WithExtensions sets the file extensions (without the dot) of the release
+// assets attestations are read from, replacing the filesystem defaults.
+func WithExtensions(exts []string) optFn {
+	return func(c *Collector) error {
+		c.Options.Extensions = exts
+		return nil
+	}
+}
+
 func WithRetries(n uint) optFn {
 	return func(c *Collector) error {
 		c.Options.Retries = n
