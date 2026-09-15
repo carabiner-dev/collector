@@ -5,6 +5,7 @@ package envelope
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -114,15 +115,21 @@ func (list *ParserList) Parse(r io.Reader) ([]attestation.Envelope, error) {
 	if err != nil {
 		return nil, fmt.Errorf("reading atetstation data: %w", err)
 	}
-	for f, parser := range *list {
-		logrus.Debugf("Checking if envelope is %s", f)
-		env, err := parser.ParseStream(bytes.NewReader(data))
-		if err == nil {
-			logrus.Debugf("Found envelope type: %s ", f)
-			return env, nil
-		}
-		if !errors.Is(err, attestation.ErrNotCorrectFormat) {
-			return nil, err
+
+	// Signed envelopes are always JSON. Data that is not JSON (for example a
+	// policy authored in HJSON) can only be a bare attestation, so it skips
+	// the envelope parsers, which would reject it with a syntax error.
+	if json.Valid(data) {
+		for f, parser := range *list {
+			logrus.Debugf("Checking if envelope is %s", f)
+			env, err := parser.ParseStream(bytes.NewReader(data))
+			if err == nil {
+				logrus.Debugf("Found envelope type: %s ", f)
+				return env, nil
+			}
+			if !errors.Is(err, attestation.ErrNotCorrectFormat) {
+				return nil, err
+			}
 		}
 	}
 
