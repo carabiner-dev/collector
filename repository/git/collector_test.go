@@ -11,6 +11,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/release-utils/tar"
+
+	"github.com/carabiner-dev/collector/repository/filesystem"
 )
 
 func TestClone(t *testing.T) {
@@ -47,4 +49,34 @@ func TestClone(t *testing.T) {
 			require.Len(t, res, tc.expectedNum)
 		})
 	}
+}
+
+func TestCloneExtensions(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	require.NoError(t, tar.Extract("testdata/repo.tar.gz", dir))
+	repo := filepath.Join(dir, "repo")
+
+	t.Run("defaults", func(t *testing.T) {
+		t.Parallel()
+		c, err := New(WithLocator(repo))
+		require.NoError(t, err)
+		require.NoError(t, c.clone())
+		require.Equal(t, filesystem.DefaultExtensions, c.FSCollector.Extensions)
+	})
+
+	t.Run("custom", func(t *testing.T) {
+		t.Parallel()
+		c, err := New(WithLocator(repo), WithExtensions([]string{"spdx"}))
+		require.NoError(t, err)
+		require.NoError(t, c.clone())
+		require.Equal(t, []string{"spdx"}, c.FSCollector.Extensions)
+
+		// Only the spdx documents in the fixture are read now
+		res, err := c.Fetch(t.Context(), attestation.FetchOptions{})
+		require.NoError(t, err)
+		for _, env := range res {
+			require.Contains(t, string(env.GetStatement().GetPredicateType()), "spdx")
+		}
+	})
 }

@@ -8,15 +8,16 @@ repository collector drivers. Each driver implements one or more of the
 ## filesystem (`fs`)
 
 Walks a local or embedded `fs.FS` filesystem and parses any files with
-recognized extensions (`.json`, `.jsonl`, `.spdx`, `.cdx`, `.bundle`).
-JSONL files are parsed as multi-attestation bundles; all other files are
-passed to the standard envelope parsers.
+recognized extensions (`.json`, `.jsonl`, `.spdx`, `.cdx`, `.bundle`,
+`.hjson`). JSONL files are parsed as multi-attestation bundles; all other
+files are passed to the standard envelope parsers. `WithExtensions` replaces
+the list (`DefaultExtensions` holds the default one).
 
 ## git
 
 Clones a remote git repository (shallow, single-branch, depth 1) into
 memory and delegates to the **filesystem** collector to read attestations
-from the cloned worktree.
+from the cloned worktree. `WithExtensions` is passed through to it.
 
 ## github
 
