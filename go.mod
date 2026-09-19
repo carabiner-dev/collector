@@ -10,11 +10,11 @@ require (
 	github.com/carabiner-dev/jsonl v0.2.2
 	github.com/carabiner-dev/openeox v1.0.0
 	github.com/carabiner-dev/osv v0.1.2
-	github.com/carabiner-dev/predicates v0.5.2-0.20260914235924-fec2bb07398b
+	github.com/carabiner-dev/predicates v0.5.4
 	github.com/carabiner-dev/sbomfs v0.2.0
 	github.com/carabiner-dev/signer v0.6.2
 	github.com/carabiner-dev/spdx3 v0.1.0
-	github.com/carabiner-dev/stash v0.0.0-20260908191435-d6225e020426
+	github.com/carabiner-dev/stash v0.0.0-20260914181612-673fcf191e49
 	github.com/carabiner-dev/vcslocator v0.5.0
 	github.com/cenkalti/backoff/v5 v5.0.3
 	github.com/github/smimesign v0.2.0
@@ -86,7 +86,7 @@ require (
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/carabiner-dev/command v0.3.2 // indirect
 	github.com/carabiner-dev/deadrop v0.0.0-20260228173914-d95e9ea2877d // indirect
-	github.com/carabiner-dev/policy v0.5.5 // indirect
+	github.com/carabiner-dev/policy v0.5.6 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chainguard-dev/clog v1.8.1 // indirect

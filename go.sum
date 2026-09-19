@@ -114,8 +114,12 @@ github.com/carabiner-dev/osv v0.1.2 h1:W5nZOGuygnqzB7YbGon6ab3iFHxFZZgzS3m7GEvYn
 github.com/carabiner-dev/osv v0.1.2/go.mod h1:06cHx1aOdlb53feQxjBIRt3NSFfQKg1b1hrHHj/57QQ=
 github.com/carabiner-dev/policy v0.5.5 h1:+UU9awmI77uL5tBhl44eKF3iPcU0/WGsnITOQNFxY5M=
 github.com/carabiner-dev/policy v0.5.5/go.mod h1:JVGoDp9BRtW6meaZPNE9DbcHasDWjeN3Aei4qiHOlpo=
+github.com/carabiner-dev/policy v0.5.6 h1:zM203rdxnv2epn6czUs+CcAxQoyKqJDHqfiWLog+UtM=
+github.com/carabiner-dev/policy v0.5.6/go.mod h1:E0KFvUp/xVj6ZCoFHdrPJ1i/G2uUDlwpFn26J+z6M+8=
 github.com/carabiner-dev/predicates v0.5.2-0.20260914235924-fec2bb07398b h1:awzbdrttZn5exek5CmMtjbUMUWhpo7vXIVI8SE3UdDs=
 github.com/carabiner-dev/predicates v0.5.2-0.20260914235924-fec2bb07398b/go.mod h1:AlLDfExvCswnVkR7g04ZSaP4xnQCGKzEEzEdf5izNt0=
+github.com/carabiner-dev/predicates v0.5.4 h1:koiNmcr0IbjHpjywI/k9OGeEilTIKdMQyh5LZZJt4ok=
+github.com/carabiner-dev/predicates v0.5.4/go.mod h1:zHcoDfyIfH7WMOS0zpEKD+lBPikEw+/BNg6988g8c2I=
 github.com/carabiner-dev/sbomfs v0.2.0 h1:7OG0Su6iz9sPWcAFzSsaauVZQpKayzrJvGWe0NoxbPw=
 github.com/carabiner-dev/sbomfs v0.2.0/go.mod h1:KaTNcHjm5qbu5G0RCc/7uo3U1KZj1IqRZLFiG+nwC8g=
 github.com/carabiner-dev/signer v0.6.2 h1:Tww40YP4RKjLSKdgT5nXVRiqd3Czjvkwd2WRDE7ecJ0=
@@ -124,6 +128,8 @@ github.com/carabiner-dev/spdx3 v0.1.0 h1:Q6nMLXV0BhtqDQuwRDOaJDZR670TK4jdOvZqvTW
 github.com/carabiner-dev/spdx3 v0.1.0/go.mod h1:d/t010TrZvYZBeYGpvHeId6QpRvGLlqK7cy0E81npPA=
 github.com/carabiner-dev/stash v0.0.0-20260908191435-d6225e020426 h1:OpWSJwPUe5cwDLRS52AIG5UlvEjnA3NClq+nQO74HZI=
 github.com/carabiner-dev/stash v0.0.0-20260908191435-d6225e020426/go.mod h1:a3y+CMfB8JcwycV3dMGJ9sskLpamxzLFEW1cMJoaTc8=
+github.com/carabiner-dev/stash v0.0.0-20260914181612-673fcf191e49 h1:1w2A+h9pJd340ONY2cv8/LN+wfwAicplXpBnwja/ljg=
+github.com/carabiner-dev/stash v0.0.0-20260914181612-673fcf191e49/go.mod h1:oLgs6W8zu4PFbISAJDjNSsD9PNvHlaDCLwoOpz44cYU=
 github.com/carabiner-dev/vcslocator v0.5.0 h1:UpqilJXRJBgwzQHk0MsD03w+8/0GcyC1HbXxX0wZKcU=
 github.com/carabiner-dev/vcslocator v0.5.0/go.mod h1:s4zrF5l7b2iZFsxVDKz6Y+6LcaqP4GTshSCGuCbu+Ls=
 github.com/cenkalti/backoff/v4 v4.3.0 h1:MyRJ/UdXutAwSAT+s3wNd7MfTIcy71VQueUuFK343L8=
