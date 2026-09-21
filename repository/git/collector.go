@@ -54,13 +54,13 @@ type Collector struct {
 }
 
 // clone clones the repository and sets up the filesystem and fs collector
-func (c *Collector) clone() error {
+func (c *Collector) clone(ctx context.Context) error {
 	// For now we clone the data to memory, this could
 	// be an option
 	fs := memfs.New()
 
 	// Make a shallow clone of the repo to memory
-	r, err := git.Clone(memory.NewStorage(), fs, &git.CloneOptions{
+	r, err := git.CloneContext(ctx, memory.NewStorage(), fs, &git.CloneOptions{
 		URL: c.Options.URL,
 		// Progress:      os.Stdout,
 		ReferenceName: plumbing.ReferenceName(c.Options.Ref),
@@ -89,16 +89,16 @@ func (c *Collector) clone() error {
 	return nil
 }
 
-func (c *Collector) ensureClone() error {
+func (c *Collector) ensureClone(ctx context.Context) error {
 	if c.FSCollector == nil {
-		return c.clone()
+		return c.clone(ctx)
 	}
 	return nil
 }
 
 // Fetch queries the repository and retrieves any attestations matching the query
 func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
-	if err := c.ensureClone(); err != nil {
+	if err := c.ensureClone(ctx); err != nil {
 		return nil, err
 	}
 	return c.FSCollector.Fetch(ctx, opts)
@@ -107,14 +107,14 @@ func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([
 // FetchBySubject calls the attestation reader with a filter preconfigured
 // with subject hashes.
 func (c *Collector) FetchBySubject(ctx context.Context, opts attestation.FetchOptions, subj []attestation.Subject) ([]attestation.Envelope, error) {
-	if err := c.ensureClone(); err != nil {
+	if err := c.ensureClone(ctx); err != nil {
 		return nil, err
 	}
 	return c.FSCollector.FetchBySubject(ctx, opts, subj)
 }
 
 func (c *Collector) FetchByPredicateType(ctx context.Context, opts attestation.FetchOptions, pts []attestation.PredicateType) ([]attestation.Envelope, error) {
-	if err := c.ensureClone(); err != nil {
+	if err := c.ensureClone(ctx); err != nil {
 		return nil, err
 	}
 	return c.FSCollector.FetchByPredicateType(ctx, opts, pts)

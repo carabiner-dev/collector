@@ -4,6 +4,7 @@
 package filesystem
 
 import (
+	"context"
 	"os"
 	"testing"
 	"testing/fstest"
@@ -111,4 +112,21 @@ func TestFetchFetchByPredicateType(t *testing.T) {
 			require.Len(t, atts, tc.expect)
 		})
 	}
+}
+
+// TestFetchStopsWalkOnCancelledContext proves the filesystem walk checks the
+// context on every entry: a cancelled context returns the context error and
+// reads no attestations.
+func TestFetchStopsWalkOnCancelledContext(t *testing.T) {
+	t.Parallel()
+
+	collector, err := New(WithFS(os.DirFS("testdata")))
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	envs, err := collector.Fetch(ctx, attestation.FetchOptions{})
+	require.ErrorIs(t, err, context.Canceled)
+	require.Empty(t, envs)
 }

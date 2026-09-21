@@ -161,6 +161,11 @@ func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([
 			return fmt.Errorf("scanning at %s: %w", path, err)
 		}
 
+		// Stop walking once the caller has given up
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+
 		if d.IsDir() {
 			return nil
 		}

@@ -15,7 +15,7 @@ require (
 	github.com/carabiner-dev/signer v0.6.2
 	github.com/carabiner-dev/spdx3 v0.1.0
 	github.com/carabiner-dev/stash v0.0.0-20260914181612-673fcf191e49
-	github.com/carabiner-dev/vcslocator v0.5.0
+	github.com/carabiner-dev/vcslocator v0.5.1
 	github.com/cenkalti/backoff/v5 v5.0.3
 	github.com/github/smimesign v0.2.0
 	github.com/go-git/go-billy/v5 v5.9.1

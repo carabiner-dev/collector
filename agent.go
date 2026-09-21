@@ -118,6 +118,12 @@ func (agent *Agent) Fetch(ctx context.Context, optFn ...FetchOptionsFunc) ([]att
 
 	for _, r := range repos {
 		go func(r attestation.Fetcher) {
+			// Do not start a fetch the caller has already given up on
+			if err := ctx.Err(); err != nil {
+				t.Done(err)
+				return
+			}
+
 			// Call the repo driver's fetch method
 			atts, err := r.Fetch(ctx, opts)
 			if err != nil {
@@ -141,7 +147,7 @@ func (agent *Agent) Fetch(ctx context.Context, optFn ...FetchOptionsFunc) ([]att
 		ret = ret[0:opts.Limit]
 	}
 
-	return ret, t.Err()
+	return ret, errors.Join(t.Errs()...)
 }
 
 // fetchMutex protects the entire fetch operation to prevent concurrent fetches
@@ -216,6 +222,12 @@ func (agent *Agent) FetchAttestationsBySubject(ctx context.Context, subjects []a
 
 			for _, r := range repos {
 				go func(r attestation.Fetcher) {
+					// Do not start a fetch the caller has already given up on
+					if err := ctx.Err(); err != nil {
+						t.Done(err)
+						return
+					}
+
 					var err error
 					var atts []attestation.Envelope
 					if fr, ok := r.(attestation.FetcherBySubject); ok {
@@ -238,7 +250,7 @@ func (agent *Agent) FetchAttestationsBySubject(ctx context.Context, subjects []a
 				}(r)
 				t.Throttle()
 			}
-			if err := t.Err(); err != nil {
+			if err := errors.Join(t.Errs()...); err != nil {
 				return nil, fmt.Errorf("fetch throttler error: %w", err)
 			}
 			if agent.Options.UseCache && agent.Cache != nil {
@@ -304,6 +316,12 @@ func (agent *Agent) FetchAttestationsByPredicateType(ctx context.Context, pt []a
 		})
 		for _, r := range repos {
 			go func(r attestation.Fetcher) {
+				// Do not start a fetch the caller has already given up on
+				if err := ctx.Err(); err != nil {
+					t.Done(err)
+					return
+				}
+
 				var err error
 				var atts []attestation.Envelope
 
@@ -327,7 +345,7 @@ func (agent *Agent) FetchAttestationsByPredicateType(ctx context.Context, pt []a
 			}(r)
 			t.Throttle()
 		}
-		if err := t.Err(); err != nil {
+		if err := errors.Join(t.Errs()...); err != nil {
 			return nil, fmt.Errorf("fetch throttler error: %w", err)
 		}
 		if agent.Options.UseCache && agent.Cache != nil {
@@ -365,6 +383,11 @@ func (agent *Agent) Store(ctx context.Context, envelopes []attestation.Envelope,
 	// Every repository gets the envelopes even when another one failed
 	errs := []error{}
 	for _, repo := range repos {
+		// Stop before the next repository once the caller has given up
+		if err := ctx.Err(); err != nil {
+			errs = append(errs, err)
+			break
+		}
 		if err := repo.Store(ctx, opts, envelopes); err != nil {
 			errs = append(errs, fmt.Errorf("storing attestation: %w", err))
 		}

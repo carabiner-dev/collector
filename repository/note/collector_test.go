@@ -4,6 +4,7 @@
 package note
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -57,7 +58,7 @@ func TestExtractCommitBundle(t *testing.T) {
 			c := Collector{
 				Options: Options{Locator: tc.locator},
 			}
-			reader, err := c.extractCommitBundle()
+			reader, err := c.extractCommitBundle(t.Context())
 			if tc.mustErr {
 				require.Error(t, err)
 				return
@@ -151,4 +152,23 @@ func TestNoteMissing(t *testing.T) {
 			require.Equal(t, tc.want, noteMissing(tc.err))
 		})
 	}
+}
+
+// TestFetchHonorsContext proves the notes clone respects the caller's
+// context: a pre-cancelled context must fail with context.Canceled before
+// reaching the remote, not with a network error from the unreachable address.
+func TestFetchHonorsContext(t *testing.T) {
+	t.Parallel()
+
+	c, err := New(
+		WithLocator("git+https://127.0.0.1:1/org/repo@0123456789abcdef0123456789abcdef01234567"),
+		WithHttpAuth("user", "pass"),
+	)
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	_, err = c.Fetch(ctx, attestation.FetchOptions{})
+	require.ErrorIs(t, err, context.Canceled)
 }

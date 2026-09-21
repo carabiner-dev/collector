@@ -232,7 +232,7 @@ func TestOpenRepoLocal(t *testing.T) {
 	c, err := New(WithRepoPath(repoPath))
 	require.NoError(t, err)
 
-	repo, err := c.openRepo()
+	repo, err := c.openRepo(t.Context())
 	require.NoError(t, err)
 	require.NotNil(t, repo)
 }
@@ -243,7 +243,7 @@ func TestOpenRepoFileLocator(t *testing.T) {
 	c, err := New(WithInitString(string(vcslocator.NewFromPath(repoPath))))
 	require.NoError(t, err)
 
-	repo, err := c.openRepo()
+	repo, err := c.openRepo(t.Context())
 	require.NoError(t, err)
 	require.NotNil(t, repo)
 }

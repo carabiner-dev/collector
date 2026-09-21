@@ -54,7 +54,7 @@ func (c *Collector) Store(ctx context.Context, opts attestation.StoreOptions, en
 	}
 
 	// Open or clone the repository
-	repo, err := c.openOrCloneRepoForNotes(components)
+	repo, err := c.openOrCloneRepoForNotes(ctx, components)
 	if err != nil {
 		return fmt.Errorf("opening repository: %w", err)
 	}
@@ -102,7 +102,7 @@ func (c *Collector) Store(ctx context.Context, opts attestation.StoreOptions, en
 
 	// Push if needed
 	if shouldPush {
-		if err := c.pushNotes(repo); err != nil {
+		if err := c.pushNotes(ctx, repo); err != nil {
 			return fmt.Errorf("pushing notes: %w", err)
 		}
 	}
@@ -111,7 +111,7 @@ func (c *Collector) Store(ctx context.Context, opts attestation.StoreOptions, en
 }
 
 // openOrCloneRepoForNotes opens an existing repository or clones it for notes operations
-func (c *Collector) openOrCloneRepoForNotes(components *vcslocator.Components) (*git.Repository, error) {
+func (c *Collector) openOrCloneRepoForNotes(ctx context.Context, components *vcslocator.Components) (*git.Repository, error) {
 	if components.Transport == vcslocator.TransportFile {
 		// Open existing local repository
 		localPath, err := vcslocator.Locator(c.Options.Locator).LocalPath()
@@ -136,7 +136,7 @@ func (c *Collector) openOrCloneRepoForNotes(components *vcslocator.Components) (
 	}
 
 	// For remote repos, clone to memory
-	repo, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
+	repo, err := git.CloneContext(ctx, memory.NewStorage(), nil, &git.CloneOptions{
 		URL:  components.RepoURL(),
 		Auth: auth,
 		// Clone without checking out a worktree (bare-like clone)
@@ -146,7 +146,7 @@ func (c *Collector) openOrCloneRepoForNotes(components *vcslocator.Components) (
 	}
 
 	// Fetch notes explicitly
-	err = repo.Fetch(&git.FetchOptions{
+	err = repo.FetchContext(ctx, &git.FetchOptions{
 		Auth: auth,
 		RefSpecs: []config.RefSpec{
 			config.RefSpec(fmt.Sprintf("+%s:%s", notesRef, notesRef)),
@@ -454,7 +454,7 @@ func (c *Collector) createUpdatedTree(repo *git.Repository, baseTree *object.Tre
 }
 
 // pushNotes pushes the notes ref to the remote
-func (c *Collector) pushNotes(repo *git.Repository) error {
+func (c *Collector) pushNotes(ctx context.Context, repo *git.Repository) error {
 	// Get authentication method
 	auth, err := vcslocator.GetAuthMethod(
 		c.Options.Locator, vcslocator.WithHttpAuth(c.Options.HttpUsername, c.Options.HttpPassword),
@@ -470,7 +470,7 @@ func (c *Collector) pushNotes(repo *git.Repository) error {
 	}
 
 	// Push the notes ref
-	err = remote.Push(&git.PushOptions{
+	err = remote.PushContext(ctx, &git.PushOptions{
 		Auth: auth,
 		RefSpecs: []config.RefSpec{
 			config.RefSpec(fmt.Sprintf("%s:%s", notesRef, notesRef)),

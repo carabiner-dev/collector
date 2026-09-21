@@ -107,7 +107,7 @@ func (o *Options) Validate() error {
 func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
 	ret := []attestation.Envelope{}
 
-	reader, err := c.extractCommitBundle()
+	reader, err := c.extractCommitBundle(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +154,7 @@ func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([
 // extractCommitBundle reads the jsonl attestations bundle from the commit
 // notes data. Returns an error if cloning fails but nil if there is no
 // bundle data in the commit.
-func (c *Collector) extractCommitBundle() (io.Reader, error) {
+func (c *Collector) extractCommitBundle(ctx context.Context) (io.Reader, error) {
 	if c.Options.Locator == "" {
 		return nil, errors.New("unable to read note, no VCS locator set")
 	}
@@ -193,6 +193,7 @@ func (c *Collector) extractCommitBundle() (io.Reader, error) {
 	err = vcslocator.CopyFileGroup(
 		[]string{uriShard, uriFile}, []io.Writer{&bufferShard, &bufferFile},
 		vcslocator.WithHttpAuth(c.Options.HttpUsername, c.Options.HttpPassword),
+		vcslocator.WithContext(ctx),
 	)
 
 	// Depending on wether the notes data was sharded or not, one of the VCS
