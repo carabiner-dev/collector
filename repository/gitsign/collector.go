@@ -256,7 +256,7 @@ func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([
 		return []attestation.Envelope{}, nil
 	}
 
-	repo, err := c.openRepo()
+	repo, err := c.openRepo(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -339,7 +339,7 @@ func (c *Collector) FetchBySubject(ctx context.Context, opts attestation.FetchOp
 		return nil, nil
 	}
 
-	repo, err := c.openRepo()
+	repo, err := c.openRepo(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -373,7 +373,7 @@ func (c *Collector) FetchBySubject(ctx context.Context, opts attestation.FetchOp
 // The locator is first tried as a vcslocator; if it parses and is not a
 // file:// transport, the repository is cloned. Otherwise it is treated as
 // a local filesystem path.
-func (c *Collector) openRepo() (*gogit.Repository, error) {
+func (c *Collector) openRepo(ctx context.Context) (*gogit.Repository, error) {
 	components, err := vcslocator.Locator(c.Options.Locator).Parse()
 	if err == nil && components.Transport != vcslocator.TransportFile {
 		// Remote repository — fetch into memory. An explicit auth option wins,
@@ -397,10 +397,10 @@ func (c *Collector) openRepo() (*gogit.Repository, error) {
 		// (including fork PRs under refs/pull/N/head) that a default-branch
 		// clone never sees. Otherwise fall back to a full clone.
 		if ref != "" {
-			return fetchRef(components.RepoURL(), c.Options.Remote, ref, auth, c.Options.Depth)
+			return fetchRef(ctx, components.RepoURL(), c.Options.Remote, ref, auth, c.Options.Depth)
 		}
 
-		repo, err := gogit.Clone(memory.NewStorage(), nil, &gogit.CloneOptions{
+		repo, err := gogit.CloneContext(ctx, memory.NewStorage(), nil, &gogit.CloneOptions{
 			URL:   components.RepoURL(),
 			Auth:  auth,
 			Depth: c.Options.Depth,
@@ -434,7 +434,7 @@ func (c *Collector) openRepo() (*gogit.Repository, error) {
 // — notably refs/pull/N/head, where GitHub exposes a pull request's head commit
 // (fork PRs included) on the base repository, readable with the base repo's
 // installation token. depth 0 fetches full history; 1 fetches only the ref tip.
-func fetchRef(url, remote, ref string, auth transport.AuthMethod, depth int) (*gogit.Repository, error) {
+func fetchRef(ctx context.Context, url, remote, ref string, auth transport.AuthMethod, depth int) (*gogit.Repository, error) {
 	if remote == "" {
 		remote = "origin"
 	}
@@ -448,7 +448,7 @@ func fetchRef(url, remote, ref string, auth transport.AuthMethod, depth int) (*g
 	}); err != nil {
 		return nil, fmt.Errorf("creating remote: %w", err)
 	}
-	if err := repo.Fetch(&gogit.FetchOptions{
+	if err := repo.FetchContext(ctx, &gogit.FetchOptions{
 		RemoteName: remote,
 		Auth:       auth,
 		Depth:      depth,

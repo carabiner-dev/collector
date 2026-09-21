@@ -282,3 +282,20 @@ func createTestAttestation(t *testing.T) attestation.Envelope {
 
 	return env[0]
 }
+
+// TestStoreHonorsContext proves the remote clone respects the caller's
+// context: a pre-cancelled context must fail with context.Canceled before
+// reaching the remote, not with a network error from the unreachable address.
+func TestStoreHonorsContext(t *testing.T) {
+	collector, err := New(
+		WithLocator("git+https://127.0.0.1:1/org/repo@0123456789abcdef0123456789abcdef01234567"),
+		WithHttpAuth("user", "pass"),
+	)
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	err = collector.Store(ctx, attestation.StoreOptions{}, nil)
+	require.ErrorIs(t, err, context.Canceled)
+}

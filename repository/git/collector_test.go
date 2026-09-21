@@ -4,6 +4,7 @@
 package git
 
 import (
+	"context"
 	"path/filepath"
 	"testing"
 
@@ -36,7 +37,7 @@ func TestClone(t *testing.T) {
 			c, err := New(WithLocator(tc.init))
 			require.NoError(t, err)
 
-			err = c.clone()
+			err = c.clone(t.Context())
 			if tc.mustErr {
 				require.Error(t, err)
 				return
@@ -61,7 +62,7 @@ func TestCloneExtensions(t *testing.T) {
 		t.Parallel()
 		c, err := New(WithLocator(repo))
 		require.NoError(t, err)
-		require.NoError(t, c.clone())
+		require.NoError(t, c.clone(t.Context()))
 		require.Equal(t, filesystem.DefaultExtensions, c.FSCollector.Extensions)
 	})
 
@@ -69,7 +70,7 @@ func TestCloneExtensions(t *testing.T) {
 		t.Parallel()
 		c, err := New(WithLocator(repo), WithExtensions([]string{"spdx"}))
 		require.NoError(t, err)
-		require.NoError(t, c.clone())
+		require.NoError(t, c.clone(t.Context()))
 		require.Equal(t, []string{"spdx"}, c.FSCollector.Extensions)
 
 		// Only the spdx documents in the fixture are read now
@@ -79,4 +80,19 @@ func TestCloneExtensions(t *testing.T) {
 			require.Contains(t, string(env.GetStatement().GetPredicateType()), "spdx")
 		}
 	})
+}
+
+// TestFetchHonorsContext proves the clone respects the caller's context: a
+// pre-cancelled context must fail with context.Canceled before reaching the
+// remote, not with a network error from the unreachable address.
+func TestFetchHonorsContext(t *testing.T) {
+	t.Parallel()
+	c, err := New(WithLocator("https://127.0.0.1:1/org/repo"))
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	_, err = c.Fetch(ctx, attestation.FetchOptions{})
+	require.ErrorIs(t, err, context.Canceled)
 }

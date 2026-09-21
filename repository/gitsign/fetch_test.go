@@ -4,6 +4,7 @@
 package gitsign
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -61,7 +62,7 @@ func TestFetchRef_PullRef(t *testing.T) {
 	require.NoError(t, src.Storer.SetReference(
 		plumbing.NewHashReference("refs/pull/1/head", h)))
 
-	repo, err := fetchRef(dir, "origin", "refs/pull/1/head", nil, 0)
+	repo, err := fetchRef(t.Context(), dir, "origin", "refs/pull/1/head", nil, 0)
 	require.NoError(t, err)
 	_, err = repo.CommitObject(h)
 	require.NoError(t, err, "the pull-ref commit must be present after fetchRef")
@@ -76,6 +77,27 @@ func TestFetchRef_MissingRef(t *testing.T) {
 	_, err := gogit.PlainInit(dir, false)
 	require.NoError(t, err)
 
-	_, err = fetchRef(dir, "origin", "refs/pull/999/head", nil, 0)
+	_, err = fetchRef(t.Context(), dir, "origin", "refs/pull/999/head", nil, 0)
 	require.Error(t, err, "fetching a non-existent ref must fail")
+}
+
+// TestOpenRepoHonorsContext proves the remote clone and the single-ref fetch
+// respect the caller's context: a pre-cancelled context must fail with
+// context.Canceled before reaching the remote, not with a network error from
+// the unreachable address.
+func TestOpenRepoHonorsContext(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	t.Run("clone", func(t *testing.T) {
+		c, err := New(WithRepoPath("git+https://127.0.0.1:1/org/repo"), WithToken("tok"))
+		require.NoError(t, err)
+		_, err = c.openRepo(ctx)
+		require.ErrorIs(t, err, context.Canceled)
+	})
+
+	t.Run("fetchRef", func(t *testing.T) {
+		_, err := fetchRef(ctx, "https://127.0.0.1:1/org/repo", "origin", "refs/pull/1/head", nil, 0)
+		require.ErrorIs(t, err, context.Canceled)
+	})
 }
