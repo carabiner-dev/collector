@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/carabiner-dev/attestation"
+	intoto "github.com/in-toto/attestation/go/v1"
 	"github.com/stretchr/testify/require"
 
 	"github.com/carabiner-dev/collector/envelope/bare"
@@ -359,4 +360,72 @@ func TestStoreReachesEveryRepository(t *testing.T) {
 	require.ErrorContains(t, err, "boom")
 	require.Equal(t, 1, failing.calls)
 	require.Equal(t, 1, working.calls, "a failing repository must not stop the others")
+}
+
+// TestFetchSkipsDriversOnCancelledContext proves the agent does not start a
+// driver fetch once the caller's context is done: every fetch entry point
+// returns the context error and no driver is called.
+func TestFetchSkipsDriversOnCancelledContext(t *testing.T) {
+	t.Parallel()
+
+	calls := 0
+	record := func() {
+		calls++
+	}
+	fetcher := &fakeFetcher{
+		fetchFunc: func(context.Context, attestation.FetchOptions) ([]attestation.Envelope, error) {
+			record()
+			return nil, nil
+		},
+		fetchBySubjectFunc: func(context.Context, attestation.FetchOptions, []attestation.Subject) ([]attestation.Envelope, error) {
+			record()
+			return nil, nil
+		},
+		fetchByPredicateTypeFunc: func(context.Context, attestation.FetchOptions, []attestation.PredicateType) ([]attestation.Envelope, error) {
+			record()
+			return nil, nil
+		},
+	}
+
+	agent, err := New()
+	require.NoError(t, err)
+	require.NoError(t, agent.AddRepository(fetcher))
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	_, err = agent.Fetch(ctx)
+	require.ErrorIs(t, err, context.Canceled)
+
+	_, err = agent.FetchAttestationsBySubject(ctx, []attestation.Subject{
+		&intoto.ResourceDescriptor{Name: "x", Digest: map[string]string{"sha256": "abc"}},
+	})
+	require.ErrorIs(t, err, context.Canceled)
+
+	_, err = agent.FetchAttestationsByPredicateType(ctx, []attestation.PredicateType{"https://example.com/p"})
+	require.ErrorIs(t, err, context.Canceled)
+
+	require.Equal(t, 0, calls, "no driver may be called once the context is done")
+}
+
+// TestStoreStopsOnCancelledContext proves Store checks the context between
+// repositories: with a cancelled context no repository is written and the
+// context error is returned.
+func TestStoreStopsOnCancelledContext(t *testing.T) {
+	t.Parallel()
+
+	first := &fakeStorer{}
+	second := &fakeStorer{}
+
+	agent, err := New()
+	require.NoError(t, err)
+	require.NoError(t, agent.AddRepository(first, second))
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	err = agent.Store(ctx, nil)
+	require.ErrorIs(t, err, context.Canceled)
+	require.Equal(t, 0, first.calls)
+	require.Equal(t, 0, second.calls)
 }
