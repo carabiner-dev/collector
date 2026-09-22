@@ -4,6 +4,7 @@
 package ossrebuild
 
 import (
+	"context"
 	"testing"
 
 	"github.com/carabiner-dev/attestation"
@@ -75,4 +76,20 @@ func TestSubjectsToUrls(t *testing.T) {
 			require.Equal(t, tt.expect, urls)
 		})
 	}
+}
+
+// TestFetchBySubjectHonorsContext proves the context reaches the HTTP
+// collector this driver delegates to: a pre-cancelled context must fail with
+// context.Canceled rather than contacting the rebuild bucket.
+func TestFetchBySubjectHonorsContext(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	c := &Collector{}
+	_, err := c.FetchBySubject(ctx, attestation.FetchOptions{}, []attestation.Subject{
+		&intoto.ResourceDescriptor{Uri: "pkg:npm/%40alloc/quick-lru@5.2.0"},
+	})
+	require.ErrorIs(t, err, context.Canceled)
 }

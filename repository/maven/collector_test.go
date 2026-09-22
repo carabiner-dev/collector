@@ -4,6 +4,7 @@
 package maven
 
 import (
+	"context"
 	"testing"
 
 	"github.com/carabiner-dev/attestation"
@@ -328,4 +329,24 @@ func TestFindSnapshotVersion(t *testing.T) {
 
 	_, ok = findSnapshotVersion(md, "jar", "nonexistent")
 	require.False(t, ok)
+}
+
+// TestFetchHonorsContext proves the metadata request hands the caller's
+// context to the HTTP agent: a pre-cancelled context must fail with
+// context.Canceled before reaching the remote, not with a network error from
+// the unreachable address.
+func TestFetchHonorsContext(t *testing.T) {
+	t.Parallel()
+
+	c, err := New(
+		WithPackageURL("pkg:maven/com.example/foo@1.0.0"),
+		WithBaseURL("https://127.0.0.1:1/"),
+	)
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	_, err = c.Fetch(ctx, attestation.FetchOptions{})
+	require.ErrorIs(t, err, context.Canceled)
 }

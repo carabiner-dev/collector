@@ -75,14 +75,14 @@ func (c *Collector) SetKeys(keys []key.PublicKeyProvider) {
 // Fetch retrieves attestations for the configured package URL. When the
 // collector is in global mode (no package URL configured) it returns
 // nothing — global mode is subject-driven, use FetchBySubject instead.
-func (c *Collector) Fetch(_ context.Context, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
+func (c *Collector) Fetch(ctx context.Context, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
 	if !c.Options.HasPackageURL() {
 		return nil, nil
 	}
 	// In configured mode the collector's BaseURL is authoritative — it
 	// already reflects any "repository_url" qualifier captured at
 	// construction time and preserves explicit WithBaseURL overrides.
-	return c.fetchForPurl(opts, &c.Options.PackageURL, c.Options.BaseURL)
+	return c.fetchForPurl(ctx, opts, &c.Options.PackageURL, c.Options.BaseURL)
 }
 
 // fetchForPurl runs the full attestation lookup for a single Maven purl
@@ -90,31 +90,31 @@ func (c *Collector) Fetch(_ context.Context, opts attestation.FetchOptions) ([]a
 // configured mode passes the collector's BaseURL as-is; global mode
 // resolves per-subject via baseURLForPurl so a "repository_url"
 // qualifier on a subject purl can target its own repository.
-func (c *Collector) fetchForPurl(opts attestation.FetchOptions, purl *gopurl.PackageURL, baseURL string) ([]attestation.Envelope, error) {
+func (c *Collector) fetchForPurl(ctx context.Context, opts attestation.FetchOptions, purl *gopurl.PackageURL, baseURL string) ([]attestation.Envelope, error) {
 	dirURL := directoryURL(purl, baseURL)
 	artifactID := purl.Name
 	agent := http.NewAgent().WithFailOnHTTPError(true)
 
-	md, err := c.fetchMetadata(agent, dirURL)
+	md, err := c.fetchMetadata(ctx, agent, dirURL)
 	if err != nil {
 		return nil, err
 	}
 
 	var ret []attestation.Envelope
 
-	ascEnvs, err := c.fetchSignature(agent, dirURL, purl, md, opts)
+	ascEnvs, err := c.fetchSignature(ctx, agent, dirURL, purl, md, opts)
 	if err != nil {
 		return nil, err
 	}
 	ret = append(ret, ascEnvs...)
 
-	jsonlEnvs, err := c.fetchJSONLAttestations(agent, dirURL, artifactID, md, opts)
+	jsonlEnvs, err := c.fetchJSONLAttestations(ctx, agent, dirURL, artifactID, md, opts)
 	if err != nil {
 		return nil, err
 	}
 	ret = append(ret, jsonlEnvs...)
 
-	sbomEnvs, err := c.fetchSBOMs(agent, dirURL, artifactID, md, opts)
+	sbomEnvs, err := c.fetchSBOMs(ctx, agent, dirURL, artifactID, md, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +152,7 @@ func (c *Collector) FetchBySubject(ctx context.Context, opts attestation.FetchOp
 			// Global mode: a per-subject purl can carry its own
 			// "repository_url" qualifier; fall back to the collector's
 			// BaseURL when it doesn't.
-			envs, err := c.fetchForPurl(opts, p, baseURLForPurl(p, c.Options.BaseURL))
+			envs, err := c.fetchForPurl(ctx, opts, p, baseURLForPurl(p, c.Options.BaseURL))
 			if err != nil {
 				// A missing or unreachable package for one subject shouldn't
 				// fail the whole query — log and continue.
@@ -242,8 +242,8 @@ type snapshotVersion struct {
 }
 
 // fetchMetadata fetches and parses the maven-metadata.xml from the directory.
-func (c *Collector) fetchMetadata(agent *http.Agent, dirURL string) (*mavenMetadata, error) {
-	data, err := agent.Get(dirURL + "maven-metadata.xml")
+func (c *Collector) fetchMetadata(ctx context.Context, agent *http.Agent, dirURL string) (*mavenMetadata, error) {
+	data, err := agent.GetContext(ctx, dirURL+"maven-metadata.xml")
 	if err != nil {
 		return nil, fmt.Errorf("fetching maven-metadata.xml from %s: %w", dirURL, err)
 	}
@@ -284,7 +284,7 @@ func findSnapshotVersion(md *mavenMetadata, extension, classifier string) (snaps
 // purl "type" and "classifier" qualifiers so the hashed subject matches
 // the artifact the purl refers to. Returns nil without error if the
 // artifacts are not in the metadata or no keys are configured.
-func (c *Collector) fetchSignature(agent *http.Agent, dirURL string, purl *gopurl.PackageURL, md *mavenMetadata, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
+func (c *Collector) fetchSignature(ctx context.Context, agent *http.Agent, dirURL string, purl *gopurl.PackageURL, md *mavenMetadata, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
 	if len(c.Keys) == 0 {
 		return nil, nil
 	}
@@ -312,7 +312,7 @@ func (c *Collector) fetchSignature(agent *http.Agent, dirURL string, purl *gopur
 
 	// Fetch the artifact and its signature in parallel.
 	urls := []string{dirURL + artFile, dirURL + ascFile}
-	datas, errs := agent.GetGroup(urls)
+	datas, errs := agent.GetGroupContext(ctx, urls)
 
 	for i, e := range errs {
 		if e != nil {
@@ -343,7 +343,7 @@ func (c *Collector) fetchSignature(agent *http.Agent, dirURL string, purl *gopur
 
 // fetchJSONLAttestations looks for intoto.jsonl in the metadata and parses
 // it for attestation envelopes. Returns nil without error if not present.
-func (c *Collector) fetchJSONLAttestations(agent *http.Agent, dirURL, artifactID string, md *mavenMetadata, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
+func (c *Collector) fetchJSONLAttestations(ctx context.Context, agent *http.Agent, dirURL, artifactID string, md *mavenMetadata, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
 	sv, ok := findSnapshotVersion(md, "intoto.jsonl", "")
 	if !ok {
 		return nil, nil
@@ -352,7 +352,7 @@ func (c *Collector) fetchJSONLAttestations(agent *http.Agent, dirURL, artifactID
 	filename := resolveFilename(artifactID, sv)
 	maxSize := readlimit.Resolve(opts.MaxReadSize)
 
-	data, err := agent.Get(dirURL + filename)
+	data, err := agent.GetContext(ctx, dirURL+filename)
 	if err != nil {
 		return nil, fmt.Errorf("fetching %s: %w", filename, err)
 	}
@@ -377,7 +377,7 @@ var sbomExtensions = []struct {
 
 // fetchSBOMs looks for unsigned SBOM files in the metadata.
 // Returns nil without error if none are present.
-func (c *Collector) fetchSBOMs(agent *http.Agent, dirURL, artifactID string, md *mavenMetadata, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
+func (c *Collector) fetchSBOMs(ctx context.Context, agent *http.Agent, dirURL, artifactID string, md *mavenMetadata, opts attestation.FetchOptions) ([]attestation.Envelope, error) {
 	maxSize := readlimit.Resolve(opts.MaxReadSize)
 	var ret []attestation.Envelope
 
@@ -388,7 +388,7 @@ func (c *Collector) fetchSBOMs(agent *http.Agent, dirURL, artifactID string, md 
 		}
 
 		filename := resolveFilename(artifactID, sv)
-		data, err := agent.Get(dirURL + filename)
+		data, err := agent.GetContext(ctx, dirURL+filename)
 		if err != nil {
 			return nil, fmt.Errorf("fetching SBOM %s: %w", filename, err)
 		}
