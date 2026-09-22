@@ -4,6 +4,7 @@
 package http
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -100,4 +101,51 @@ func TestFetchData(t *testing.T) {
 		})
 	}
 	//
+}
+
+// TestFetchHonorsContext proves each fetch path hands the caller's context
+// to the HTTP agent: a pre-cancelled context must fail with context.Canceled
+// before reaching the remote, not with a network error from the unreachable
+// address.
+func TestFetchHonorsContext(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	t.Run("Fetch", func(t *testing.T) {
+		t.Parallel()
+
+		c, err := New(WithURL("https://127.0.0.1:1/attestations.json"))
+		require.NoError(t, err)
+
+		_, err = c.Fetch(ctx, attestation.FetchOptions{})
+		require.ErrorIs(t, err, context.Canceled)
+	})
+
+	t.Run("FetchBySubject", func(t *testing.T) {
+		t.Parallel()
+
+		c, err := New(WithTemplateSubjectName("https://127.0.0.1:1/{{.SubjectName}}"))
+		require.NoError(t, err)
+		fetcher, ok := c.(attestation.FetcherBySubject)
+		require.True(t, ok)
+
+		_, err = fetcher.FetchBySubject(ctx, attestation.FetchOptions{}, []attestation.Subject{
+			&intoto.ResourceDescriptor{Name: "artifact"},
+		})
+		require.ErrorIs(t, err, context.Canceled)
+	})
+
+	t.Run("FetchByPredicateType", func(t *testing.T) {
+		t.Parallel()
+
+		c, err := New(WithTemplatePredicateType("https://127.0.0.1:1/{{.PredicateType}}"))
+		require.NoError(t, err)
+		fetcher, ok := c.(attestation.FetcherByPredicateType)
+		require.True(t, ok)
+
+		_, err = fetcher.FetchByPredicateType(ctx, attestation.FetchOptions{}, []attestation.PredicateType{"https://example.com/p"})
+		require.ErrorIs(t, err, context.Canceled)
+	})
 }

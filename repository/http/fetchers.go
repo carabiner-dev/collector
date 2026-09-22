@@ -18,7 +18,7 @@ import (
 )
 
 // fetchGeneral is the URL to retrieve all available attestations
-func fetchGeneral(_ context.Context, opts *Options, fo attestation.FetchOptions) ([]attestation.Envelope, error) {
+func fetchGeneral(ctx context.Context, opts *Options, fo attestation.FetchOptions) ([]attestation.Envelope, error) {
 	if len(opts.URLs) == 0 {
 		return nil, fmt.Errorf("unable to do request, url empty")
 	}
@@ -30,7 +30,7 @@ func fetchGeneral(_ context.Context, opts *Options, fo attestation.FetchOptions)
 
 	var attestations []attestation.Envelope
 	var err error
-	datas, errs := a.GetGroup(opts.URLs)
+	datas, errs := a.GetGroupContext(ctx, opts.URLs)
 	for i := range datas {
 		if errs[i] != nil {
 			// Don't take 404 as an error
@@ -66,7 +66,7 @@ func fetchGeneral(_ context.Context, opts *Options, fo attestation.FetchOptions)
 // fetchBySubject fetches the subject from the subject URL. If the collector
 // has specialized URL templates defined for name, digest or uri, then
 // those will be used to fetch data.
-func fetchBySubject(_ context.Context, opts *Options, fo attestation.FetchOptions, subjects []attestation.Subject) ([]attestation.Envelope, error) {
+func fetchBySubject(ctx context.Context, opts *Options, fo attestation.FetchOptions, subjects []attestation.Subject) ([]attestation.Envelope, error) {
 	var subjectNameTemplate, subjectDigestTemplate, subjectUriTemplate *template.Template
 	var err error
 
@@ -140,7 +140,7 @@ func fetchBySubject(_ context.Context, opts *Options, fo attestation.FetchOption
 
 	maxSize := readlimit.Resolve(fo.MaxReadSize)
 	attestations := []attestation.Envelope{}
-	datas, errs := http.NewAgent().WithRetries(opts.Retries).WithFailOnHTTPError(true).GetGroup(urls)
+	datas, errs := http.NewAgent().WithRetries(opts.Retries).WithFailOnHTTPError(true).GetGroupContext(ctx, urls)
 	for i, data := range datas {
 		if errs[i] != nil {
 			if strings.Contains(errs[i].Error(), "HTTP error 404") {
@@ -171,7 +171,7 @@ func fetchBySubject(_ context.Context, opts *Options, fo attestation.FetchOption
 	return attestations, nil
 }
 
-func fetchByPredicateType(_ context.Context, opts *Options, fo attestation.FetchOptions, types []attestation.PredicateType) ([]attestation.Envelope, error) {
+func fetchByPredicateType(ctx context.Context, opts *Options, fo attestation.FetchOptions, types []attestation.PredicateType) ([]attestation.Envelope, error) {
 	tmpl, err := template.New("urltemplate").Parse(opts.TemplatePredicateType)
 	if err != nil {
 		return nil, fmt.Errorf("parsing predicate URL template: %w", err)
@@ -186,13 +186,13 @@ func fetchByPredicateType(_ context.Context, opts *Options, fo attestation.Fetch
 	}
 	maxSize := readlimit.Resolve(fo.MaxReadSize)
 	attestations := []attestation.Envelope{}
-	datas, errs := http.NewAgent().WithRetries(opts.Retries).WithFailOnHTTPError(true).GetGroup(urls)
+	datas, errs := http.NewAgent().WithRetries(opts.Retries).WithFailOnHTTPError(true).GetGroupContext(ctx, urls)
 	for i, data := range datas {
 		if errs[i] != nil {
-			if strings.Contains(err.Error(), "HTTP error 404") {
+			if strings.Contains(errs[i].Error(), "HTTP error 404") {
 				continue
 			}
-			return nil, fmt.Errorf("error requesting data: %w", err)
+			return nil, fmt.Errorf("error requesting data: %w", errs[i])
 		}
 
 		if int64(len(data)) > maxSize {
