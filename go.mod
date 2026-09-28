@@ -31,7 +31,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/openvex/go-vex v0.2.9
 	github.com/package-url/packageurl-go v0.1.7
-	github.com/protobom/protobom v0.6.1
+	github.com/protobom/protobom v0.6.2
 	github.com/regclient/regclient v0.11.6
 	github.com/sigstore/gitsign v0.17.1
 	github.com/sigstore/protobuf-specs v0.5.2
