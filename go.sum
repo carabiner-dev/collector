@@ -102,8 +102,6 @@ github.com/bradleyjkemp/cupaloy/v2 v2.8.0 h1:any4BmKE+jGIaMpnU8YgH/I2LPiLBufr6oM
 github.com/bradleyjkemp/cupaloy/v2 v2.8.0/go.mod h1:bm7JXdkRd4BHJk9HpwqAI8BoAY1lps46Enkdqw6aRX0=
 github.com/c2sp/wycheproof v0.0.0-20260105152342-fca0d3ba9f12 h1:C34LW7dhWgjAaAOdNB8z2UCyJsXDjC6UTILljHuqOlI=
 github.com/c2sp/wycheproof v0.0.0-20260105152342-fca0d3ba9f12/go.mod h1:U1QjrC6KepOmtVmJn3QsKOTd9HliGr/da5afPEhLRnk=
-github.com/carabiner-dev/attestation v0.2.1 h1:VhjV5YlO9TsW50Sr/Zd54bdbZhhDAqgxC3kB9z1I+3Q=
-github.com/carabiner-dev/attestation v0.2.1/go.mod h1:O84vF84RZG3pJO/6BYrPs718bZviHF5DKajP1HsrDpw=
 github.com/carabiner-dev/command v0.3.3 h1:TwS5tAa+fHhY83lX5XjyakmF12mmcoUSwc87ZLxnBdo=
 github.com/carabiner-dev/command v0.3.3/go.mod h1:winbJcNyPQwCnYegXBiNG2TbqXgE9Zyfh7DF9cW/r1s=
 github.com/carabiner-dev/deadrop v0.0.0-20260228173914-d95e9ea2877d h1:Gl8o56PI73PE6YcDzUd49iJJBdp/ye/METanFm8gG64=
@@ -460,8 +458,8 @@ github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 h1:Jamvg5psRI
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/policylabs/attestation v0.3.0 h1:tutwsvbq/T5F0Hwt8+M4u42Egk1qP8YbNx4GQ1hnTTA=
 github.com/policylabs/attestation v0.3.0/go.mod h1:z5gJ2M2aAkByYxMLqoOIY31KvAOIX+Ys4ZW2HavM3/o=
-github.com/policylabs/policy v0.5.7-0.20261004134513-55e5473eef09 h1:xfDq4vrXBDv7EboreJwnDEwLn41cA2EqR9onfyBB9HE=
-github.com/policylabs/policy v0.5.7-0.20261004134513-55e5473eef09/go.mod h1:NArOX4b9LMPoc/aa8WPuZkEknGavT3IoYiyJ1rHxUBE=
+github.com/policylabs/policy v0.6.0 h1:NUMtcAH3tC123HHZmXK8H2Xo6izaNovwF3XnHbskIKg=
+github.com/policylabs/policy v0.6.0/go.mod h1:a+8uNqhkyYL2EJsJlHFrUwAMt3iqb4jgjeWhIkQEeS0=
 github.com/policylabs/predicates v0.6.0 h1:PgM9/8X8p/i4+Mr+VkijTb2ukeykrHmmjBnk1GuSq+M=
 github.com/policylabs/predicates v0.6.0/go.mod h1:g3sbkSBMWlEK8CPVFiUzSOfUoHWKLFYHr7xugF77Z60=
 github.com/policylabs/signer v0.6.4 h1:5dBt/X+MVbg1Is+IeH9rmTEV9R4J9c4/Egawe9Q61Bc=

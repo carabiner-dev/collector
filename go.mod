@@ -43,8 +43,6 @@ require (
 	sigs.k8s.io/release-utils v0.12.5
 )
 
-require github.com/carabiner-dev/attestation v0.2.1 // indirect
-
 require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.12-20260825204119-511051f7f437.2 // indirect
 	cloud.google.com/go v0.123.0 // indirect
@@ -181,7 +179,7 @@ require (
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/policylabs/attestation v0.3.0
-	github.com/policylabs/policy v0.5.7-0.20261004134513-55e5473eef09 // indirect
+	github.com/policylabs/policy v0.6.0 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/sassoftware/relic/v8 v8.2.0 // indirect
 	github.com/secure-systems-lab/go-securesystemslib v0.11.1 // indirect
