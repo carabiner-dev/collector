@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/carabiner-dev/attestation"
 	gopurl "github.com/package-url/packageurl-go"
+	"github.com/policylabs/attestation"
 
 	"github.com/policylabs/collector/repository/http"
 )

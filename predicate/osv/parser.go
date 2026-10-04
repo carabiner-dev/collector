@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/carabiner-dev/attestation"
 	protoOSV "github.com/carabiner-dev/osv/go/osv"
+	"github.com/policylabs/attestation"
 
 	"github.com/policylabs/collector/predicate/generic"
 )

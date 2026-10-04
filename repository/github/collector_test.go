@@ -11,9 +11,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/carabiner-dev/attestation"
 	"github.com/carabiner-dev/github"
 	intoto "github.com/in-toto/attestation/go/v1"
+	"github.com/policylabs/attestation"
 	"github.com/stretchr/testify/require"
 
 	"github.com/policylabs/collector/envelope"

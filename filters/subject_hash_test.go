@@ -6,8 +6,8 @@ package filters
 import (
 	"testing"
 
-	"github.com/carabiner-dev/attestation"
 	gointoto "github.com/in-toto/attestation/go/v1"
+	"github.com/policylabs/attestation"
 	"github.com/stretchr/testify/require"
 
 	"github.com/policylabs/collector/envelope/bare"

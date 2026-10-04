@@ -13,11 +13,11 @@ import (
 	"os"
 	"testing"
 
-	"github.com/carabiner-dev/attestation"
 	"github.com/olareg/olareg"
 	olaregconfig "github.com/olareg/olareg/config"
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/policylabs/attestation"
 	"github.com/regclient/regclient"
 	rcconfig "github.com/regclient/regclient/config"
 	rcdesc "github.com/regclient/regclient/types/descriptor"

@@ -9,8 +9,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/carabiner-dev/attestation"
 	"github.com/carabiner-dev/openeox"
+	"github.com/policylabs/attestation"
 
 	"github.com/policylabs/collector/predicate/generic"
 )

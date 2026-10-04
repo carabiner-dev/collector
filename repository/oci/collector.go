@@ -10,9 +10,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/carabiner-dev/attestation"
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/policylabs/attestation"
 	"github.com/regclient/regclient"
 	"github.com/regclient/regclient/types/descriptor"
 	"github.com/regclient/regclient/types/manifest"

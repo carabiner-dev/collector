@@ -10,7 +10,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/carabiner-dev/attestation"
+	"github.com/policylabs/attestation"
 	"sigs.k8s.io/release-utils/http"
 
 	"github.com/policylabs/collector/envelope"

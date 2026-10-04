@@ -7,8 +7,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/carabiner-dev/attestation"
 	gointoto "github.com/in-toto/attestation/go/v1"
+	"github.com/policylabs/attestation"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"

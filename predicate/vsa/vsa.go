@@ -8,8 +8,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/carabiner-dev/attestation"
 	vsa "github.com/in-toto/attestation/go/predicates/vsa/v1"
+	"github.com/policylabs/attestation"
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/policylabs/collector/predicate/generic"

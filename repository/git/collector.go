@@ -10,12 +10,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/carabiner-dev/attestation"
 	"github.com/go-git/go-billy/v5/helper/iofs"
 	"github.com/go-git/go-billy/v5/memfs"
 	git "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/storage/memory"
+	"github.com/policylabs/attestation"
 
 	"github.com/policylabs/collector/repository/filesystem"
 )

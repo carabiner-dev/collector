@@ -15,11 +15,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/carabiner-dev/attestation"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/olareg/olareg"
 	olaregconfig "github.com/olareg/olareg/config"
+	"github.com/policylabs/attestation"
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	protodsse "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"

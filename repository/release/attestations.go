@@ -11,8 +11,8 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/carabiner-dev/attestation"
 	"github.com/cenkalti/backoff/v5"
+	"github.com/policylabs/attestation"
 
 	"github.com/policylabs/collector/envelope/bundle"
 	"github.com/policylabs/collector/internal/creds"

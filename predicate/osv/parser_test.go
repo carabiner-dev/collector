@@ -7,8 +7,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/carabiner-dev/attestation"
 	protoOSV "github.com/carabiner-dev/osv/go/osv"
+	"github.com/policylabs/attestation"
 	"github.com/stretchr/testify/require"
 )
 

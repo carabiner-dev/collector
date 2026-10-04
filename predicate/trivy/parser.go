@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/carabiner-dev/attestation"
+	"github.com/policylabs/attestation"
 
 	"github.com/policylabs/collector/predicate/generic"
 )

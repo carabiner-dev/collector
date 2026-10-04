@@ -8,7 +8,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/carabiner-dev/attestation"
+	"github.com/policylabs/attestation"
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/policylabs/collector/predicate/generic"

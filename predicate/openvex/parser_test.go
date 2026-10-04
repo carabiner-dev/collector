@@ -6,8 +6,8 @@ package openvex
 import (
 	"testing"
 
-	"github.com/carabiner-dev/attestation"
 	openvex "github.com/openvex/go-vex/pkg/vex"
+	"github.com/policylabs/attestation"
 	"github.com/stretchr/testify/require"
 )
 

@@ -8,7 +8,7 @@ repository.
 
 The collector agent interacts with repositories through a small family of
 interfaces defined in the
-[`github.com/carabiner-dev/attestation`](https://github.com/carabiner-dev/attestation)
+[`github.com/policylabs/attestation`](https://github.com/policylabs/attestation)
 package. A repository expresses its capabilities by implementing one or
 more of them.
 
@@ -198,7 +198,7 @@ package mytype
 import (
     "context"
 
-    "github.com/carabiner-dev/attestation"
+    "github.com/policylabs/attestation"
 
     "github.com/policylabs/collector/internal/readlimit"
 )

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/carabiner-dev/attestation"
+	"github.com/policylabs/attestation"
 	"github.com/stretchr/testify/require"
 )
 

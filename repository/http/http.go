@@ -9,7 +9,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/carabiner-dev/attestation"
+	"github.com/policylabs/attestation"
 )
 
 var (

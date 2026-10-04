@@ -12,8 +12,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/carabiner-dev/attestation"
 	"github.com/carabiner-dev/hasher"
+	"github.com/policylabs/attestation"
 	"github.com/policylabs/signer"
 	"github.com/sirupsen/logrus"
 

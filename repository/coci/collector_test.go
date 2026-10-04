@@ -7,8 +7,8 @@ import (
 	"encoding/base64"
 	"testing"
 
-	"github.com/carabiner-dev/attestation"
 	ggcr "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/policylabs/attestation"
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	protodsse "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	"github.com/stretchr/testify/require"

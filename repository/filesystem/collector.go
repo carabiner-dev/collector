@@ -15,7 +15,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/carabiner-dev/attestation"
+	"github.com/policylabs/attestation"
 	"github.com/policylabs/signer/key"
 	"github.com/sirupsen/logrus"
 

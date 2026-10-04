@@ -4,7 +4,7 @@
 package filters
 
 import (
-	"github.com/carabiner-dev/attestation"
+	"github.com/policylabs/attestation"
 )
 
 // SubjectlessMatcher matches any attestation that does not have a subject.

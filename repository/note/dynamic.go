@@ -8,8 +8,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/carabiner-dev/attestation"
 	intoto "github.com/in-toto/attestation/go/v1"
+	"github.com/policylabs/attestation"
 
 	"github.com/policylabs/collector/filters"
 	"github.com/policylabs/collector/repository"

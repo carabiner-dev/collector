@@ -7,10 +7,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/carabiner-dev/attestation"
 	"github.com/carabiner-dev/vcslocator"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/policylabs/attestation"
 	"github.com/stretchr/testify/require"
 
 	"github.com/policylabs/collector/internal/envtest"

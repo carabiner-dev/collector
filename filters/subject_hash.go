@@ -4,7 +4,7 @@
 package filters
 
 import (
-	"github.com/carabiner-dev/attestation"
+	"github.com/policylabs/attestation"
 	"github.com/sirupsen/logrus"
 )
 

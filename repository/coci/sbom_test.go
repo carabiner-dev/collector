@@ -9,12 +9,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/carabiner-dev/attestation"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/static"
 	"github.com/google/go-containerregistry/pkg/v1/types"
+	"github.com/policylabs/attestation"
 	"github.com/stretchr/testify/require"
 
 	"github.com/policylabs/collector/envelope/bare"

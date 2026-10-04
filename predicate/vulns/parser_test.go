@@ -7,8 +7,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/carabiner-dev/attestation"
 	v02 "github.com/in-toto/attestation/go/predicates/vulns/v02"
+	"github.com/policylabs/attestation"
 	"github.com/stretchr/testify/require"
 )
 

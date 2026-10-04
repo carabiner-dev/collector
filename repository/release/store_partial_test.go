@@ -12,7 +12,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/carabiner-dev/attestation"
+	"github.com/policylabs/attestation"
 	"github.com/stretchr/testify/require"
 
 	"github.com/policylabs/collector/internal/envtest"

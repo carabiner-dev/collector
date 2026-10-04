@@ -9,8 +9,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/carabiner-dev/attestation"
 	openvex "github.com/openvex/go-vex/pkg/vex"
+	"github.com/policylabs/attestation"
 
 	"github.com/policylabs/collector/predicate/generic"
 )

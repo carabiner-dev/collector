@@ -7,8 +7,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/carabiner-dev/attestation"
 	spdx3 "github.com/carabiner-dev/spdx3"
+	"github.com/policylabs/attestation"
 	"github.com/stretchr/testify/require"
 
 	"github.com/policylabs/collector/predicate/generic"

@@ -13,7 +13,7 @@ import (
 	"io/fs"
 	"strings"
 
-	"github.com/carabiner-dev/attestation"
+	"github.com/policylabs/attestation"
 	sigstore "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	protorekor "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"

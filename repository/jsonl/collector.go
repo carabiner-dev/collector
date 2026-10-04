@@ -11,10 +11,10 @@ import (
 	"os"
 	"sync"
 
-	"github.com/carabiner-dev/attestation"
 	cjsonl "github.com/carabiner-dev/jsonl"
 	intoto "github.com/in-toto/attestation/go/v1"
 	"github.com/nozzle/throttler"
+	"github.com/policylabs/attestation"
 
 	"github.com/policylabs/collector/envelope"
 	"github.com/policylabs/collector/filters"

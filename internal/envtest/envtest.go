@@ -7,7 +7,7 @@ package envtest
 import (
 	"errors"
 
-	"github.com/carabiner-dev/attestation"
+	"github.com/policylabs/attestation"
 )
 
 // Unserializable is an attestation.Envelope that cannot be serialized to

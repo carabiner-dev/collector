@@ -11,9 +11,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/carabiner-dev/attestation"
 	gointoto "github.com/in-toto/attestation/go/v1"
 	gopurl "github.com/package-url/packageurl-go"
+	"github.com/policylabs/attestation"
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	protodsse "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"

@@ -14,9 +14,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/carabiner-dev/attestation"
 	"github.com/google/go-containerregistry/pkg/crane"
 	ggcr "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/policylabs/attestation"
 	sapi "github.com/policylabs/signer/api/v1"
 	"github.com/policylabs/signer/key"
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"

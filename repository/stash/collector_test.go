@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/carabiner-dev/attestation"
 	stashclient "github.com/carabiner-dev/stash/pkg/client"
 	ita "github.com/in-toto/attestation/go/v1"
+	"github.com/policylabs/attestation"
 )
 
 const (

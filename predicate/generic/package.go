@@ -8,7 +8,7 @@ package generic
 import (
 	"encoding/json"
 
-	"github.com/carabiner-dev/attestation"
+	"github.com/policylabs/attestation"
 )
 
 type Predicate struct {

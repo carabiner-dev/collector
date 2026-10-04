@@ -13,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/carabiner-dev/attestation"
 	"github.com/carabiner-dev/vcslocator"
 	git "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
@@ -21,6 +20,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/filemode"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/storage/memory"
+	"github.com/policylabs/attestation"
 
 	"github.com/policylabs/collector/repository"
 )

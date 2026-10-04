@@ -11,11 +11,11 @@ import (
 	"io"
 	"strings"
 
-	"github.com/carabiner-dev/attestation"
 	"github.com/carabiner-dev/hasher"
 	"github.com/google/go-containerregistry/pkg/crane"
 	ggcr "github.com/google/go-containerregistry/pkg/v1"
 	gointoto "github.com/in-toto/attestation/go/v1"
+	"github.com/policylabs/attestation"
 	"github.com/sirupsen/logrus"
 
 	"github.com/policylabs/collector/envelope/bare"
