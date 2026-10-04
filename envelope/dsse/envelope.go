@@ -14,6 +14,7 @@ import (
 	sigstoreProtoDSSE "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	"google.golang.org/protobuf/encoding/protojson"
 
+	"github.com/policylabs/collector/internal/verifier"
 	"github.com/policylabs/collector/statement"
 )
 
@@ -89,8 +90,11 @@ func (env *Envelope) Verify(args ...any) error {
 	// Prepare the keys and verification options
 	keys := []key.PublicKeyProvider{}
 	optFns := []options.VerificationOptFunc{}
+	v := verifier.Default()
 	for _, a := range args {
 		switch vm := a.(type) {
+		case *signer.Verifier:
+			v = vm
 		case []key.PublicKeyProvider:
 			keys = append(keys, vm...)
 		case key.PublicKeyProvider:
@@ -102,12 +106,12 @@ func (env *Envelope) Verify(args ...any) error {
 		default:
 			return fmt.Errorf(
 				"unsupported argument of type %T: Verify takes key.PublicKeyProvider values or signer "+
-					"verification options, or slices of them", a,
+					"verification options, or slices of them, or a *signer.Verifier", a,
 			)
 		}
 	}
 
-	verification, err := signer.NewVerifier().VerifyStatement(
+	verification, err := v.VerifyStatement(
 		env.toArtifact(),
 		append([]options.VerificationOptFunc{options.WithPublicKeys(keys...)}, optFns...)...,
 	)

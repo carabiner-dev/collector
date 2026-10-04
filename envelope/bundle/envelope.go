@@ -15,6 +15,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/policylabs/collector/envelope/dsse"
+	"github.com/policylabs/collector/internal/verifier"
 	"github.com/policylabs/collector/statement/intoto"
 )
 
@@ -107,7 +108,11 @@ func (env *Envelope) GetVerification() attestation.Verification {
 // evaluation time against the identities recorded in the verification.
 // If the bundle already carries a successful verification, the signatures
 // are not verified again.
-func (e *Envelope) Verify(_ ...any) error {
+//
+// A *signer.Verifier among the arguments is used in place of the shared
+// default; everything else (keys, options meant for other envelope kinds)
+// is ignored.
+func (e *Envelope) Verify(args ...any) error {
 	// If the bundle is already verified, don't retry
 	if v := e.GetVerification(); v != nil && v.GetVerified() {
 		return nil
@@ -117,7 +122,14 @@ func (e *Envelope) Verify(_ ...any) error {
 		return fmt.Errorf("unable to set verification, bundle has no predicate")
 	}
 
-	verification, err := signer.NewVerifier().VerifyStatement(
+	v := verifier.Default()
+	for _, a := range args {
+		if custom, ok := a.(*signer.Verifier); ok {
+			v = custom
+		}
+	}
+
+	verification, err := v.VerifyStatement(
 		&signer.BundleArtifact{Bundle: &sgbundle.Bundle{Bundle: &e.Bundle}},
 		options.WithSkipIdentityCheck(true),
 	)

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/policylabs/signer"
 	sapi "github.com/policylabs/signer/api/v1"
 	"github.com/policylabs/signer/key"
 	"github.com/stretchr/testify/require"
@@ -108,6 +109,8 @@ nQSECAK6r262hPwIzjd6LpE7IPlUbwgheE87vU8EUE9tsS02MShFZGo1gg==
 		// signer key types.
 		{"provider", []any{goodKey}, "", sapi.VerificationStatus_VERIFIED},
 		{"provider-slice", []any{[]key.PublicKeyProvider{goodKey}}, "", sapi.VerificationStatus_VERIFIED},
+		// A caller-supplied verifier replaces the shared default.
+		{"custom-verifier", []any{signer.NewVerifier(), goodKey}, "", sapi.VerificationStatus_VERIFIED},
 		// A raw crypto key is not a provider.
 		{"crypto-key", []any{goodKey.Key}, "*ecdsa.PublicKey", 0},
 		// Nor is a slice of any, even one holding providers.
