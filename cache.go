@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/carabiner-dev/attestation"
+	"github.com/policylabs/attestation"
 )
 
 var cacheMutex = sync.Mutex{}

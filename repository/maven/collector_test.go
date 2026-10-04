@@ -7,8 +7,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/carabiner-dev/attestation"
 	gopurl "github.com/package-url/packageurl-go"
+	"github.com/policylabs/attestation"
 	"github.com/stretchr/testify/require"
 )
 

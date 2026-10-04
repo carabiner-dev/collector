@@ -14,7 +14,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/carabiner-dev/attestation"
+	"github.com/policylabs/attestation"
 	sapi "github.com/policylabs/signer/api/v1"
 	"github.com/policylabs/signer/key"
 	"github.com/stretchr/testify/require"

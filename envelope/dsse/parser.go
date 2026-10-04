@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/carabiner-dev/attestation"
 	"github.com/carabiner-dev/hasher"
+	"github.com/policylabs/attestation"
 	sdsse "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	"google.golang.org/protobuf/encoding/protojson"
 

@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/carabiner-dev/attestation"
+	"github.com/policylabs/attestation"
 	"github.com/policylabs/signer"
 	"github.com/policylabs/signer/key"
 	"github.com/policylabs/signer/options"

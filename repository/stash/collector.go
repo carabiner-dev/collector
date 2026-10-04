@@ -11,9 +11,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/carabiner-dev/attestation"
 	stashclient "github.com/carabiner-dev/stash/pkg/client"
 	stashconfig "github.com/carabiner-dev/stash/pkg/client/config"
+	"github.com/policylabs/attestation"
 
 	"github.com/policylabs/collector/envelope"
 )

@@ -12,8 +12,8 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/carabiner-dev/attestation"
 	ita "github.com/in-toto/attestation/go/v1"
+	"github.com/policylabs/attestation"
 	"github.com/stretchr/testify/require"
 )
 

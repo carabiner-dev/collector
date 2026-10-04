@@ -14,9 +14,9 @@ import (
 	"io"
 	"strings"
 
-	"github.com/carabiner-dev/attestation"
 	"github.com/carabiner-dev/hasher"
 	gopurl "github.com/package-url/packageurl-go"
+	"github.com/policylabs/attestation"
 	sapi "github.com/policylabs/signer/api/v1"
 	"github.com/policylabs/signer/key"
 	"github.com/sirupsen/logrus"

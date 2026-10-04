@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/carabiner-dev/attestation"
+	"github.com/policylabs/attestation"
 
 	"github.com/policylabs/collector/repository/actions"
 	"github.com/policylabs/collector/repository/coci"

@@ -6,7 +6,7 @@ package protobom
 import (
 	"slices"
 
-	"github.com/carabiner-dev/attestation"
+	"github.com/policylabs/attestation"
 
 	"github.com/policylabs/collector/predicate/cyclonedx"
 	"github.com/policylabs/collector/predicate/spdx"

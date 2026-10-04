@@ -13,8 +13,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/carabiner-dev/attestation"
 	gointoto "github.com/in-toto/attestation/go/v1"
+	"github.com/policylabs/attestation"
 	sapi "github.com/policylabs/signer/api/v1"
 	"github.com/stretchr/testify/require"
 )

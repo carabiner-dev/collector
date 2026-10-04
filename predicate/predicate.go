@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/carabiner-dev/attestation"
+	"github.com/policylabs/attestation"
 	ampel "github.com/policylabs/predicates"
 	"github.com/sirupsen/logrus"
 

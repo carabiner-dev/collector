@@ -3,7 +3,7 @@
 
 package filters
 
-import "github.com/carabiner-dev/attestation"
+import "github.com/policylabs/attestation"
 
 type PredicateTypeMatcher struct {
 	PredicateTypes map[attestation.PredicateType]struct{}

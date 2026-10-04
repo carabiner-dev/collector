@@ -18,8 +18,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/carabiner-dev/attestation"
 	gopurl "github.com/package-url/packageurl-go"
+	"github.com/policylabs/attestation"
 	"github.com/sirupsen/logrus"
 
 	"github.com/policylabs/collector/filters"

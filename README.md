@@ -18,7 +18,7 @@ needs to download, read and query attestations can benefit from this module.
 
 This project handles attestations using an abstraction above the vanilla intoto
 attestations by relying on the
-[Carabiner Attestation Framework](https://github.com/carabiner-dev/attestation).
+[Carabiner Attestation Framework](https://github.com/policylabs/attestation).
 
 ## Repository Drivers
 
@@ -79,9 +79,9 @@ flowchart LR
 
 Here are some definitions about each component. Most code definitions of the
 following concepts are in interfaces in the 
-[Carabiner Attestations Framework](https://github.com/carabiner-dev/attestation),
+[Carabiner Attestations Framework](https://github.com/policylabs/attestation),
 most definitions can be found in
-[repository.go](https://github.com/carabiner-dev/attestation/blob/main/repository.go).
+[repository.go](https://github.com/policylabs/attestation/blob/main/repository.go).
 
 ### Repository
 

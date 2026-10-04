@@ -9,8 +9,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/carabiner-dev/attestation"
 	"github.com/carabiner-dev/jsonl"
+	"github.com/policylabs/attestation"
 )
 
 var _ attestation.EnvelopeParser = (*JsonlParser)(nil)

@@ -6,7 +6,7 @@ package bundle
 import (
 	"fmt"
 
-	"github.com/carabiner-dev/attestation"
+	"github.com/policylabs/attestation"
 	"github.com/policylabs/signer"
 	"github.com/policylabs/signer/options"
 	sigstore "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"

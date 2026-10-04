@@ -3,7 +3,6 @@ module github.com/policylabs/collector
 go 1.26.0
 
 require (
-	github.com/carabiner-dev/attestation v0.2.1
 	github.com/carabiner-dev/ghrfs v0.3.7
 	github.com/carabiner-dev/github v0.2.3
 	github.com/carabiner-dev/hasher v0.2.4
@@ -29,8 +28,8 @@ require (
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/openvex/go-vex v0.2.9
 	github.com/package-url/packageurl-go v0.1.7
-	github.com/policylabs/predicates v0.5.5-0.20261004135751-f12e6748573a
-	github.com/policylabs/signer v0.6.3
+	github.com/policylabs/predicates v0.6.0
+	github.com/policylabs/signer v0.6.4
 	github.com/protobom/protobom v0.6.2
 	github.com/regclient/regclient v0.11.6
 	github.com/sigstore/gitsign v0.17.1
@@ -43,6 +42,8 @@ require (
 	google.golang.org/protobuf v1.36.12
 	sigs.k8s.io/release-utils v0.12.5
 )
+
+require github.com/carabiner-dev/attestation v0.2.1 // indirect
 
 require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.12-20260825204119-511051f7f437.2 // indirect
@@ -84,9 +85,8 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.45.0 // indirect
 	github.com/aws/smithy-go v1.27.3 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
-	github.com/carabiner-dev/command v0.3.2 // indirect
+	github.com/carabiner-dev/command v0.3.3 // indirect
 	github.com/carabiner-dev/deadrop v0.0.0-20260228173914-d95e9ea2877d // indirect
-	github.com/carabiner-dev/signer v0.6.2 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chainguard-dev/clog v1.8.1 // indirect
@@ -180,6 +180,7 @@ require (
 	github.com/pjbgf/sha1cd v0.6.0 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/policylabs/attestation v0.3.0
 	github.com/policylabs/policy v0.5.7-0.20261004134513-55e5473eef09 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/sassoftware/relic/v8 v8.2.0 // indirect

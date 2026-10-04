@@ -15,8 +15,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/carabiner-dev/attestation"
 	gh "github.com/carabiner-dev/github"
+	"github.com/policylabs/attestation"
 	"github.com/sirupsen/logrus"
 
 	"github.com/policylabs/collector/envelope/bundle"

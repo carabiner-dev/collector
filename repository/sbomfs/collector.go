@@ -10,8 +10,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/carabiner-dev/attestation"
 	sbomfslib "github.com/carabiner-dev/sbomfs"
+	"github.com/policylabs/attestation"
 	"github.com/policylabs/signer/key"
 	"github.com/protobom/protobom/pkg/formats"
 	"github.com/protobom/protobom/pkg/mod"

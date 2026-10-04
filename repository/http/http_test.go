@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/carabiner-dev/attestation"
 	intoto "github.com/in-toto/attestation/go/v1"
+	"github.com/policylabs/attestation"
 	"github.com/stretchr/testify/require"
 )
 

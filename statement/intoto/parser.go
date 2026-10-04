@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/carabiner-dev/attestation"
 	v1 "github.com/in-toto/attestation/go/v1"
+	"github.com/policylabs/attestation"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/encoding/protojson"
 

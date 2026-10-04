@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"strings"
 
-	"github.com/carabiner-dev/attestation"
+	"github.com/policylabs/attestation"
 	"github.com/protobom/protobom/pkg/formats"
 
 	"github.com/policylabs/collector/predicate/json"

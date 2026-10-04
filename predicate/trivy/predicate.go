@@ -6,7 +6,7 @@ package trivy
 import (
 	"time"
 
-	"github.com/carabiner-dev/attestation"
+	"github.com/policylabs/attestation"
 )
 
 var PredicateType = attestation.PredicateType("https://trivy.dev/report")

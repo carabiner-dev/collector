@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/carabiner-dev/attestation"
 	"github.com/carabiner-dev/ghrfs"
+	"github.com/policylabs/attestation"
 	"github.com/policylabs/signer/key"
 
 	"github.com/policylabs/collector/filters"

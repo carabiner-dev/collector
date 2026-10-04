@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/carabiner-dev/attestation"
 	"github.com/nozzle/throttler"
+	"github.com/policylabs/attestation"
 	"github.com/policylabs/signer/key"
 	"github.com/sirupsen/logrus"
 

@@ -16,8 +16,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/carabiner-dev/attestation"
 	"github.com/cenkalti/backoff/v5"
+	"github.com/policylabs/attestation"
 
 	"github.com/policylabs/collector/internal/creds"
 	"github.com/policylabs/collector/repository"

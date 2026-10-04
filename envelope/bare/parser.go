@@ -11,8 +11,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/carabiner-dev/attestation"
 	"github.com/carabiner-dev/hasher"
+	"github.com/policylabs/attestation"
 
 	"github.com/policylabs/collector/predicate"
 	"github.com/policylabs/collector/statement"

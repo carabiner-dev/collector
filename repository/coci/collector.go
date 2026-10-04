@@ -16,12 +16,12 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/carabiner-dev/attestation"
 	"github.com/carabiner-dev/hasher"
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
 	ggcr "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/policylabs/attestation"
 	"github.com/policylabs/signer/key"
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"

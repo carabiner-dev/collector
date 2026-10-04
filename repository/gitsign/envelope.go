@@ -3,7 +3,7 @@
 
 package gitsign
 
-import "github.com/carabiner-dev/attestation"
+import "github.com/policylabs/attestation"
 
 // virtualEnvelope implements attestation.Envelope for virtual gitsign
 // attestations synthesized from commit signatures.
