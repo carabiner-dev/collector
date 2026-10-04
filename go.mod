@@ -11,7 +11,7 @@ require (
 	github.com/carabiner-dev/osv v0.1.2
 	github.com/carabiner-dev/sbomfs v0.2.0
 	github.com/carabiner-dev/spdx3 v0.1.0
-	github.com/carabiner-dev/stash v0.0.0-20261004142609-3818168e0780
+	github.com/carabiner-dev/stash v0.0.0-20261004182444-008b3bad7a45
 	github.com/carabiner-dev/vcslocator v0.5.1
 	github.com/cenkalti/backoff/v5 v5.0.3
 	github.com/github/smimesign v0.2.0

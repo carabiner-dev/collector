@@ -124,8 +124,8 @@ github.com/carabiner-dev/sbomfs v0.2.0 h1:7OG0Su6iz9sPWcAFzSsaauVZQpKayzrJvGWe0N
 github.com/carabiner-dev/sbomfs v0.2.0/go.mod h1:KaTNcHjm5qbu5G0RCc/7uo3U1KZj1IqRZLFiG+nwC8g=
 github.com/carabiner-dev/spdx3 v0.1.0 h1:Q6nMLXV0BhtqDQuwRDOaJDZR670TK4jdOvZqvTW/ctY=
 github.com/carabiner-dev/spdx3 v0.1.0/go.mod h1:d/t010TrZvYZBeYGpvHeId6QpRvGLlqK7cy0E81npPA=
-github.com/carabiner-dev/stash v0.0.0-20261004142609-3818168e0780 h1:RlAFxM7HNSYZfoRCn8mU1Kpk9mQV+tl6E+JtIB6OUyA=
-github.com/carabiner-dev/stash v0.0.0-20261004142609-3818168e0780/go.mod h1:q43U3SZLxoIwqrfrwveajYD/TR8gmHJGx7npTJoukrk=
+github.com/carabiner-dev/stash v0.0.0-20261004182444-008b3bad7a45 h1:AehL6+PA85whryLIpD5pkxR4EkrNdkbgAeEQ5dnUDR4=
+github.com/carabiner-dev/stash v0.0.0-20261004182444-008b3bad7a45/go.mod h1:S2DNFao2+gFNVBwZv5Mi8AeCHIqIq0n1k2xj0n0VLj4=
 github.com/carabiner-dev/vcslocator v0.5.1 h1:IK75RcYgHp2HQ1qxAYlhzEJhYTFnqlP9zRJBhkTJ6GI=
 github.com/carabiner-dev/vcslocator v0.5.1/go.mod h1:s4zrF5l7b2iZFsxVDKz6Y+6LcaqP4GTshSCGuCbu+Ls=
 github.com/cenkalti/backoff/v4 v4.3.0 h1:MyRJ/UdXutAwSAT+s3wNd7MfTIcy71VQueUuFK343L8=
