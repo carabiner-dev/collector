@@ -9,8 +9,8 @@ import (
 	"testing/fstest"
 
 	"github.com/carabiner-dev/attestation"
-	sapi "github.com/carabiner-dev/signer/api/v1"
-	"github.com/carabiner-dev/signer/key"
+	sapi "github.com/policylabs/signer/api/v1"
+	"github.com/policylabs/signer/key"
 	sigstore "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/encoding/protojson"

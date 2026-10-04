@@ -7,8 +7,8 @@ import (
 	"fmt"
 
 	"github.com/carabiner-dev/attestation"
-	"github.com/carabiner-dev/signer"
-	"github.com/carabiner-dev/signer/options"
+	"github.com/policylabs/signer"
+	"github.com/policylabs/signer/options"
 	sigstore "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 	"github.com/sirupsen/logrus"

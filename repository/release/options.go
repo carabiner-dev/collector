@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/carabiner-dev/github"
-	"github.com/carabiner-dev/signer/key"
+	"github.com/policylabs/signer/key"
 )
 
 var defaultOptions = Options{

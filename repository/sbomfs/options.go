@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/carabiner-dev/signer/key"
+	"github.com/policylabs/signer/key"
 )
 
 var defaultOptions = Options{}

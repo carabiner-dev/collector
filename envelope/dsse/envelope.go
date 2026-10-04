@@ -8,9 +8,9 @@ import (
 	"fmt"
 
 	"github.com/carabiner-dev/attestation"
-	"github.com/carabiner-dev/signer"
-	"github.com/carabiner-dev/signer/key"
-	"github.com/carabiner-dev/signer/options"
+	"github.com/policylabs/signer"
+	"github.com/policylabs/signer/key"
+	"github.com/policylabs/signer/options"
 	sigstoreProtoDSSE "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	"google.golang.org/protobuf/encoding/protojson"
 
@@ -67,7 +67,7 @@ func (env *Envelope) GetCertificate() attestation.Certificate {
 // objects. For more information see the carabiner signer public key
 // library:
 //
-//	https://github.com/carabiner-dev/signer/blob/main/key/public.go
+//	https://github.com/policylabs/signer/blob/main/key/public.go
 //
 // Every conclusion is recorded, not only success: an envelope without
 // signatures, one verified without any keys to check against, and one
