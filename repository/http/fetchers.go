@@ -13,8 +13,8 @@ import (
 	"github.com/carabiner-dev/attestation"
 	"sigs.k8s.io/release-utils/http"
 
-	"github.com/carabiner-dev/collector/envelope"
-	"github.com/carabiner-dev/collector/internal/readlimit"
+	"github.com/policylabs/collector/envelope"
+	"github.com/policylabs/collector/internal/readlimit"
 )
 
 // fetchGeneral is the URL to retrieve all available attestations

@@ -22,8 +22,8 @@ import (
 	intoto "github.com/in-toto/attestation/go/v1"
 	"github.com/stretchr/testify/require"
 
-	"github.com/carabiner-dev/collector/filters"
-	"github.com/carabiner-dev/collector/repository/filesystem"
+	"github.com/policylabs/collector/filters"
+	"github.com/policylabs/collector/repository/filesystem"
 )
 
 const (

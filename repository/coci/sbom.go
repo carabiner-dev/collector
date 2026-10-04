@@ -18,12 +18,12 @@ import (
 	gointoto "github.com/in-toto/attestation/go/v1"
 	"github.com/sirupsen/logrus"
 
-	"github.com/carabiner-dev/collector/envelope/bare"
-	"github.com/carabiner-dev/collector/internal/readlimit"
-	"github.com/carabiner-dev/collector/predicate/cyclonedx"
-	"github.com/carabiner-dev/collector/predicate/spdx"
-	"github.com/carabiner-dev/collector/predicate/spdx3"
-	"github.com/carabiner-dev/collector/statement/intoto"
+	"github.com/policylabs/collector/envelope/bare"
+	"github.com/policylabs/collector/internal/readlimit"
+	"github.com/policylabs/collector/predicate/cyclonedx"
+	"github.com/policylabs/collector/predicate/spdx"
+	"github.com/policylabs/collector/predicate/spdx3"
+	"github.com/policylabs/collector/statement/intoto"
 )
 
 // Media types of the layers cosign's legacy `attach sbom` layout can hold

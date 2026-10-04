@@ -15,8 +15,8 @@ import (
 	"github.com/carabiner-dev/attestation"
 	"github.com/stretchr/testify/require"
 
-	"github.com/carabiner-dev/collector/internal/envtest"
-	"github.com/carabiner-dev/collector/repository"
+	"github.com/policylabs/collector/internal/envtest"
+	"github.com/policylabs/collector/repository"
 )
 
 func TestStoreKeepsUploadingAfterFailures(t *testing.T) {

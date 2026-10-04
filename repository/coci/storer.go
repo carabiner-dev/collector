@@ -29,9 +29,9 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/carabiner-dev/collector/envelope/bundle"
-	"github.com/carabiner-dev/collector/envelope/dsse"
-	"github.com/carabiner-dev/collector/repository"
+	"github.com/policylabs/collector/envelope/bundle"
+	"github.com/policylabs/collector/envelope/dsse"
+	"github.com/policylabs/collector/repository"
 )
 
 // dsseEnvelopeMediaType is the layer media type cosign uses for DSSE-wrapped

@@ -14,8 +14,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/encoding/protojson"
 
-	"github.com/carabiner-dev/collector/envelope/dsse"
-	"github.com/carabiner-dev/collector/statement/intoto"
+	"github.com/policylabs/collector/envelope/dsse"
+	"github.com/policylabs/collector/statement/intoto"
 )
 
 type Envelope struct {

@@ -22,9 +22,9 @@ import (
 	"github.com/sigstore/sigstore-go/pkg/fulcio/certificate"
 	"google.golang.org/protobuf/encoding/protojson"
 
-	"github.com/carabiner-dev/collector/envelope/bundle"
-	"github.com/carabiner-dev/collector/predicate/generic"
-	"github.com/carabiner-dev/collector/statement/intoto"
+	"github.com/policylabs/collector/envelope/bundle"
+	"github.com/policylabs/collector/predicate/generic"
+	"github.com/policylabs/collector/statement/intoto"
 )
 
 // PublishPredicateType is the predicate type of the attestations PyPI's

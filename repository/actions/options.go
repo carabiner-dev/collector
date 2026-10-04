@@ -14,7 +14,7 @@ import (
 
 	"github.com/policylabs/signer/key"
 
-	"github.com/carabiner-dev/collector/repository/filesystem"
+	"github.com/policylabs/collector/repository/filesystem"
 )
 
 const (

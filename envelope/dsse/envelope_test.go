@@ -141,7 +141,7 @@ nQSECAK6r262hPwIzjd6LpE7IPlUbwgheE87vU8EUE9tsS02MShFZGo1gg==
 
 // A marshaled envelope must be DSSE JSON: parsing it back must yield the
 // same signatures, and they must still verify. Regression test for
-// https://github.com/carabiner-dev/collector/issues/18.
+// https://github.com/policylabs/collector/issues/18.
 func TestMarshalJSONRoundTrip(t *testing.T) {
 	t.Parallel()
 	goodKey, err := key.NewParser().ParsePublicKey([]byte(`-----BEGIN PUBLIC KEY-----

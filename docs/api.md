@@ -200,7 +200,7 @@ import (
 
     "github.com/carabiner-dev/attestation"
 
-    "github.com/carabiner-dev/collector/internal/readlimit"
+    "github.com/policylabs/collector/internal/readlimit"
 )
 
 var TypeMoniker = "mytype"

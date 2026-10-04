@@ -19,9 +19,9 @@ import (
 	"github.com/policylabs/signer/key"
 	"github.com/stretchr/testify/require"
 
-	"github.com/carabiner-dev/collector/envelope/bundle"
-	"github.com/carabiner-dev/collector/repository/filesystem"
-	"github.com/carabiner-dev/collector/repository/release"
+	"github.com/policylabs/collector/envelope/bundle"
+	"github.com/policylabs/collector/repository/filesystem"
+	"github.com/policylabs/collector/repository/release"
 )
 
 // TestSigstoreVirtualAttestations verifies that the collector generates virtual

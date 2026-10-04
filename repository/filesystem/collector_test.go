@@ -12,7 +12,7 @@ import (
 	"github.com/carabiner-dev/attestation"
 	"github.com/stretchr/testify/require"
 
-	"github.com/carabiner-dev/collector/filters"
+	"github.com/policylabs/collector/filters"
 )
 
 func TestFetch(t *testing.T) {

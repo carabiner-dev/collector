@@ -8,8 +8,8 @@ import (
 
 	"github.com/carabiner-dev/attestation"
 
-	"github.com/carabiner-dev/collector/predicate/cyclonedx"
-	"github.com/carabiner-dev/collector/predicate/spdx"
+	"github.com/policylabs/collector/predicate/cyclonedx"
+	"github.com/policylabs/collector/predicate/spdx"
 )
 
 const PredicateType attestation.PredicateType = "application/protobom"

@@ -22,8 +22,8 @@ import (
 	gopurl "github.com/package-url/packageurl-go"
 	"github.com/sirupsen/logrus"
 
-	"github.com/carabiner-dev/collector/filters"
-	"github.com/carabiner-dev/collector/internal/readlimit"
+	"github.com/policylabs/collector/filters"
+	"github.com/policylabs/collector/internal/readlimit"
 )
 
 var TypeMoniker = "pypi"

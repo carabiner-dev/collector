@@ -11,10 +11,10 @@ import (
 	protoOSV "github.com/carabiner-dev/osv/go/osv"
 	"github.com/stretchr/testify/require"
 
-	"github.com/carabiner-dev/collector/predicate/json"
-	"github.com/carabiner-dev/collector/predicate/osv"
-	"github.com/carabiner-dev/collector/predicate/spdx"
-	"github.com/carabiner-dev/collector/predicate/spdx3"
+	"github.com/policylabs/collector/predicate/json"
+	"github.com/policylabs/collector/predicate/osv"
+	"github.com/policylabs/collector/predicate/spdx"
+	"github.com/policylabs/collector/predicate/spdx3"
 )
 
 // spdx3Doc is the smallest SPDX 3 document the parsers should route to the

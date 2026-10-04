@@ -10,7 +10,7 @@ import (
 	"github.com/carabiner-dev/attestation"
 	"github.com/protobom/protobom/pkg/formats"
 
-	"github.com/carabiner-dev/collector/predicate/json"
+	"github.com/policylabs/collector/predicate/json"
 )
 
 type Parser struct{}

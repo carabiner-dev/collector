@@ -11,7 +11,7 @@ import (
 	spdx3 "github.com/carabiner-dev/spdx3"
 	"github.com/stretchr/testify/require"
 
-	"github.com/carabiner-dev/collector/predicate/generic"
+	"github.com/policylabs/collector/predicate/generic"
 )
 
 func TestParse(t *testing.T) {

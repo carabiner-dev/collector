@@ -10,8 +10,8 @@ import (
 	gointoto "github.com/in-toto/attestation/go/v1"
 	"github.com/stretchr/testify/require"
 
-	"github.com/carabiner-dev/collector/envelope/bare"
-	"github.com/carabiner-dev/collector/statement/intoto"
+	"github.com/policylabs/collector/envelope/bare"
+	"github.com/policylabs/collector/statement/intoto"
 )
 
 func TestSubjectHashMatcher(t *testing.T) {

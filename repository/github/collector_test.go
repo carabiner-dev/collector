@@ -16,8 +16,8 @@ import (
 	intoto "github.com/in-toto/attestation/go/v1"
 	"github.com/stretchr/testify/require"
 
-	"github.com/carabiner-dev/collector/envelope"
-	"github.com/carabiner-dev/collector/repository"
+	"github.com/policylabs/collector/envelope"
+	"github.com/policylabs/collector/repository"
 )
 
 // failingCaller answers every request with an empty 200 except the ones

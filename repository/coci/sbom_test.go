@@ -17,9 +17,9 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/stretchr/testify/require"
 
-	"github.com/carabiner-dev/collector/envelope/bare"
-	"github.com/carabiner-dev/collector/predicate/cyclonedx"
-	"github.com/carabiner-dev/collector/predicate/spdx"
+	"github.com/policylabs/collector/envelope/bare"
+	"github.com/policylabs/collector/predicate/cyclonedx"
+	"github.com/policylabs/collector/predicate/spdx"
 )
 
 const (

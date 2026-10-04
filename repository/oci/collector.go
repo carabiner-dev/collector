@@ -19,9 +19,9 @@ import (
 	"github.com/regclient/regclient/types/ref"
 	"github.com/sirupsen/logrus"
 
-	"github.com/carabiner-dev/collector/envelope/bundle"
-	"github.com/carabiner-dev/collector/internal/readlimit"
-	"github.com/carabiner-dev/collector/repository"
+	"github.com/policylabs/collector/envelope/bundle"
+	"github.com/policylabs/collector/internal/readlimit"
+	"github.com/policylabs/collector/repository"
 )
 
 const (

@@ -63,9 +63,9 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/carabiner-dev/collector/filters"
-	"github.com/carabiner-dev/collector/predicate/generic"
-	intotostatement "github.com/carabiner-dev/collector/statement/intoto"
+	"github.com/policylabs/collector/filters"
+	"github.com/policylabs/collector/predicate/generic"
+	intotostatement "github.com/policylabs/collector/statement/intoto"
 )
 
 var TypeMoniker = "gitsign"

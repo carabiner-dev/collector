@@ -13,7 +13,7 @@ import (
 	"github.com/carabiner-dev/attestation"
 	gopurl "github.com/package-url/packageurl-go"
 
-	"github.com/carabiner-dev/collector/repository/http"
+	"github.com/policylabs/collector/repository/http"
 )
 
 var (

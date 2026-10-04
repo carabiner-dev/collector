@@ -24,10 +24,10 @@ import (
 	"github.com/policylabs/signer/key"
 	"github.com/sirupsen/logrus"
 
-	"github.com/carabiner-dev/collector/filters"
-	"github.com/carabiner-dev/collector/internal/creds"
-	"github.com/carabiner-dev/collector/internal/readlimit"
-	"github.com/carabiner-dev/collector/repository/filesystem"
+	"github.com/policylabs/collector/filters"
+	"github.com/policylabs/collector/internal/creds"
+	"github.com/policylabs/collector/internal/readlimit"
+	"github.com/policylabs/collector/repository/filesystem"
 )
 
 var TypeMoniker = "actions"

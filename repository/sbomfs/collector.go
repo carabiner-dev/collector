@@ -20,9 +20,9 @@ import (
 	"github.com/protobom/protobom/pkg/sbom"
 	"github.com/protobom/protobom/pkg/writer"
 
-	"github.com/carabiner-dev/collector/filters"
-	"github.com/carabiner-dev/collector/repository"
-	"github.com/carabiner-dev/collector/repository/filesystem"
+	"github.com/policylabs/collector/filters"
+	"github.com/policylabs/collector/repository"
+	"github.com/policylabs/collector/repository/filesystem"
 )
 
 var TypeMoniker = "sbomfs"

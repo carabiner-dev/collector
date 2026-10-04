@@ -17,9 +17,9 @@ import (
 	"github.com/policylabs/signer"
 	"github.com/sirupsen/logrus"
 
-	"github.com/carabiner-dev/collector/envelope/bare"
-	"github.com/carabiner-dev/collector/envelope/bundle"
-	"github.com/carabiner-dev/collector/envelope/dsse"
+	"github.com/policylabs/collector/envelope/bare"
+	"github.com/policylabs/collector/envelope/bundle"
+	"github.com/policylabs/collector/envelope/dsse"
 )
 
 type Format string

@@ -19,8 +19,8 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/stretchr/testify/require"
 
-	"github.com/carabiner-dev/collector/envelope/dsse"
-	"github.com/carabiner-dev/collector/repository"
+	"github.com/policylabs/collector/envelope/dsse"
+	"github.com/policylabs/collector/repository"
 )
 
 // createTestAttestationForCommit creates a DSSE envelope with a gitCommit subject

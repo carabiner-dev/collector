@@ -19,9 +19,9 @@ import (
 	"github.com/policylabs/signer/key"
 	"github.com/sirupsen/logrus"
 
-	"github.com/carabiner-dev/collector/envelope"
-	"github.com/carabiner-dev/collector/filters"
-	"github.com/carabiner-dev/collector/internal/readlimit"
+	"github.com/policylabs/collector/envelope"
+	"github.com/policylabs/collector/filters"
+	"github.com/policylabs/collector/internal/readlimit"
 )
 
 var TypeMoniker = "fs"

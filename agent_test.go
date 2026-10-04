@@ -12,7 +12,7 @@ import (
 	intoto "github.com/in-toto/attestation/go/v1"
 	"github.com/stretchr/testify/require"
 
-	"github.com/carabiner-dev/collector/envelope/bare"
+	"github.com/policylabs/collector/envelope/bare"
 )
 
 var _ attestation.Fetcher = (*fakeFetcher)(nil)

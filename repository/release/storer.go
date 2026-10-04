@@ -19,8 +19,8 @@ import (
 	"github.com/carabiner-dev/attestation"
 	"github.com/cenkalti/backoff/v5"
 
-	"github.com/carabiner-dev/collector/internal/creds"
-	"github.com/carabiner-dev/collector/repository"
+	"github.com/policylabs/collector/internal/creds"
+	"github.com/policylabs/collector/repository"
 )
 
 const (

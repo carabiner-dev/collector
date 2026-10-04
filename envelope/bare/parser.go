@@ -14,9 +14,9 @@ import (
 	"github.com/carabiner-dev/attestation"
 	"github.com/carabiner-dev/hasher"
 
-	"github.com/carabiner-dev/collector/predicate"
-	"github.com/carabiner-dev/collector/statement"
-	"github.com/carabiner-dev/collector/statement/intoto"
+	"github.com/policylabs/collector/predicate"
+	"github.com/policylabs/collector/statement"
+	"github.com/policylabs/collector/statement/intoto"
 )
 
 type Parser struct{}
