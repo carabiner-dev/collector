@@ -8,7 +8,7 @@ import (
 	"os"
 
 	"github.com/carabiner-dev/attestation"
-	"github.com/carabiner-dev/signer/key"
+	"github.com/policylabs/signer/key"
 )
 
 // DefaultMaxReadSize is the default maximum number of bytes the collector will

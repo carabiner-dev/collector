@@ -3,7 +3,7 @@
 
 package repository
 
-import "github.com/carabiner-dev/signer/key"
+import "github.com/policylabs/signer/key"
 
 // SignatureVerifier is implemented by repositories that support key-based
 // signature verification. The agent distributes its keys to any

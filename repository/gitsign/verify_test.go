@@ -15,11 +15,11 @@ import (
 	"os"
 	"testing"
 
-	signersigstore "github.com/carabiner-dev/signer/sigstore"
 	"github.com/github/smimesign/ietf-cms/protocol"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/storage/memory"
+	signersigstore "github.com/policylabs/signer/sigstore"
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/sigstore-go/pkg/root"
 	sgverify "github.com/sigstore/sigstore-go/pkg/verify"

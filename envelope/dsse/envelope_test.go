@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	sapi "github.com/carabiner-dev/signer/api/v1"
-	"github.com/carabiner-dev/signer/key"
+	sapi "github.com/policylabs/signer/api/v1"
+	"github.com/policylabs/signer/key"
 	"github.com/stretchr/testify/require"
 )
 

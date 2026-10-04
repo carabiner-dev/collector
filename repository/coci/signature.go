@@ -15,10 +15,10 @@ import (
 	"sync"
 
 	"github.com/carabiner-dev/attestation"
-	sapi "github.com/carabiner-dev/signer/api/v1"
-	"github.com/carabiner-dev/signer/key"
 	"github.com/google/go-containerregistry/pkg/crane"
 	ggcr "github.com/google/go-containerregistry/pkg/v1"
+	sapi "github.com/policylabs/signer/api/v1"
+	"github.com/policylabs/signer/key"
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	sbundle "github.com/sigstore/sigstore-go/pkg/bundle"

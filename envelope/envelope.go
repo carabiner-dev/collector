@@ -14,7 +14,7 @@ import (
 
 	"github.com/carabiner-dev/attestation"
 	"github.com/carabiner-dev/hasher"
-	"github.com/carabiner-dev/signer"
+	"github.com/policylabs/signer"
 	"github.com/sirupsen/logrus"
 
 	"github.com/carabiner-dev/collector/envelope/bare"

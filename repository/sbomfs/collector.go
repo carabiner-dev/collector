@@ -12,7 +12,7 @@ import (
 
 	"github.com/carabiner-dev/attestation"
 	sbomfslib "github.com/carabiner-dev/sbomfs"
-	"github.com/carabiner-dev/signer/key"
+	"github.com/policylabs/signer/key"
 	"github.com/protobom/protobom/pkg/formats"
 	"github.com/protobom/protobom/pkg/mod"
 	"github.com/protobom/protobom/pkg/native"

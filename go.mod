@@ -10,9 +10,7 @@ require (
 	github.com/carabiner-dev/jsonl v0.2.2
 	github.com/carabiner-dev/openeox v1.0.0
 	github.com/carabiner-dev/osv v0.1.2
-	github.com/carabiner-dev/predicates v0.5.4
 	github.com/carabiner-dev/sbomfs v0.2.0
-	github.com/carabiner-dev/signer v0.6.2
 	github.com/carabiner-dev/spdx3 v0.1.0
 	github.com/carabiner-dev/stash v0.0.0-20260914181612-673fcf191e49
 	github.com/carabiner-dev/vcslocator v0.5.1
@@ -31,6 +29,8 @@ require (
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/openvex/go-vex v0.2.9
 	github.com/package-url/packageurl-go v0.1.7
+	github.com/policylabs/predicates v0.5.5-0.20261004135751-f12e6748573a
+	github.com/policylabs/signer v0.6.3
 	github.com/protobom/protobom v0.6.2
 	github.com/regclient/regclient v0.11.6
 	github.com/sigstore/gitsign v0.17.1
@@ -41,7 +41,7 @@ require (
 	github.com/sirupsen/logrus v1.10.2
 	github.com/stretchr/testify v1.12.1
 	google.golang.org/protobuf v1.36.12
-	sigs.k8s.io/release-utils v0.12.5-0.20260922054209-8d37007e7cd6
+	sigs.k8s.io/release-utils v0.12.5
 )
 
 require (
@@ -64,7 +64,7 @@ require (
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.7.2 // indirect
 	github.com/CycloneDX/cyclonedx-go v0.12.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
-	github.com/ProtonMail/go-crypto v1.4.1 // indirect
+	github.com/ProtonMail/go-crypto v1.5.2 // indirect
 	github.com/anchore/go-struct-converter v0.1.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/avast/retry-go/v4 v4.7.0 // indirect
@@ -86,7 +86,7 @@ require (
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/carabiner-dev/command v0.3.2 // indirect
 	github.com/carabiner-dev/deadrop v0.0.0-20260228173914-d95e9ea2877d // indirect
-	github.com/carabiner-dev/policy v0.5.6 // indirect
+	github.com/carabiner-dev/signer v0.6.2 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chainguard-dev/clog v1.8.1 // indirect
@@ -132,6 +132,7 @@ require (
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/goccy/go-json v0.10.6 // indirect
 	github.com/goccy/go-yaml v1.19.2 // indirect
+	github.com/godbus/dbus/v5 v5.2.2 // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
@@ -180,6 +181,7 @@ require (
 	github.com/pjbgf/sha1cd v0.6.0 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/policylabs/policy v0.5.7-0.20261004134513-55e5473eef09 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/sassoftware/relic/v8 v8.2.0 // indirect
 	github.com/secure-systems-lab/go-securesystemslib v0.11.1 // indirect
@@ -196,7 +198,7 @@ require (
 	github.com/spdx/tools-golang v0.5.7 // indirect
 	github.com/spf13/cobra v1.10.2 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
-	github.com/spiffe/go-spiffe/v2 v2.8.1 // indirect
+	github.com/spiffe/go-spiffe/v2 v2.8.2 // indirect
 	github.com/sudo-bmitch/oci-digest v0.1.2 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d // indirect
 	github.com/theupdateframework/go-tuf v0.7.0 // indirect
@@ -220,13 +222,13 @@ require (
 	go.uber.org/zap v1.28.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	golang.org/x/crypto v0.55.0 // indirect
+	golang.org/x/crypto v0.57.0 // indirect
 	golang.org/x/mod v0.41.0 // indirect
-	golang.org/x/net v0.58.0 // indirect
+	golang.org/x/net v0.59.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sync v0.23.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
-	golang.org/x/term v0.45.0 // indirect
+	golang.org/x/term v0.46.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	google.golang.org/api v0.290.0 // indirect

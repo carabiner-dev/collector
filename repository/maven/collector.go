@@ -16,9 +16,9 @@ import (
 
 	"github.com/carabiner-dev/attestation"
 	"github.com/carabiner-dev/hasher"
-	sapi "github.com/carabiner-dev/signer/api/v1"
-	"github.com/carabiner-dev/signer/key"
 	gopurl "github.com/package-url/packageurl-go"
+	sapi "github.com/policylabs/signer/api/v1"
+	"github.com/policylabs/signer/key"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"sigs.k8s.io/release-utils/http"

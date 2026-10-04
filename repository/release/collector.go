@@ -10,7 +10,7 @@ import (
 
 	"github.com/carabiner-dev/attestation"
 	"github.com/carabiner-dev/ghrfs"
-	"github.com/carabiner-dev/signer/key"
+	"github.com/policylabs/signer/key"
 
 	"github.com/carabiner-dev/collector/filters"
 	"github.com/carabiner-dev/collector/repository/filesystem"

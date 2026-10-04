@@ -10,8 +10,8 @@ import (
 	"sync"
 
 	"github.com/carabiner-dev/attestation"
-	"github.com/carabiner-dev/signer/key"
 	"github.com/nozzle/throttler"
+	"github.com/policylabs/signer/key"
 	"github.com/sirupsen/logrus"
 
 	"github.com/carabiner-dev/collector/envelope"

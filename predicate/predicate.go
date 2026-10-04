@@ -9,7 +9,7 @@ import (
 	"slices"
 
 	"github.com/carabiner-dev/attestation"
-	ampel "github.com/carabiner-dev/predicates"
+	ampel "github.com/policylabs/predicates"
 	"github.com/sirupsen/logrus"
 
 	"github.com/carabiner-dev/collector/predicate/cyclonedx"
