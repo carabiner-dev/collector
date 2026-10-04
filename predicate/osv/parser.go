@@ -10,7 +10,7 @@ import (
 	"github.com/carabiner-dev/attestation"
 	protoOSV "github.com/carabiner-dev/osv/go/osv"
 
-	"github.com/carabiner-dev/collector/predicate/generic"
+	"github.com/policylabs/collector/predicate/generic"
 )
 
 var (

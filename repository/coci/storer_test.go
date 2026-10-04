@@ -27,8 +27,8 @@ import (
 	sbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 	"github.com/stretchr/testify/require"
 
-	"github.com/carabiner-dev/collector/envelope/bundle"
-	"github.com/carabiner-dev/collector/envelope/dsse"
+	"github.com/policylabs/collector/envelope/bundle"
+	"github.com/policylabs/collector/envelope/dsse"
 )
 
 func startTestRegistry(t *testing.T) string {

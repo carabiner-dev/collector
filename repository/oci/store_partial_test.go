@@ -12,9 +12,9 @@ import (
 	"github.com/regclient/regclient/types/ref"
 	"github.com/stretchr/testify/require"
 
-	"github.com/carabiner-dev/collector/envelope/bundle"
-	"github.com/carabiner-dev/collector/internal/envtest"
-	"github.com/carabiner-dev/collector/repository"
+	"github.com/policylabs/collector/envelope/bundle"
+	"github.com/policylabs/collector/internal/envtest"
+	"github.com/policylabs/collector/repository"
 )
 
 func TestStoreSkipsFailingEnvelopes(t *testing.T) {

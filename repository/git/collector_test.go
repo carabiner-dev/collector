@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/release-utils/tar"
 
-	"github.com/carabiner-dev/collector/repository/filesystem"
+	"github.com/policylabs/collector/repository/filesystem"
 )
 
 func TestClone(t *testing.T) {

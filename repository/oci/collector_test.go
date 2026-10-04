@@ -25,7 +25,7 @@ import (
 	"github.com/regclient/regclient/types/ref"
 	"github.com/stretchr/testify/require"
 
-	"github.com/carabiner-dev/collector/envelope/bundle"
+	"github.com/policylabs/collector/envelope/bundle"
 )
 
 // startRegistry starts an in-memory OCI registry backed by olareg and returns

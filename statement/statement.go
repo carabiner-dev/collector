@@ -11,7 +11,7 @@ import (
 	"github.com/carabiner-dev/attestation"
 	"github.com/sirupsen/logrus"
 
-	"github.com/carabiner-dev/collector/statement/intoto"
+	"github.com/policylabs/collector/statement/intoto"
 )
 
 type Format string

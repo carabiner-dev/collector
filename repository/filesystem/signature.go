@@ -28,9 +28,9 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/carabiner-dev/collector/envelope"
-	"github.com/carabiner-dev/collector/predicate/generic"
-	"github.com/carabiner-dev/collector/statement/intoto"
+	"github.com/policylabs/collector/envelope"
+	"github.com/policylabs/collector/predicate/generic"
+	"github.com/policylabs/collector/statement/intoto"
 )
 
 // SignaturePredicateType is the predicate type for virtual signature attestations.

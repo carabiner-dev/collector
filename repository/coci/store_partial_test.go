@@ -11,8 +11,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/stretchr/testify/require"
 
-	"github.com/carabiner-dev/collector/envelope/bundle"
-	"github.com/carabiner-dev/collector/repository"
+	"github.com/policylabs/collector/envelope/bundle"
+	"github.com/policylabs/collector/repository"
 )
 
 func TestStoreSkipsFailingEnvelopes(t *testing.T) {

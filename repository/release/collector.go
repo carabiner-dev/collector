@@ -12,8 +12,8 @@ import (
 	"github.com/carabiner-dev/ghrfs"
 	"github.com/policylabs/signer/key"
 
-	"github.com/carabiner-dev/collector/filters"
-	"github.com/carabiner-dev/collector/repository/filesystem"
+	"github.com/policylabs/collector/filters"
+	"github.com/policylabs/collector/repository/filesystem"
 )
 
 var _ attestation.Fetcher = (*Collector)(nil)

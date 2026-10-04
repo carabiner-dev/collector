@@ -13,8 +13,8 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/stretchr/testify/require"
 
-	"github.com/carabiner-dev/collector/internal/envtest"
-	"github.com/carabiner-dev/collector/repository"
+	"github.com/policylabs/collector/internal/envtest"
+	"github.com/policylabs/collector/repository"
 )
 
 func TestStoreSkipsFailingEnvelopes(t *testing.T) {

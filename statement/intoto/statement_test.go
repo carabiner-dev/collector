@@ -174,7 +174,7 @@ func TestSerializeKeys(t *testing.T) {
 // Statements must render the same in-toto JSON keys whether they are
 // written through WriteJson or marshaled directly with encoding/json, and
 // whether they were parsed or built with NewStatement. Regression test for
-// https://github.com/carabiner-dev/collector/issues/39, where a parsed
+// https://github.com/policylabs/collector/issues/39, where a parsed
 // statement rendered "_type": "" next to "type": "<uri>".
 func TestStatementJSONKeys(t *testing.T) {
 	t.Parallel()

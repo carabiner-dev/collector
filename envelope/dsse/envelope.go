@@ -14,7 +14,7 @@ import (
 	sigstoreProtoDSSE "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	"google.golang.org/protobuf/encoding/protojson"
 
-	"github.com/carabiner-dev/collector/statement"
+	"github.com/policylabs/collector/statement"
 )
 
 var _ attestation.Envelope = (*Envelope)(nil)

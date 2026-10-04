@@ -19,9 +19,9 @@ import (
 	"github.com/carabiner-dev/vcslocator"
 	intoto "github.com/in-toto/attestation/go/v1"
 
-	"github.com/carabiner-dev/collector/envelope"
-	"github.com/carabiner-dev/collector/filters"
-	"github.com/carabiner-dev/collector/internal/readlimit"
+	"github.com/policylabs/collector/envelope"
+	"github.com/policylabs/collector/filters"
+	"github.com/policylabs/collector/internal/readlimit"
 )
 
 var TypeMoniker = "note"

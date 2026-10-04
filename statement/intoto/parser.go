@@ -13,7 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/encoding/protojson"
 
-	"github.com/carabiner-dev/collector/predicate"
+	"github.com/policylabs/collector/predicate"
 )
 
 type Parser struct{}

@@ -14,7 +14,7 @@ import (
 	sdsse "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	"google.golang.org/protobuf/encoding/protojson"
 
-	"github.com/carabiner-dev/collector/statement"
+	"github.com/policylabs/collector/statement"
 )
 
 // Parser for attestations wrapped in DSSE envelopes

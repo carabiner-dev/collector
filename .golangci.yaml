@@ -27,7 +27,7 @@ formatters:
       sections:
         - standard
         - default
-        - prefix(github.com/carabiner-dev/collector)
+        - prefix(github.com/policylabs/collector)
 linters:
   enable:
     - asasalint

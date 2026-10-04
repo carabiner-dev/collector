@@ -11,8 +11,8 @@ import (
 	"github.com/carabiner-dev/attestation"
 	intoto "github.com/in-toto/attestation/go/v1"
 
-	"github.com/carabiner-dev/collector/filters"
-	"github.com/carabiner-dev/collector/repository"
+	"github.com/policylabs/collector/filters"
+	"github.com/policylabs/collector/repository"
 )
 
 var (

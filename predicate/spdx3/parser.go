@@ -17,7 +17,7 @@ import (
 	"github.com/carabiner-dev/attestation"
 	spdx3 "github.com/carabiner-dev/spdx3"
 
-	"github.com/carabiner-dev/collector/predicate/generic"
+	"github.com/policylabs/collector/predicate/generic"
 )
 
 // PredicateType is the in-toto predicate type of an SPDX 3 document.

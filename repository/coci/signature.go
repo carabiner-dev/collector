@@ -25,10 +25,10 @@ import (
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/carabiner-dev/collector/envelope/bundle"
-	"github.com/carabiner-dev/collector/internal/readlimit"
-	"github.com/carabiner-dev/collector/predicate/generic"
-	"github.com/carabiner-dev/collector/statement/intoto"
+	"github.com/policylabs/collector/envelope/bundle"
+	"github.com/policylabs/collector/internal/readlimit"
+	"github.com/policylabs/collector/predicate/generic"
+	"github.com/policylabs/collector/statement/intoto"
 )
 
 // CosignSignaturePredicateType is the predicate type for virtual attestations

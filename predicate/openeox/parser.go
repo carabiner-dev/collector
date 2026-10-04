@@ -12,7 +12,7 @@ import (
 	"github.com/carabiner-dev/attestation"
 	"github.com/carabiner-dev/openeox"
 
-	"github.com/carabiner-dev/collector/predicate/generic"
+	"github.com/policylabs/collector/predicate/generic"
 )
 
 var (

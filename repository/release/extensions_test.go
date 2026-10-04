@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/carabiner-dev/collector/repository/filesystem"
+	"github.com/policylabs/collector/repository/filesystem"
 )
 
 func TestExtensions(t *testing.T) {

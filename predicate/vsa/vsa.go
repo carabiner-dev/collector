@@ -12,7 +12,7 @@ import (
 	vsa "github.com/in-toto/attestation/go/predicates/vsa/v1"
 	"google.golang.org/protobuf/encoding/protojson"
 
-	"github.com/carabiner-dev/collector/predicate/generic"
+	"github.com/policylabs/collector/predicate/generic"
 )
 
 var PredicateType = attestation.PredicateType("https://slsa.dev/verification_summary/v1")

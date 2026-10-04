@@ -14,9 +14,9 @@ import (
 	"github.com/policylabs/signer/key"
 	"github.com/sirupsen/logrus"
 
-	"github.com/carabiner-dev/collector/envelope"
-	"github.com/carabiner-dev/collector/filters"
-	"github.com/carabiner-dev/collector/repository"
+	"github.com/policylabs/collector/envelope"
+	"github.com/policylabs/collector/filters"
+	"github.com/policylabs/collector/repository"
 )
 
 var (

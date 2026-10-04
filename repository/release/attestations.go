@@ -14,8 +14,8 @@ import (
 	"github.com/carabiner-dev/attestation"
 	"github.com/cenkalti/backoff/v5"
 
-	"github.com/carabiner-dev/collector/envelope/bundle"
-	"github.com/carabiner-dev/collector/internal/creds"
+	"github.com/policylabs/collector/envelope/bundle"
+	"github.com/policylabs/collector/internal/creds"
 )
 
 // attestationsResponse mirrors the payload of the GitHub attestations API.

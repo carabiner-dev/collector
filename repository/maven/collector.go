@@ -23,12 +23,12 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"sigs.k8s.io/release-utils/http"
 
-	"github.com/carabiner-dev/collector/envelope"
-	"github.com/carabiner-dev/collector/filters"
-	"github.com/carabiner-dev/collector/internal/readlimit"
-	"github.com/carabiner-dev/collector/predicate/generic"
-	"github.com/carabiner-dev/collector/repository/filesystem"
-	"github.com/carabiner-dev/collector/statement/intoto"
+	"github.com/policylabs/collector/envelope"
+	"github.com/policylabs/collector/filters"
+	"github.com/policylabs/collector/internal/readlimit"
+	"github.com/policylabs/collector/predicate/generic"
+	"github.com/policylabs/collector/repository/filesystem"
+	"github.com/policylabs/collector/statement/intoto"
 )
 
 var TypeMoniker = "maven"

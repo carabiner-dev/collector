@@ -15,7 +15,7 @@ import (
 	stashclient "github.com/carabiner-dev/stash/pkg/client"
 	stashconfig "github.com/carabiner-dev/stash/pkg/client/config"
 
-	"github.com/carabiner-dev/collector/envelope"
+	"github.com/policylabs/collector/envelope"
 )
 
 // TypeMoniker is the string identifying the stash repository type.

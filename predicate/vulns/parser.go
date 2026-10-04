@@ -12,7 +12,7 @@ import (
 	v02 "github.com/in-toto/attestation/go/predicates/vulns/v02"
 	"google.golang.org/protobuf/encoding/protojson"
 
-	"github.com/carabiner-dev/collector/predicate/generic"
+	"github.com/policylabs/collector/predicate/generic"
 )
 
 var (

@@ -30,9 +30,9 @@ import (
 	sbundle "github.com/sigstore/sigstore-go/pkg/bundle"
 	"github.com/sirupsen/logrus"
 
-	"github.com/carabiner-dev/collector/envelope/bundle"
-	"github.com/carabiner-dev/collector/envelope/dsse"
-	"github.com/carabiner-dev/collector/internal/readlimit"
+	"github.com/policylabs/collector/envelope/bundle"
+	"github.com/policylabs/collector/envelope/dsse"
+	"github.com/policylabs/collector/internal/readlimit"
 )
 
 var TypeMoniker = "coci"

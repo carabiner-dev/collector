@@ -15,7 +15,7 @@ import (
 	gointoto "github.com/in-toto/attestation/go/v1"
 	"google.golang.org/protobuf/encoding/protojson"
 
-	"github.com/carabiner-dev/collector/predicate"
+	"github.com/policylabs/collector/predicate"
 )
 
 // var _ attestation.Subject = (*Subject)(nil)
